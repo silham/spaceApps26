@@ -31,7 +31,7 @@ from ftm.engine.forcing import from_store_frame
 from ftm.engine.params import soil_spec_from_profile
 from ftm.engine.runner import EngineInputError, EngineOutput, EngineRequest, run_engine
 from ftm.engine.scenarios import SCENARIO_HORIZON, build_ks_field_2
-from ftm.engine.sensitivity import AwcBounds, full_grid, one_at_a_time, run_sensitivity
+from ftm.engine.sensitivity import make_run_fn
 
 # Validation plan v1.2 section 1: ET0-based ranges draw from 1984-2019; 2020-2025 are held out.
 DEFAULT_POOL = (1984, 2019)
@@ -68,22 +68,17 @@ def _elevation(source: Source) -> tuple[float, str]:
     return float(parsed.elevation_m), f"{parsed.elevation_m:.0f} m, POWER grid-cell elevation ({source.id})"
 
 
-def _awc_bounds(site: Site, profile: SoilProfile, cli: list[float] | None) -> AwcBounds | None:
-    mid = profile.available_water_capacity_mm_per_m.value
-    if mid is None:
-        return None
+def _awc_bounds(site: Site, cli: list[float] | None) -> tuple[float | None, float | None, str]:
+    """SSURGO low/high from M3's cached snapshot (or the command line). (None, None) -> M5 uses +/-20 %."""
     if cli:
-        return AwcBounds(cli[0], float(mid), cli[1], "AWC bounds given on the command line")
+        return cli[0], cli[1], "AWC bounds given on the command line"
     from ftm.data.adapters import soil_ssurgo
     from ftm.data.raw_cache import find_latest_raw
 
-    path = find_latest_raw(soil_ssurgo.SOURCE_KEY, soil_ssurgo.raw_filename(site.latitude, site.longitude))
-    if path is None:
-        return None
+    if find_latest_raw(soil_ssurgo.SOURCE_KEY, soil_ssurgo.raw_filename(site.latitude, site.longitude)) is None:
+        return None, None, "no cached SSURGO snapshot"
     res = soil_ssurgo.build(site.id, soil_ssurgo.fetch_cached(site.latitude, site.longitude))
-    if res.awc_low_mm_per_m is None or res.awc_high_mm_per_m is None:
-        return None
-    return AwcBounds(res.awc_low_mm_per_m, float(mid), res.awc_high_mm_per_m, "SSURGO awc_l / awc_r / awc_h, 0-1 m")
+    return res.awc_low_mm_per_m, res.awc_high_mm_per_m, "SSURGO awc_l / awc_h, 0-1 m"
 
 
 def _print(out: EngineOutput) -> None:
@@ -195,21 +190,25 @@ def main() -> None:
     )
     try:
         if args.sensitivity:
-            bounds = _awc_bounds(site, profile, args.awc_bounds)
-            if bounds is None:
-                raise SystemExit(
-                    "AWC bounds unknown: no cached SSURGO snapshot; pass --awc-bounds LOW HIGH with a source"
-                )
-            fixed = req.mode is Mode.FIXED_ALLOCATION
-            cases = (
-                one_at_a_time(include_allocation=fixed)
-                if args.sensitivity == "oat"
-                else full_grid(include_allocation=fixed)
-            )
-            report = run_sensitivity(req, cases, bounds)
-            print(f"sensitivity ({args.sensitivity}, {len(cases)} runs, same weather paths; AWC {bounds.source})")
-            for line in report.summary.values():
-                print(f"  - {line}")
+            from ftm.validation import sensitivity as m5
+
+            low, high, basis = _awc_bounds(site, args.awc_bounds)
+            awc_mid = profile.available_water_capacity_mm_per_m.value
+            if awc_mid is None:
+                raise SystemExit("soil AWC is missing; sensitivity cannot run")
+            factors = m5.default_factors(low, float(awc_mid), high, args.allocation)
+            scenarios = m5.one_at_a_time(factors) if args.sensitivity == "oat" else m5.full_factorial(factors)
+            # Direction for ordering only (M5 harness): less irrigation / stress / exposure ranks first.
+            metrics = {
+                "irrigation_mm": False,
+                "water_stress_days": False,
+                "cover_days": True,
+                "possible_low_cover_days": False,
+            }
+            reports = m5.ranking_stability(make_run_fn(req), scenarios, metrics)
+            print(f"sensitivity ({args.sensitivity}, {len(scenarios)} runs, same weather paths; AWC: {basis})")
+            for rep in reports.values():
+                print(f"  - {rep.sentence}")
             return
         out = run_engine(req)
     except EngineInputError as exc:

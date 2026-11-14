@@ -16,16 +16,9 @@ from ftm.engine.et0 import compute_et0
 from ftm.engine.forcing import EXPECTED_UNITS, ForcingContractError, assert_forcing_contract, from_store_frame
 from ftm.engine.params import CatalogError, soil_spec_from_profile, with_awc
 from ftm.engine.runner import EngineInputError, run_engine
-from ftm.engine.sensitivity import (
-    AwcBounds,
-    SensitivityCase,
-    apply_case,
-    full_grid,
-    one_at_a_time,
-    ranking,
-    run_sensitivity,
-    shift_planting,
-)
+from ftm.engine.sensitivity import apply_inputs, make_run_fn, medians, shift_planting
+from ftm.validation import coverage as m5_coverage
+from ftm.validation import sensitivity as m5_sensitivity
 
 from ._synthetic import IRR, make_forcing, strategy
 from .test_ensemble_runner import HORIZON, _request
@@ -124,49 +117,76 @@ def test_soil_spec_from_ssurgo_profile() -> None:
     assert low.profile.available_water_capacity_mm_per_m.value == 194.3 and "194.3" in low.notes[-1]
 
 
-def test_case_grids_and_planting_shift() -> None:
-    assert len(one_at_a_time(include_allocation=True)) == 9
-    assert len(one_at_a_time(include_allocation=False)) == 7
-    grid = full_grid(include_allocation=True)
-    assert len(grid) == 81 and grid[0].name == "baseline" and len(set(grid)) == 81
+def test_planting_shift_moves_crop_seasons_only() -> None:
     s = strategy(
         "s", [("crop-a", date(2027, 4, 1), date(2027, 8, 31), IRR), (None, date(2027, 9, 1), date(2027, 9, 30), None)]
     )
     moved = shift_planting(s, 14)
     assert moved.seasons[0].plant_date == date(2027, 4, 15) and moved.seasons[0].end_date == date(2027, 9, 14)
     assert moved.seasons[1] == s.seasons[1]  # fallow stays
+    assert shift_planting(s, 0) is s
 
 
-def test_apply_case_changes_only_the_named_input() -> None:
+def test_apply_inputs_maps_m5_factor_names() -> None:
     base = _request()
-    bounds = AwcBounds(120.0, 150.0, 180.0, "test bounds")
-    req = apply_case(base, SensitivityCase(allocation="high", initial_water="low"), bounds)
-    assert req.allocation_mm_per_season == pytest.approx(120.0) and req.initial_fraction == 0.25
-    assert req.soil is base.soil and req.forcing is base.forcing and req.seed == base.seed
-    assert (
-        apply_case(base, SensitivityCase(awc="low"), bounds).soil.profile.available_water_capacity_mm_per_m.value == 120
+    req = apply_inputs(
+        base,
+        {
+            "awc_mm_per_m": 120.0,
+            "initial_soil_water_frac_taw": 0.25,
+            "planting_shift_days": -14,
+            "irrigation_allocation_mm": 80.0,
+        },
     )
+    assert req.soil.profile.available_water_capacity_mm_per_m.value == 120.0
+    assert req.initial_fraction == 0.25 and req.allocation_mm_per_season == 80.0
+    assert req.strategies[0].seasons[0].plant_date == date(2027, 3, 18)
+    assert req.forcing is base.forcing and req.seed == base.seed and req.n_paths == base.n_paths
+    assert apply_inputs(base, {"awc_mm_per_m": 150.0}).soil is base.soil  # mid value: unchanged soil
+    with pytest.raises(ValueError, match="unknown sensitivity input"):
+        apply_inputs(base, {"yield_t_ha": 3})
     needed = dataclasses.replace(base, mode=SimulationMode.IRRIGATION_NEEDED, allocation_mm_per_season=None)
     with pytest.raises(ValueError, match="fixed_allocation"):
-        apply_case(needed, SensitivityCase(allocation="low"), bounds)
+        apply_inputs(needed, {"irrigation_allocation_mm": 80.0})
 
 
-def test_sensitivity_uses_identical_weather_paths_and_reports_rankings() -> None:
+def test_m5_ranking_harness_runs_on_identical_weather_paths() -> None:
     base = _request(n_paths=5)
-    cases = one_at_a_time(include_allocation=True)
-    report = run_sensitivity(base, cases, AwcBounds(120.0, 150.0, 180.0, "test bounds"))
-    assert len(report.cases) == 9
-    assert all(c.path_years == report.cases[0].path_years for c in report.cases)
-    for m in ("irrigation_mm", "water_stress_days", "cover_days", "possible_low_cover_days"):
-        assert m in report.summary and "ranking unchanged in" in report.summary[m]
-        r = report.cases[0].rankings[m]
-        assert r is not None and sorted(sid for g in r for sid in g) == ["alt", "base"]
-    with pytest.raises(ValueError, match="baseline"):
-        run_sensitivity(base, cases[1:], AwcBounds(120.0, 150.0, 180.0, "x"))
+    seen: list[list[tuple[int, ...]]] = []
+    run_fn = make_run_fn(base, on_output=lambda out: seen.append([o.years for o in out.outcomes]))
+    factors = m5_sensitivity.default_factors(120.0, 150.0, 180.0, 100.0)
+    scenarios = m5_sensitivity.one_at_a_time(factors)
+    metrics = {"irrigation_mm": False, "water_stress_days": False, "cover_days": True}
+    reports = m5_sensitivity.ranking_stability(run_fn, scenarios, metrics)
+    assert len(seen) == len(scenarios) == 9 and all(p == seen[0] for p in seen)
+    for rep in reports.values():
+        assert rep.total == 9 and sorted(rep.baseline_order) == ["alt", "base"]
+        assert "ranking unchanged in" in rep.sentence
 
 
-def test_ranking_groups_ties_and_skips_infeasible() -> None:
+def test_infeasible_strategies_are_absent_from_medians() -> None:
     bad = strategy("bad", [("crop-a", date(2027, 4, 1), date(2027, 5, 1), IRR)])
     out = run_engine(_request(strategies=[*_request().strategies, bad], n_paths=3))
-    r = ranking(out, "crop_diversity_count")
-    assert r is not None and all("bad" not in g for g in r)
+    m = medians(out)
+    assert set(m) == {"base", "alt"} and "irrigation_mm" in m["base"]
+
+
+def test_m5_coverage_harness_uses_the_engine_ensemble_without_leakage() -> None:
+    from ftm.engine.ensemble import seasonal_ensemble_fn, seasonal_totals_by_year
+
+    f = make_forcing("1990-01-01", "2012-12-31", seed=4)
+    e = compute_et0(f, latitude_deg=38.0, elevation_m=800.0)
+    window = m5_coverage.SeasonWindow((10, 1), (6, 30))  # crosses the new year, like winter wheat
+    fn = seasonal_ensemble_fn(f, e, window, "rain_mm", n_paths=200, seed=7)
+    from ftm.engine.ensemble import daily_weather
+
+    totals = seasonal_totals_by_year(daily_weather(f, e), window, "rain_mm")
+    assert np.isnan(totals[1990])  # season Oct 1989 - Jun 1990 is not fully in the record
+    sims = fn(list(range(1991, 2005)), 2005)
+    assert sims.shape == (200,) and set(np.round(sims, 6)) <= set(np.round(totals.loc[1991:2004].to_numpy(), 6))
+    np.testing.assert_array_equal(sims, fn(list(range(1991, 2005)), 2005))  # seeded
+    with pytest.raises(ValueError, match="no leakage"):
+        fn(list(range(1991, 2006)), 2005)
+    observed = totals.loc[2005:2010]
+    res = m5_coverage.rolling_origin(observed, fn, range(2005, 2011), pool_start=1991)
+    assert res["n"] == 6 and all(r["n_paths"] == 200 for r in res["rows"])  # type: ignore[index, union-attr]

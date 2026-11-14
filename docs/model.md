@@ -206,17 +206,26 @@ Each failed constraint comes back as a readable reason:
 - **Strategy IDs:** `engine-demo-*`.
 - `--power LAT LON` uses real POWER data through M3's adapter. The outputs stay DEMO because the soil and strategies are still DEMO.
 
-### Sensitivity (`engine.sensitivity`, validation plan §4)
+### Sensitivity and coverage adapters for M5 (validation plan §3–4)
 
-- **Inputs varied:**
-  - AWC low/mid/high: SSURGO `awc_l`/`awc_r`/`awc_h`, rebuilt from M3's cached snapshot or given explicitly with a source label
-  - initial soil water: 25/50/75 % of field capacity
-  - planting-date shift: −14/0/+14 days. The whole crop season moves, harvest included, and fallow seasons stay.
-  - allocation: −20/0/+20 %, fixed-allocation mode only
-- **Cases:** `one_at_a_time` gives 8 + 1 runs (6 + 1 without allocation). `full_grid` gives 81, or 27 without allocation.
-- **Pairing:** every case keeps the seed, pool, horizon and path count, so all cases draw **the same weather paths**. This is checked at run time, and a mismatch raises an error.
-- **Ranking:** strategies are ordered by the median of irrigation, stress days, cover days and possible low-cover days. Equal medians are a tie. A shift that breaks a hard constraint is infeasible with its reason, and that case is reported as "not comparable".
-- **Output:** "ranking unchanged in X of Y combinations; changed by: …". This measures robustness, not accuracy.
+M5 owns the analyses in `ftm.validation.sensitivity` and `ftm.validation.coverage`: the scenarios, the rankings, coverage scoring and the test-year lock. The engine supplies the two callables they expect.
+
+**Sensitivity: `engine.sensitivity.make_run_fn(base) -> run_fn(inputs) -> {strategy: {metric: p50}}`**
+- `apply_inputs` maps M5's factor names onto the request:
+  - `awc_mm_per_m` replaces the soil AWC, and the change is disclosed
+  - `initial_soil_water_frac_taw` sets the initial fraction of field capacity
+  - `planting_shift_days` moves every crop season, harvest included; fallow stays
+  - `irrigation_allocation_mm` is accepted in fixed-allocation mode only
+  - any other key is an error
+- **Pairing:** every call keeps the seed, pool, horizon and path count, so every scenario draws **the same weather paths**. This is checked on each call, and a mismatch raises an error. Tested with M5's `one_at_a_time` and `ranking_stability`.
+- A shift that breaks a hard constraint makes that strategy infeasible with its reason. It is then absent from that scenario's medians, never moved back silently.
+
+**Coverage: `engine.ensemble.seasonal_ensemble_fn(forcing, et0, window, target, n_paths, seed) -> ensemble_fn(pool_years, target_year)`**
+- Targets: `rain_mm`, `et0_mm`, `rain_minus_et0_mm`.
+- It uses the same season-aligned block bootstrap with a one-season horizon: whole historical seasons are drawn with replacement from the pool by `default_rng(seed)`.
+- A season with any unusable day is never drawn.
+- A pool year at or after the target year is refused, so there is no leakage.
+- Tested with M5's `rolling_origin`.
 
 ### Planting calendar and ks-field-2 strategies (`engine.calendar`, `engine.scenarios`)
 

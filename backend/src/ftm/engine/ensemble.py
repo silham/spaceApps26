@@ -20,10 +20,11 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import date
 from itertools import pairwise
+from typing import Protocol
 
 import numpy as np
 import pandas as pd
@@ -429,3 +430,50 @@ def ensemble_weather_paths(
     return pool, [
         (y, build_path_forcing(weather, y, anchor_md=config.anchor_md, base_year=config.horizon[0].year)) for y in years
     ]
+
+
+class SeasonWindowLike(Protocol):
+    """Anything with ``bounds(year) -> (start, end)`` for the season *ending* in ``year`` (M5's SeasonWindow)."""
+
+    def bounds(self, year: int) -> tuple[date, date]: ...
+
+
+SEASONAL_TARGETS = ("rain_mm", "et0_mm", "rain_minus_et0_mm")
+
+
+def seasonal_totals_by_year(weather: pd.DataFrame, window: SeasonWindowLike, target: str) -> pd.Series:
+    """Season totals of ``target`` keyed by the year the season ends. Any unusable day -> NaN (never 0)."""
+    if target not in SEASONAL_TARGETS:
+        raise ValueError(f"target must be one of {SEASONAL_TARGETS}")
+    daily = weather["rain_mm"] - weather["et0_mm"] if target == "rain_minus_et0_mm" else weather[target]
+    out = {}
+    for y in sorted({int(t.year) for t in weather.index}):
+        a, b = (pd.Timestamp(d) for d in window.bounds(y))
+        part = daily.loc[a:b]
+        complete = a >= weather.index[0] and b <= weather.index[-1] and part.notna().all()
+        out[y] = float(part.sum()) if complete else np.nan
+    return pd.Series(out, name=target, dtype="float64")
+
+
+def seasonal_ensemble_fn(
+    forcing: pd.DataFrame, et0: pd.DataFrame, window: SeasonWindowLike, target: str, *, n_paths: int, seed: int
+) -> Callable[[Sequence[int], int], np.ndarray]:
+    """``ensemble_fn(pool_years, target_year)`` for M5's coverage evaluation (validation plan section 3).
+
+    The same season-aligned block bootstrap as a run, with a one-season horizon: whole historical seasons
+    (all days of the window together) are drawn with replacement from ``pool_years`` by
+    ``numpy.random.default_rng(seed)``. Seasons with any unusable day are not drawn. A pool year at or after
+    the target year is refused, so the held-out season can never inform its own range.
+    """
+    totals = seasonal_totals_by_year(daily_weather(forcing, et0), window, target)
+
+    def ensemble_fn(pool_years: Sequence[int], target_year: int) -> np.ndarray:
+        if any(y >= target_year for y in pool_years):
+            raise ValueError(f"pool years must precede the target year {target_year} (no leakage)")
+        usable_pool = [y for y in pool_years if y in totals.index and np.isfinite(totals[y])]
+        if not usable_pool:
+            raise ValueError(f"no complete {target} season in the pool before {target_year}")
+        draws = np.random.default_rng(seed).choice(np.asarray(usable_pool), size=n_paths, replace=True)
+        return np.asarray(totals.loc[draws].to_numpy(), dtype="float64")
+
+    return ensemble_fn
