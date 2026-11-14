@@ -9,7 +9,7 @@ rendering of the same content (reportlab, BSD licence).
 from __future__ import annotations
 
 import json
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 from sqlalchemy import select
@@ -109,37 +109,39 @@ def _assumptions(detail: RunDetail, crops: dict[str, CropProfile]) -> list[str]:
 
 
 def _questions(session: Session, detail: RunDetail, crops: dict[str, CropProfile]) -> list[str]:
+    """Questions for local review, built only from what this run used (no site-specific text)."""
     q = []
-    plants = {
-        crops[s.crop_id].name if s.crop_id in crops else s.crop_id: s.plant_date
-        for st in detail.strategies
-        for s in st.seasons
-        if s.crop_id
-    }
-    if plants:
+    seen: set[tuple[str, date]] = set()
+    dates = []
+    for st in detail.strategies:
+        for s in st.seasons:
+            if s.crop_id and (s.crop_id, s.plant_date) not in seen:
+                seen.add((s.crop_id, s.plant_date))
+                name = crops[s.crop_id].name if s.crop_id in crops else s.crop_id
+                dates.append(f"{name} {s.plant_date:%d %b}")
+    if dates:
+        how = " ".join(detail.scenario_notes) or "see the run's scenario notes"
         q.append(
             "Are these planting dates realistic for this field? "
-            + ", ".join(f"{k} {v:%d %b}" for k, v in plants.items())
-            + " (derived from FAO-56 temperature rules on the site's weather, not from farm records)."
+            + ", ".join(dates)
+            + f". They are model choices, not farm records. How they were set: {how}"
         )
-    q.append(
-        "What irrigation allocation per season does the water right / well capacity allow, and what is the "
-        "pivot's application efficiency? The model counts net irrigation at 100% efficiency."
-    )
+    if any(s.irrigation_rule for st in detail.strategies for s in st.seasons):
+        q.append(
+            "What irrigation allocation per season does the water right or well capacity allow, and what is the "
+            "system's application efficiency? The model counts net irrigation at 100% efficiency."
+        )
     soil = session.get(SoilProfileRow, detail.run.input_versions.get("soil_profile_id", ""))
     if soil is not None:
         awc = soil.params.get("available_water_capacity_mm_per_m", {}).get("value")
         q.append(
-            f"Does the soil match the survey ({soil.params.get('texture') or 'texture unknown'}, "
-            f"available water {awc} mm/m over 1 m)? Local soil tests would replace the survey value."
+            f"Does the soil match the stored profile ({soil.params.get('texture') or 'texture unknown'}, "
+            f"available water {awc} mm/m over the top 1 m)? A local soil test would replace this value."
         )
-    if any(s.crop_id == "sorghum-grain" for st in detail.strategies for s in st.seasons):
-        q.append("Is grain sorghum marketable or usable on this farm, and is double-cropping after wheat practical?")
-    q.append(
-        "Satellite data suggests a second green-up after wheat harvest in some years: is that a double crop, "
-        "volunteer growth or weeds?"
-    )
-    q.append("Which equipment (planter, harvester, pivot) constraints would rule out any of these seasons?")
+    used = sorted({s.crop_id for st in detail.strategies for s in st.seasons if s.crop_id})
+    names = [crops[c].name if c in crops else c for c in used]
+    q.append(f"Can every crop in these options be grown, sold or used on this farm? ({', '.join(names)})")
+    q.append("Which equipment (planter, harvester, irrigation system) constraints would rule out any of these seasons?")
     return q
 
 
