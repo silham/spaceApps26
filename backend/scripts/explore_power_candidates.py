@@ -158,8 +158,78 @@ def main() -> None:
         "candidates": [summarise(c) for c in CANDIDATES],
     }
     path: Path = out_dir / "power_candidates.json"
-    path.write_text(json.dumps(payload, indent=1, default=str))
+    path.write_text(json.dumps(payload, indent=1, default=str), encoding="utf-8")
     print(f"wrote {path}")
+    write_explainer_tables(payload, out_dir)
+
+
+# --------------------------------------------------------------------------- team explainer tables
+
+MONTHS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+# Declared screening rule for "review" years (a prompt to check, NOT a finding that the data is wrong).
+SUSPECT_RAIN_FRACTION_OF_MEDIAN = 0.5
+SUSPECT_MAX_DAY_QUANTILE = 0.1
+
+
+def write_explainer_tables(payload: dict[str, object], out_dir: Path) -> None:
+    """Flat tables ({rows, meta}) for the team explainer page; meta carries this script's code."""
+    code = Path(__file__).read_text(encoding="utf-8")
+    meta = [
+        {"label": "explore_power_candidates.py", "value": code, "type": "code", "lang": "python"},
+        {"label": "Input", "value": "NASA POWER daily point API (raw snapshots under data/raw/power/)"},
+        {"label": "Generated", "value": str(payload["generated_at"])},
+    ]
+    summary, monthly, annual, quality = [], [], [], []
+    for c in payload["candidates"]:  # type: ignore[attr-defined]
+        site = c["key"]
+        ann = pd.DataFrame(c["annual"])
+        median_rain = ann.rain.median()
+        maxday_floor = ann.max_daily_rain.quantile(SUSPECT_MAX_DAY_QUANTILE)
+        for r in c["annual"]:
+            year = int(r["year"])
+            suspect = r["rain"] < SUSPECT_RAIN_FRACTION_OF_MEDIAN * median_rain and r["max_daily_rain"] <= maxday_floor
+            annual.append({
+                "site": site, "year": year, "rain_mm": r["rain"], "et0_mm": r["et0"],
+                "balance_mm": r["balance"], "tmean_c": r["tmean"], "max_daily_rain_mm": r["max_daily_rain"],
+                "rain_days": r["rain_days_ge_1mm"],
+                "held_out": "yes" if TEST_YEARS[0] <= year <= TEST_YEARS[1] else "no",
+                "review_flag": "suspect" if suspect else "",
+            })  # fmt: skip
+        for m in c["climatology"]:
+            i = int(m["month"])
+            monthly.append(
+                {"site": site, "month": i, "month_name": MONTHS[i - 1], **{k: m[k] for k in m if k != "month"}}
+            )
+        steps = {s: c["journey"][n]["details"] for n, s in enumerate(("check", "clean", "handle_gaps"))}
+        for var, q in c["qa"].items():
+            gap = next((g for g in c["gaps"] if g["variable"] == var and not g["resolved"]), None)
+            quality.append({
+                "site": site, "variable": var, "unit": c["source"]["units"].get(var, ""),
+                "expected": q["expected"], "received": q["received"], "missing": q["missing"],
+                "rejected": steps["clean"]["rejected_per_variable"].get(var, 0), "duplicate": q["duplicate"],
+                "unresolved_gap": f"{gap['start']} to {gap['end']}" if gap else "",
+            })  # fmt: skip
+        with_et0 = ann.dropna(subset=["et0"])
+        summary.append({
+            "site": site, "label": c["label"], "region": c["region"],
+            "request_lat": c["request_point"]["lat"], "request_lon": c["request_point"]["lon"],
+            "elevation_m": c["elevation_m"], "first_year": int(ann.year.min()), "last_year": int(ann.year.max()),
+            "first_et0_year": int(with_et0.year.min()),
+            "mean_rain_mm": round(float(ann.rain.mean()), 0), "mean_et0_mm": round(float(with_et0.et0.mean()), 0),
+            "mean_balance_mm": round(float(with_et0.balance.mean()), 0),
+            "rain_cv": c["annual_cv"]["rain"],
+            "tmean_trend_c_decade": c["trends"]["tmean_C"]["per_decade"], "tmean_trend_p": c["trends"]["tmean_C"]["p_value"],
+            "rain_trend_mm_decade": c["trends"]["rain_mm"]["per_decade"], "rain_trend_p": c["trends"]["rain_mm"]["p_value"],
+            "share_rain_days": c["rain_days"]["share_of_days_with_rain_ge_1mm"],
+            "values_missing": int(sum(q["missing"] for q in c["qa"].values())),
+            "suspect_years": sum(1 for a in annual if a["site"] == site and a["review_flag"]),
+            "api_version": c["source"]["version"], "retrieved_at": c["source"]["retrieved_at"],
+            "raw_sha256": c["source"]["raw_sha256"], "processing_run_id": c["processing_run"]["id"],
+        })  # fmt: skip
+    for name, rows in (("summary", summary), ("monthly", monthly), ("annual", annual), ("quality", quality)):
+        p = out_dir / f"explainer_{name}.json"
+        p.write_text(json.dumps({"rows": rows, "meta": meta}, default=str, allow_nan=False), encoding="utf-8")
+        print(f"wrote {p}")
 
 
 if __name__ == "__main__":
