@@ -16,8 +16,10 @@ Owner: M3. List only sources **actually used** (AGENTS.md rule 2). Candidates go
 - GPM IMERG V07: https://developers.google.com/earth-engine/datasets/catalog/NASA_GPM_L3_IMERG_V07
 - SMAP L4 (SPL4SMGP v008): https://developers.google.com/earth-engine/datasets/catalog/NASA_SMAP_SPL4SMGP_008
 - OpenLandMap-soildb: https://doi.org/10.5194/essd-18-989-2026
-- ESA WorldCover 10 m v200 (2021), via Earth Engine `ESA/WorldCover/v200`: used once (2026-11-14) to check land cover at the candidate points, not part of app data. CC BY 4.0.
-- USDA NASS Cropland Data Layer 2021–2024, via Earth Engine `USDA/NASS/CDL`: used once (2026-11-14) to check land cover at the Kansas candidate point, not part of app data. Public domain.
+- ESA WorldCover 10 m v200 (2021), via Earth Engine `ESA/WorldCover/v200`: used for the land-cover check and the Sri Lanka field search (`docs/site-search/`), not part of app data. CC BY 4.0.
+- USDA NASS Cropland Data Layer 2018–2024, via Earth Engine `USDA/NASS/CDL`: used for the land-cover check and the field search (`docs/site-search/`), not part of app data. Public domain.
+- USDA NAIP aerial imagery (2023), via Earth Engine `USDA/NAIP/DOQQ`: photos in `docs/site-search/` only. Public domain.
+- Copernicus Sentinel-2 L2A (Jan–Apr 2024), via Earth Engine `COPERNICUS/S2_SR_HARMONIZED`: photos in `docs/site-search/` only. Contains modified Copernicus Sentinel data.
 
 ## Access check (H0–H2)
 
