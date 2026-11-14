@@ -1,10 +1,11 @@
 """MODIS MOD13Q1 adapter tests with a fake Earth Engine getRegion result (no credentials, no network)."""
 
 import json
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 import pytest
 
 from ftm.data.adapters import modis_gee as m
@@ -105,3 +106,28 @@ def test_missing_project_is_a_clear_error(monkeypatch: pytest.MonkeyPatch) -> No
     with pytest.raises(m.ModisError, match="EE_PROJECT"):
         m._ee_region(0, 0, date(2024, 1, 1), date(2024, 1, 2))
     get_settings.cache_clear()
+
+
+def test_vi_reader_keeps_composite_dates_east_of_utc() -> None:
+    """Postgres returns timestamptz in UTC; local midnight in Asia/Colombo is the previous UTC day."""
+    from datetime import UTC
+    from zoneinfo import ZoneInfo
+
+    from ftm.data.vegetation import _to_composites
+
+    tz = ZoneInfo("Asia/Colombo")
+    rows = []
+    for day, ndvi in ((date(2024, 1, 1), 0.61), (date(2024, 1, 17), 0.64)):
+        stored = datetime.combine(day, datetime.min.time(), tzinfo=tz).astimezone(UTC)
+        for var, value in (
+            ("NDVI", ndvi),
+            ("EVI", 0.4),
+            ("SummaryQA", 0.0),
+            ("DayOfYear", float(day.timetuple().tm_yday)),
+        ):
+            rows.append({"observed_at": stored, "variable": var, "processed_value": value, "raw_value": value,
+                         "quality_flag": "ok"})  # fmt: skip
+    out = _to_composites(pd.DataFrame(rows), tz)
+    assert list(out["composite_start"]) == [date(2024, 1, 1), date(2024, 1, 17)]
+    assert list(out["acquired"]) == [date(2024, 1, 1), date(2024, 1, 17)]
+    assert out["qa_pass"].all()

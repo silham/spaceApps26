@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 from datetime import date
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ftm.data.adapters.modis_gee import QA_PASS, SUMMARY_QA, _acquired
-from ftm.db.models import ObservationRow, ProcessingRunRow
+from ftm.db.models import ObservationRow, ProcessingRunRow, SiteRow
 
 
 class VegetationNotAvailableError(LookupError):
@@ -41,7 +42,23 @@ def get_vi_composites(site_id: str, *, session: Session, processing_run_id: str 
         .where(ObservationRow.processing_run_id == run_id)
     ).all()  # fmt: skip
     long = pd.DataFrame(rows, columns=["observed_at", "variable", "processed_value", "raw_value", "quality_flag"])
-    long["composite_start"] = [pd.Timestamp(t).date() for t in long["observed_at"]]
+    site = session.get(SiteRow, site_id)
+    if site is None:
+        raise VegetationNotAvailableError(f"unknown site {site_id!r}")
+    out = _to_composites(long, ZoneInfo(site.timezone))
+    out.attrs.update(site_id=site_id, source_ids=[source_id], processing_run_id=run_id)
+    return out
+
+
+def _to_composites(long: pd.DataFrame, tz: ZoneInfo) -> pd.DataFrame:
+    """Pivot stored rows to one row per composite.
+
+    ``observed_at`` was stamped at 00:00 site-local time, but Postgres returns ``timestamptz`` in the
+    session zone (UTC), so convert back to the site zone before taking the date; otherwise sites east
+    of UTC read every composite one day early.
+    """
+    long = long.copy()
+    long["composite_start"] = [pd.Timestamp(t).tz_convert(tz).date() for t in long["observed_at"]]
     val = long.pivot(index="composite_start", columns="variable", values="processed_value").sort_index()
     flags = long[long.variable == "NDVI"].set_index("composite_start")["quality_flag"]
     sqa = val.get("SummaryQA")
@@ -58,7 +75,6 @@ def get_vi_composites(site_id: str, *, session: Session, processing_run_id: str 
         }
     ).reset_index(drop=True)
     out.loc[out["ndvi"].isna(), "qa_pass"] = False
-    out.attrs.update(site_id=site_id, source_ids=[source_id], processing_run_id=run_id)
     return out
 
 
