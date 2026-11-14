@@ -169,8 +169,8 @@ def main() -> None:
     # per-year points for the Validate card (metrics must be numbers, so encoded as day-of-year keys)
     for r in per_year:
         if r["reference"] is not None and r["detected_start"] is not None:
-            metrics[f"ref_doy_{r['year']}"] = pd.Timestamp(r["reference"]).dayofyear
-            metrics[f"det_doy_{r['year']}"] = pd.Timestamp(r["detected_start"]).dayofyear
+            metrics[f"ref_doy_{r['year']}"] = pd.Timestamp(r["reference"]).day_of_year
+            metrics[f"det_doy_{r['year']}"] = pd.Timestamp(r["detected_start"]).day_of_year
     record = Validation(
         id=f"val_phenology_{args.site_id}_{datetime.now(UTC):%Y%m%dT%H%M%SZ}",
         target="Season start (amplitude-threshold green-up) of spring-planted summer crops at the field",
@@ -219,7 +219,7 @@ def _chart(py: pd.DataFrame, path) -> None:  # type: ignore[no-untyped-def]
 
     scored = py[py.reference.notna() & py.detected_start.notna()]
     fig, ax = plt.subplots(figsize=(8.5, 3.6), constrained_layout=True)
-    doy = lambda d: pd.Timestamp(d).dayofyear  # noqa: E731
+    doy = lambda d: pd.Timestamp(d).day_of_year  # noqa: E731
     for split, color in (("tuning", "#2a78d6"), ("development", "#eb6834")):
         g = scored[scored.split == split]
         ax.scatter(
