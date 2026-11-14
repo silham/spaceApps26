@@ -11,14 +11,16 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 
 import httpx
 import pandas as pd
 
+from ftm.config import get_settings
 from ftm.contracts.models import Source, ValueKind
-from ftm.data.raw_cache import RawSnapshot, save_raw
+from ftm.data.raw_cache import RawSnapshot, find_latest_raw, save_raw
+from ftm.provenance import sha256_file
 
 POWER_DAILY_POINT_URL = "https://power.larc.nasa.gov/api/temporal/daily/point"
 SOURCE_KEY = "power"
@@ -33,6 +35,9 @@ DEFAULT_PARAMETERS: tuple[str, ...] = (
     "RH2M",
     "WS2M",
 )
+
+# Native grids differ by variable (meteorology vs solar), per POWER docs. Fits source.spatial_resolution (64).
+NATIVE_RESOLUTION = "MERRA-2 met ~0.5x0.625 deg; solar ~1x1 deg"
 
 # Acknowledgment wording requested by the POWER project (see POWER "Data Access" / referencing page).
 ATTRIBUTION = (
@@ -123,6 +128,34 @@ def fetch_daily(
     )
 
 
+def fetch_daily_cached(
+    latitude: float,
+    longitude: float,
+    start: date,
+    end: date,
+    parameters: list[str] | tuple[str, ...] = DEFAULT_PARAMETERS,
+    *,
+    raw_dir: Any = None,
+    timeout_s: float = 300.0,
+) -> RawSnapshot:
+    """Reuse the newest existing raw snapshot for this exact request, else download a new one.
+
+    The cached file is re-checksummed, so the returned SHA-256 always describes the bytes on disk.
+    A different parameter list should use a different date range or be re-downloaded on purpose.
+    """
+    root = raw_dir or get_settings().raw_dir
+    existing = find_latest_raw(SOURCE_KEY, raw_filename(latitude, longitude, start, end), root)
+    if existing is None:
+        return fetch_daily(latitude, longitude, start, end, parameters, raw_dir=root, timeout_s=timeout_s)
+    retrieved = datetime.strptime(existing.parent.name, "%Y-%m-%d").replace(tzinfo=UTC)
+    return RawSnapshot(existing, existing.relative_to(root.parent).as_posix(), sha256_file(existing), retrieved)
+
+
+def source_id_for(snapshot: RawSnapshot) -> str:
+    """Deterministic source ID: the same raw bytes always map to the same Source row."""
+    return f"power_{snapshot.sha256[:16]}"
+
+
 def parse_daily(content: bytes) -> PowerDaily:
     """Parse a POWER daily JSON payload into a long table. Values are NOT decoded or cleaned."""
     try:
@@ -187,8 +220,7 @@ def build_source(source_id: str, snapshot: RawSnapshot, parsed: PowerDaily) -> S
         variables=sorted(parsed.units),
         units=parsed.units,
         kind=ValueKind.REANALYSIS,
-        # Native grids differ by variable (meteorology vs solar); recorded per POWER docs, not resampled.
-        spatial_resolution="Meteorology ~0.5° x 0.625° (MERRA-2); solar ~1° x 1° (CERES) — per POWER docs",
+        spatial_resolution=NATIVE_RESOLUTION,
         temporal_resolution="daily",
         coverage_start=dates.min() if not dates.empty else None,
         coverage_end=dates.max() if not dates.empty else None,
