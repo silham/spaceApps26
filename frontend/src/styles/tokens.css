@@ -1,0 +1,23 @@
+/* Design tokens. PLACEHOLDERS until the Figma file is supplied (M2): replace these values with the
+   Figma variables exactly; don't keep both. */
+:root {
+  --color-bg: #ffffff;
+  --color-surface: #f4f7f2;
+  --color-text: #1b2a24;
+  --color-muted: #5a6b63;
+  --color-primary: #1f4d3d;
+  --color-border: #d6ded8;
+  --color-demo: #8a5a00;
+  --color-demo-bg: #fff3d6;
+  --font-sans: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --radius: 8px;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; font-family: var(--font-sans); color: var(--color-text); background: var(--color-bg); }
+:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 2px; }

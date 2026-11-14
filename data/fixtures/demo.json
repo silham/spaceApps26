@@ -1,0 +1,90 @@
+{
+  "_comment": "DEMO fixtures for UI/engine development only. Every record has is_demo=true. Values are placeholders, NOT data or results. The location is a candidate region (western Kansas), not a confirmed site.",
+  "sites": [
+    {
+      "id": "demo-site",
+      "name": "DEMO placeholder farm (site not yet selected)",
+      "latitude": 38.0,
+      "longitude": -100.0,
+      "boundary_geojson": {
+        "type": "MultiPolygon",
+        "coordinates": [[[[-100.004, 37.996], [-99.996, 37.996], [-99.996, 38.004], [-100.004, 38.004], [-100.004, 37.996]]]]
+      },
+      "timezone": "America/Chicago",
+      "area_ha": null,
+      "farmer_context": {"note": "placeholder; to be confirmed with the farmer"},
+      "is_demo": true
+    }
+  ],
+  "sources": [
+    {
+      "id": "demo-weather",
+      "provider": "DEMO",
+      "product": "Synthetic placeholder weather",
+      "version": null,
+      "variables": ["precipitation", "tmax", "tmin"],
+      "units": {"precipitation": "mm/day", "tmax": "degC", "tmin": "degC"},
+      "kind": "demo",
+      "limitations": "Not real data. Replace with NASA POWER once cached (M3).",
+      "is_demo": true
+    }
+  ],
+  "strategies": [
+    {
+      "id": "demo-baseline",
+      "site_id": "demo-site",
+      "name": "DEMO current practice",
+      "is_baseline": true,
+      "seasons": [
+        {"crop_id": null, "plant_date": "2027-04-15", "end_date": "2027-09-30"},
+        {"crop_id": null, "plant_date": "2027-10-15", "end_date": "2028-06-30"}
+      ],
+      "feasibility": {"feasible": true, "reasons": []},
+      "is_demo": true
+    },
+    {
+      "id": "demo-alt-a",
+      "site_id": "demo-site",
+      "name": "DEMO alternative A",
+      "seasons": [
+        {"crop_id": null, "plant_date": "2027-05-01", "end_date": "2027-09-15"},
+        {"crop_id": null, "plant_date": "2027-09-25", "end_date": "2028-04-30"}
+      ],
+      "feasibility": {"feasible": true, "reasons": []},
+      "is_demo": true
+    },
+    {
+      "id": "demo-alt-b",
+      "site_id": "demo-site",
+      "name": "DEMO alternative B",
+      "seasons": [
+        {"crop_id": null, "plant_date": "2027-04-01", "end_date": "2027-08-15"}
+      ],
+      "feasibility": {"feasible": false, "reasons": ["DEMO: example reason - exceeds irrigation allocation"]},
+      "is_demo": true
+    }
+  ],
+  "simulation_runs": [
+    {
+      "id": "demo-run",
+      "site_id": "demo-site",
+      "strategy_ids": ["demo-baseline", "demo-alt-a", "demo-alt-b"],
+      "mode": "fixed_allocation",
+      "allocation_mm": 300,
+      "weather_source_id": "demo-weather",
+      "resampling_method": "demo",
+      "sample_period": ["2001-01-01", "2020-12-31"],
+      "n_paths": 1,
+      "horizon_years": 2,
+      "seed": 0,
+      "model_version": "demo",
+      "created_at": "2026-11-14T00:00:00Z",
+      "is_demo": true
+    }
+  ],
+  "results": [
+    {"id": "demo-r1", "run_id": "demo-run", "strategy_id": "demo-baseline", "metric": "water_stress_days", "unit": "days", "p10": 10, "p50": 20, "p90": 30, "sample_count": 1, "source_ids": ["demo-weather"], "limitations": ["DEMO placeholder, not a model output"], "is_demo": true},
+    {"id": "demo-r2", "run_id": "demo-run", "strategy_id": "demo-alt-a", "metric": "water_stress_days", "unit": "days", "p10": 5, "p50": 15, "p90": 35, "sample_count": 1, "source_ids": ["demo-weather"], "limitations": ["DEMO placeholder, not a model output"], "is_demo": true},
+    {"id": "demo-r3", "run_id": "demo-run", "strategy_id": "demo-alt-b", "metric": "water_stress_days", "unit": "days", "p10": null, "p50": null, "p90": null, "sample_count": 0, "source_ids": ["demo-weather"], "limitations": ["DEMO: infeasible strategy, no result"], "is_demo": true}
+  ]
+}

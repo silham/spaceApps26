@@ -1,0 +1,35 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: ftm
+      POSTGRES_PASSWORD: ftm
+      POSTGRES_DB: ftm
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ftm -d ftm"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build: ./backend
+    profiles: ["full"]
+    environment:
+      FTM_DATABASE_URL: postgresql+psycopg://ftm:ftm@db:5432/ftm
+      FTM_DATA_DIR: /app/data
+      FTM_RESULTS_DIR: /app/results
+    volumes:
+      - ./data:/app/data
+      - ./results:/app/results
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
