@@ -1,27 +1,54 @@
-const STAGES = [
-  ['collect', 'Collect', 'What arrived, from where, and for which dates?'],
-  ['check', 'Check', 'What is missing, duplicated, rejected or flagged?'],
-  ['clean', 'Clean', 'What changed, and why?'],
-  ['handle_gaps', 'Handle gaps', 'Which values were estimated, and which remain unknown?'],
-  ['align', 'Align', 'How were different scales and time intervals combined?'],
-  ['extract', 'Extract', 'Which growing periods are suggested or confirmed?'],
-  ['simulate', 'Simulate', 'How do the alternatives respond to the same conditions?'],
-  ['validate', 'Validate', 'What was checked, against what, and with what limitations?'],
-  ['compare', 'Compare', 'Which trade-offs matter to this farmer?'],
-] as const
+import { api } from '../api/client'
+import { useAsync } from '../api/useAsync'
+import { ctl } from '../components/ctl'
+import { DemoBadge } from '../components/DemoBadge'
+import { STAGES, STATUS } from '../journey'
 
-/** Data Journey: nine stage cards. TODO(M2): load /journey/{site_id} once implemented (M1/M3/M4/M5). */
-export function DataJourneyScreen() {
+/**
+ * Data Journey: nine stage cards. No Figma frame exists for this view yet; it reuses the
+ * dashboard's card and status-chip patterns. Stages the API does not report show "Unavailable".
+ */
+export function DataJourneyScreen({ siteId }: { siteId: string | undefined }) {
+  const journey = useAsync(
+    () => (siteId ? api.journey(siteId) : Promise.reject(new Error('no site is available from the API'))),
+    [siteId],
+  )
+  const stages = journey.status === 'ready' ? journey.data : []
   return (
-    <section aria-labelledby="journey-h">
-      <h2 id="journey-h">Data Journey</h2>
-      <ol>
-        {STAGES.map(([id, label, question]) => (
-          <li key={id}>
-            <strong>{label}</strong>: {question} <em>(status: not started)</em>
-          </li>
-        ))}
+    <>
+      <h1 className="page-title">Data Journey</h1>
+      {journey.status === 'loading' && <p role="status">Loading pipeline status…</p>}
+      {journey.status === 'error' && (
+        <p role="alert" className={ctl('warning')}>
+          ⚠ Pipeline status could not be loaded: {journey.error.message}
+        </p>
+      )}
+      <ol className="stage-grid">
+        {STAGES.map((stage) => {
+          const payload = stages.find((s) => s.stage === stage.id)
+          const status = STATUS[payload?.status ?? 'unavailable']
+          return (
+            <li key={stage.id} className="card">
+              <div className="row">
+                <h2>{stage.label}</h2>
+                <span className={ctl(status.warn ? 'warning' : 'outline')}>
+                  <span aria-hidden="true">{status.glyph} </span>
+                  {status.label}
+                </span>
+                {payload?.is_demo && <DemoBadge />}
+              </div>
+              <p className="muted">{stage.question}</p>
+              {payload && <p>{payload.summary}</p>}
+              {payload && (
+                <p className="small muted">
+                  Sources: {payload.source_ids?.join(', ') || 'none recorded'}
+                  {payload.processing_run_id ? ` · run ${payload.processing_run_id}` : ''}
+                </p>
+              )}
+            </li>
+          )
+        })}
       </ol>
-    </section>
+    </>
   )
 }

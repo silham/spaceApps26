@@ -1,23 +1,81 @@
-/* Design tokens. PLACEHOLDERS until the Figma file is supplied (M2): replace these values with the
-   Figma variables exactly; don't keep both. */
+/* Design tokens extracted from Figma file CWGXpY5vu06StB7waehMt5, frame 3:2
+   "Farm Time Machine / Primary dashboard". The file defines no Figma variables, so these are the
+   raw fill/type values used in that frame. Change them only when the Figma changes. */
+/* Inter is the frame's typeface. Bundled (latin subset, variable weight) so the app renders the
+   same offline. Source: @fontsource-variable/inter 5.3.0; SIL OFL 1.1, see assets/fonts. */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('../assets/fonts/inter-latin-wght-normal.woff2') format('woff2');
+}
+
 :root {
-  --color-bg: #ffffff;
-  --color-surface: #f4f7f2;
-  --color-text: #1b2a24;
-  --color-muted: #5a6b63;
-  --color-primary: #1f4d3d;
-  --color-border: #d6ded8;
-  --color-demo: #8a5a00;
-  --color-demo-bg: #fff3d6;
-  --font-sans: system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-6: 24px;
-  --radius: 8px;
+  /* Surfaces */
+  --color-bg: #f6f8fa;
+  --color-surface: #ffffff;
+  --color-navy: #09192c;
+  --color-nav-active: #1b3f60;
+
+  /* Text */
+  --color-text: #101b2d;
+  --color-muted: #465363;
+  --color-on-navy: #ffffff;
+  --color-on-navy-muted: #cfd9e7;
+  --color-link: #0085eb;
+
+  /* Lines */
+  --color-border: #bdcbda;
+  --color-divider: #d9e1e8;
+
+  /* Controls and badges */
+  --color-primary: #206442;
+  --color-warning-bg: #fff0d2;
+  --color-warning-text: #874600;
+  --color-caution-text: #875000;
+  --color-neutral-bg: #e8edf2;
+  --color-evidence-bg: #e8f6ff;
+  --color-note-bg: #e6ebf0;
+  --color-unavailable-bg: #e9edf1;
+  --color-benefit-bg: #eaf8de;
+
+  /* Strategy tints: timeline cell / card title */
+  --color-baseline-cell: #d9e8f2;
+  --color-baseline-title: #ebeef2;
+  --color-water-cell: #d4edfc;
+  --color-water-title: #dff2ff;
+  --color-soil-cell: #def3ce;
+  --color-soil-title: #e7f8de;
+
+  /* Sliders, replay, map */
+  --color-slider-track: #dbe0e3;
+  --color-slider-water: #009dc3;
+  --color-slider-soil: #29ae31;
+  --color-replay-track: #65e3e9;
+  --color-playhead: #00a6bf;
+  --color-playhead-text: #008099;
+  --color-map-bg: #5c7940;
+
+  --font-sans: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --line-height: 1.25;
+
+  --radius-control: 6px;
+  --radius-card: 8px;
+  --radius-map: 9px;
+
+  --sidebar-width: 180px;
 }
 
 * { box-sizing: border-box; }
-body { margin: 0; font-family: var(--font-sans); color: var(--color-text); background: var(--color-bg); }
-:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 2px; }
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: var(--line-height);
+  color: var(--color-text);
+  background: var(--color-bg);
+}
+h1, h2, h3, p { margin: 0; }
+button, select, textarea, input { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--color-link); outline-offset: 2px; }
