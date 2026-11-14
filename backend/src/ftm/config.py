@@ -3,6 +3,7 @@
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -16,6 +17,10 @@ class Settings(BaseSettings):
     results_dir: Path = REPO_ROOT / "results"
     cors_origins: list[str] = ["http://localhost:5173"]
     demo_mode: bool = True
+    # Earth Engine Cloud project (plain EE_PROJECT, as in .env.example). Credentials never live here.
+    ee_project: str | None = Field(default=None, validation_alias="EE_PROJECT")
+    # USDA NASS Quick Stats API key (plain NASS_API_KEY in .env). Never logged or stored in raw files.
+    nass_api_key: str | None = Field(default=None, validation_alias="NASS_API_KEY", repr=False)
 
     @property
     def raw_dir(self) -> Path:

@@ -23,9 +23,8 @@ from scipy.stats import linregress
 from ftm.config import get_settings
 from ftm.contracts.models import ValueKind
 from ftm.data.adapters import nasa_power
-from ftm.data.pipeline.run import run_daily_pipeline
-from ftm.data.raw_cache import RawSnapshot, find_latest_raw
-from ftm.provenance import sha256_file
+from ftm.data.pipeline.run import AlignContext, run_daily_pipeline
+from ftm.data.raw_cache import RawSnapshot
 
 START, END = date(1981, 1, 1), date(2025, 12, 31)
 PARAMETERS = (*nasa_power.DEFAULT_PARAMETERS, "T2MDEW")
@@ -39,22 +38,24 @@ class Candidate:
     region: str
     latitude: float
     longitude: float
+    timezone: str
 
 
 CANDIDATES = (
-    Candidate("kansas", "Western Kansas (near Garden City)", "Western Kansas, USA", 37.97, -100.87),
-    Candidate("sri_lanka", "Sri Lanka dry zone (near Anuradhapura)", "North Central Province, Sri Lanka", 8.31, 80.40),
+    Candidate("kansas", "Western Kansas (near Garden City)", "Western Kansas, USA", 37.97, -100.87, "America/Chicago"),
+    Candidate(
+        "sri_lanka",
+        "Sri Lanka dry zone (near Anuradhapura)",
+        "North Central Province, Sri Lanka",
+        8.31,
+        80.40,
+        "Asia/Colombo",
+    ),
 )
 
 
 def load_raw(c: Candidate) -> RawSnapshot:
-    name = nasa_power.raw_filename(c.latitude, c.longitude, START, END)
-    existing = find_latest_raw(nasa_power.SOURCE_KEY, name)
-    if existing is not None:
-        root = get_settings().raw_dir
-        retrieved = datetime.strptime(existing.parent.name, "%Y-%m-%d").replace(tzinfo=UTC)
-        return RawSnapshot(existing, existing.relative_to(root.parent).as_posix(), sha256_file(existing), retrieved)
-    return nasa_power.fetch_daily(c.latitude, c.longitude, START, END, PARAMETERS, timeout_s=300)
+    return nasa_power.fetch_daily_cached(c.latitude, c.longitude, START, END, PARAMETERS)
 
 
 def daily_et0(wide: pd.DataFrame, lat: float, elevation_m: float) -> pd.Series:
@@ -72,9 +73,16 @@ def summarise(c: Candidate) -> dict[str, object]:
     snap = load_raw(c)
     parsed = nasa_power.parse_daily(snap.path.read_bytes())
     source = nasa_power.build_source(f"src_power_{c.key}", snap, parsed)
-    res = run_daily_pipeline(parsed.observations, site_id=f"candidate_{c.key}", source_id=source.id,
-                             fill_value=parsed.fill_value, start=START, end=END,
-                             value_kind=ValueKind.REANALYSIS)  # fmt: skip
+    res = run_daily_pipeline(
+        parsed.observations,
+        site_id=f"candidate_{c.key}",
+        source_id=source.id,
+        fill_value=parsed.fill_value,
+        start=START,
+        end=END,
+        value_kind=ValueKind.REANALYSIS,
+        align=AlignContext(c.timezone, parsed.time_standard, nasa_power.NATIVE_RESOLUTION, parsed.grid_point),
+    )
     obs = res.observations[res.observations.quality_flag != "duplicate"]
     wide = obs.pivot(index="date", columns="variable", values="processed_value")
     wide.index = pd.to_datetime(wide.index)

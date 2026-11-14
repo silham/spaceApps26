@@ -32,3 +32,6 @@ data/processed/*
 results/*
 !results/.gitkeep
 backups/
+
+# Jupyter autosave
+.ipynb_checkpoints/
