@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     demo_mode: bool = True
     # Earth Engine Cloud project (plain EE_PROJECT, as in .env.example). Credentials never live here.
     ee_project: str | None = Field(default=None, validation_alias="EE_PROJECT")
+    # USDA NASS Quick Stats API key (plain NASS_API_KEY in .env). Never logged or stored in raw files.
+    nass_api_key: str | None = Field(default=None, validation_alias="NASS_API_KEY", repr=False)
 
     @property
     def raw_dir(self) -> Path:

@@ -194,22 +194,37 @@ def _crossing(y: np.ndarray, dates: Sequence[date], a: int, b: int, thr: float, 
 
 
 def evaluate_starts(
-    seasons: Iterable[Season], reference: Iterable[date], *, max_days: int = 60, unlock_test: bool = False
+    seasons: Iterable[Season],
+    reference: Iterable[date],
+    *,
+    max_days: int = 60,
+    peak_months: tuple[int, ...] | None = None,
+    unlock_test: bool = False,
 ) -> dict[str, Any]:
     """Compare detected season starts with reference start dates (e.g. farmer records or NASS 50 % planted).
 
-    Each reference date is matched to the nearest detected start within ``max_days``. Reports bias and median
-    absolute error in days, detection rate, extra detected seasons and n.
+    Default matching: each reference date takes the nearest unused detected start within ``max_days``.
+    With ``peak_months`` (validation plan v1.2), a reference only matches a season whose peak falls in those
+    months of the same year (nearest start if several); ``max_days`` is then a 120-day safety limit.
+    Reports bias and median absolute error in days, detection rate, extra detected seasons and n.
     """
     refs = sorted(reference)
     _guard_years((r.year for r in refs), unlock_test)
-    starts = [s.start for s in seasons if s.start is not None and s.start.year in {r.year for r in refs}]
+    ref_years = {r.year for r in refs}
+    pool = [s for s in seasons if s.start is not None and s.start.year in ref_years]
     errors, used = [], set()
+    limit = 120 if peak_months else max_days
     for r in refs:
-        best = min(((abs((s - r).days), i, s) for i, s in enumerate(starts) if i not in used), default=None)
-        if best and best[0] <= max_days:
+        cands = [
+            (abs((s.start - r).days), i, s.start)  # type: ignore[operator]
+            for i, s in enumerate(pool)
+            if i not in used and (peak_months is None or (s.peak.year == r.year and s.peak.month in peak_months))
+        ]
+        best = min(cands, default=None)
+        if best and best[0] <= limit:
             used.add(best[1])
             errors.append((best[2] - r).days)
+    starts = pool
     n = len(refs)
     return {
         "n_reference": n,
@@ -228,6 +243,7 @@ def tune(
     *,
     grid: dict[str, tuple[Any, ...]] = TUNING_GRID,
     years: Iterable[int] = TUNING_YEARS,
+    peak_months: tuple[int, ...] | None = None,
     unlock_test: bool = False,
 ) -> tuple[PhenologyParams, pd.DataFrame]:
     """Pick the grid point with the lowest median absolute start error on ``years`` (validation plan §2.4)."""
@@ -241,7 +257,7 @@ def tune(
             prm = PhenologyParams(w, po, f)
         except ValueError:
             continue
-        ev = evaluate_starts(detect_seasons(comps, prm).seasons, refs, unlock_test=unlock_test)
+        ev = evaluate_starts(detect_seasons(comps, prm).seasons, refs, peak_months=peak_months, unlock_test=unlock_test)
         rows.append(
             {"window": w, "polyorder": po, "fraction": f, **{k: v for k, v in ev.items() if k != "errors_days"}}
         )

@@ -112,3 +112,14 @@ def test_extract_stage_payload_has_caveats_and_markers() -> None:
 
 @pytest.mark.skip(reason="M5: coverage evaluation needs the M4 ensemble")
 def test_coverage_reports_sample_count_and_width() -> None: ...
+
+
+def test_peak_month_matching_ignores_seasons_peaking_elsewhere() -> None:
+    comps, _ = _series(range(2005, 2008))
+    res = detect_seasons(comps, PhenologyParams(5, 2, 0.3))
+    # reference near the spring season's start; only summer-peaking (Jul-Sep) seasons may match it
+    refs = [date(y, 4, 20) for y in range(2005, 2008)]
+    spring = evaluate_starts(res.seasons, refs)
+    summer_only = evaluate_starts(res.seasons, refs, peak_months=(7, 8, 9))
+    assert abs(spring["median_abs_error_days"]) < 20
+    assert summer_only["median_abs_error_days"] > 60  # matched to the later season, not the nearest one
