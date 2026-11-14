@@ -27,6 +27,7 @@ def session() -> Iterator[Session]:
     try:
         conn = get_engine().connect()
         conn.execute(text("select 1 from observation limit 1"))
+        conn.rollback()  # end the probe's implicit transaction before opening the test one
     except Exception as exc:
         pytest.skip(f"no migrated Postgres available: {exc.__class__.__name__}")
     trans = conn.begin()
