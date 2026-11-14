@@ -1994,8 +1994,8 @@
         },
         "farmer_context": {
           "additionalProperties": true,
-          "description": "Farmer-confirmed context (irrigation allocation, equipment, ...)",
-          "title": "Farmer Context",
+          "description": "Farmer-confirmed context as stored (FarmerContext contract, served by /sites/{id}/farmer-context)",
+          "title": "Site Farmer Context",
           "type": "object"
         },
         "is_demo": {

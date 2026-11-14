@@ -95,7 +95,9 @@ class Site(Contract):
     timezone: str = Field(description="IANA timezone used for analysis, e.g. 'America/Chicago'")
     area_ha: float | None = None
     farmer_context: dict[str, Any] = Field(
-        default_factory=dict, description="Farmer-confirmed context (irrigation allocation, equipment, ...)"
+        default_factory=dict,
+        title="Site Farmer Context",  # distinct name in generated TS; the typed shape is the FarmerContext contract
+        description="Farmer-confirmed context as stored (FarmerContext contract, served by /sites/{id}/farmer-context)",
     )
     is_demo: bool = False
 

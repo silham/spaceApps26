@@ -18,6 +18,7 @@ import { NextStep } from './NextStep'
 import { PrioritiesPanel, type Priorities } from './PrioritiesPanel'
 import { RotationCompare } from './RotationCompare'
 import { RunComparison } from './RunComparison'
+import { LiveOverview } from './LiveOverview'
 
 type RunState = { status: 'idle' } | { status: 'running' } | { status: 'failed'; message: string }
 
@@ -26,11 +27,20 @@ const joinList = (items: string[]) =>
 const capitalise = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
 /**
- * Overview dashboard: Figma frame 25:49 (Redesign v2). Site list and pipeline statuses come from the
- * API when it provides them; everything else is the frame's illustrative content from
- * demo/figmaDemo.ts and is labelled DEMO on screen.
+ * Overview dashboard: Figma frame 25:49 (Redesign v2). A loaded (non-DEMO) farm gets the live
+ * dashboard; with no API or a DEMO site it shows the frame's illustrative content, labelled DEMO.
  */
-export function OverviewScreen({
+export function OverviewScreen(props: {
+  sites: Site[]
+  site: Site | undefined
+  onSiteChange: (siteId: string) => void
+  onNavigate: (view: View) => void
+}) {
+  if (props.site && !props.site.is_demo) return <LiveOverview {...props} site={props.site} />
+  return <DemoOverview {...props} />
+}
+
+function DemoOverview({
   sites,
   site,
   onSiteChange,
@@ -63,10 +73,14 @@ export function OverviewScreen({
   ]
   const outdated = changed.length > 0
 
+  // The DEMO farm has no strategies of its own, so a run is attempted and its refusal shown honestly.
   const runComparison = () => {
+    if (!siteId) {
+      setRun({ status: 'failed', message: 'no farm is available from the API (DEMO content only)' })
+      return
+    }
     setRun({ status: 'running' })
-    api.createRun().then(
-      // TODO(M2 with M1/M4): load the new run's results and clear `changed` once POST /runs exists.
+    api.createRun({ site_id: siteId }).then(
       () => setRun({ status: 'idle' }),
       (error: Error) => setRun({ status: 'failed', message: error.message }),
     )

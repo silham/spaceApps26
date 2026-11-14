@@ -11,7 +11,8 @@
     "typecheck": "tsc -b --noEmit",
     "lint": "eslint .",
     "gen:types": "json2ts -i ../contracts/schemas/bundle.json -o src/types/contracts.ts --bannerComment \"/* Generated from contracts/schemas/bundle.json by json-schema-to-typescript. Do not edit; run make contracts. */\" --additionalProperties false",
-    "test:visual": "playwright test"
+    "test:visual": "playwright test",
+    "test": "node --test \"src/**/*.test.ts\""
   },
   "dependencies": {
     "echarts": "5.5.1",

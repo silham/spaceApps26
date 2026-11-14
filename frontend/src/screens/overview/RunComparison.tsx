@@ -6,7 +6,9 @@ import linkIcon from '../../assets/v2/icon-link.svg'
 import trendDown from '../../assets/v2/icon-trend-down.svg'
 import trendUp from '../../assets/v2/icon-trend-up.svg'
 import { Badge, Icon } from '../../components/ui'
+import type { ReactNode } from 'react'
 import type { MetricView, PairedDeltaView, StrategyView } from '../../demo/figmaDemo'
+import type { SimulationMode } from '../../types/contracts'
 
 const dash = (value: number | null) => (value == null ? '—' : String(value))
 
@@ -83,7 +85,11 @@ function Metric({
   )
 }
 
-/** "Previous run comparison" (Figma node 28:230): three strategies with aligned metrics. */
+/**
+ * "Previous run comparison" (Figma node 28:230): three strategies with aligned metrics. The optional
+ * props drive it from a live run (mode toggle, per-card note and details, infeasibility reasons);
+ * without them it renders the frame's illustrative content.
+ */
 export function RunComparison({
   strategies,
   run,
@@ -92,6 +98,11 @@ export function RunComparison({
   showRanges,
   sourceNote,
   onEvidence,
+  mode,
+  cardNote = () => 'DEMO / illustrative previous-run results',
+  details,
+  infeasible = {},
+  coverageLabel = 'Coverage not yet evaluated → Validate',
 }: {
   strategies: readonly StrategyView[]
   run: { nPaths: number; sampleStartYear: number; sampleEndYear: number }
@@ -100,6 +111,11 @@ export function RunComparison({
   showRanges: boolean
   sourceNote: readonly string[]
   onEvidence: () => void
+  mode?: { value: SimulationMode; shown: SimulationMode; onChange: (m: SimulationMode) => void }
+  cardNote?: (strategyId: string) => string
+  details?: (strategyId: string) => ReactNode
+  infeasible?: Record<string, string[]>
+  coverageLabel?: string
 }) {
   return (
     <section className="card comparison" aria-labelledby="comparison-h">
@@ -109,20 +125,40 @@ export function RunComparison({
           {outdated && <Badge tone="warning">Outdated</Badge>}
         </div>
         <div className="comparison__mode">
-          Only fixed-allocation metrics shown
+          {mode
+            ? mode.shown === 'fixed_allocation'
+              ? 'Shown: fixed-allocation run'
+              : 'Shown: irrigation-needed run'
+            : 'Only fixed-allocation metrics shown'}
           <div className="segmented" role="radiogroup" aria-label="Simulation mode">
-            <button type="button" role="radio" aria-checked="true">
-              Fixed allocation
-            </button>
-            <button
-              type="button"
-              role="radio"
-              aria-checked="false"
-              aria-disabled="true"
-              title="This run has no irrigation-needed results"
-            >
-              Irrigation needed
-            </button>
+            {mode ? (
+              (['fixed_allocation', 'irrigation_needed'] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  role="radio"
+                  aria-checked={mode.value === m}
+                  onClick={() => mode.onChange(m)}
+                >
+                  {m === 'fixed_allocation' ? 'Fixed allocation' : 'Irrigation needed'}
+                </button>
+              ))
+            ) : (
+              <>
+                <button type="button" role="radio" aria-checked="true">
+                  Fixed allocation
+                </button>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked="false"
+                  aria-disabled="true"
+                  title="This run has no irrigation-needed results"
+                >
+                  Irrigation needed
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -132,7 +168,7 @@ export function RunComparison({
           paths · sampled from {run.sampleStartYear}–{run.sampleEndYear}
         </span>
         <Badge tone="info" onClick={onEvidence}>
-          Coverage not yet evaluated → Validate
+          {coverageLabel}
         </Badge>
       </div>
       <p className="comparison__explain">
@@ -149,8 +185,19 @@ export function RunComparison({
                 <span className="dot" aria-hidden="true" />
                 {strategy.name}
               </h3>
-              <p>DEMO / illustrative previous-run results</p>
+              <p>{cardNote(strategy.id)}</p>
             </div>
+            {infeasible[strategy.id] && (
+              <div className="strategy__body">
+                <Badge tone="warning">Infeasible: not simulated</Badge>
+                <ul className="reasons">
+                  {infeasible[strategy.id]?.map((r) => (
+                    <li key={r}>{r}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {!infeasible[strategy.id] && (
             <div className="strategy__body">
               <Metric
                 icon={dropIcon}
@@ -190,6 +237,7 @@ export function RunComparison({
                 </div>
               )}
               <div className="divider" />
+              {details?.(strategy.id)}
               <div className="spacer" />
               <div className="strategy__sources">
                 <span>
@@ -203,6 +251,7 @@ export function RunComparison({
                 </button>
               </div>
             </div>
+            )}
           </article>
         ))}
       </div>

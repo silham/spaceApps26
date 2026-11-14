@@ -1,0 +1,71 @@
+/* Live-data views that have no Figma frame (docs/decisions.md, UI assumptions 2026-11-14 · live app).
+   They reuse the frame's tokens, card, badge, button and select patterns only; no new colours. */
+
+.skip-link { position: absolute; left: -9999px; top: 8px; z-index: 10; padding: 8px 12px; border-radius: 8px; background: var(--color-surface); color: var(--color-text); }
+.skip-link:focus { left: 200px; }
+
+.live-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 20px; align-items: stretch; }
+@media (max-width: 1100px) { .live-grid { grid-template-columns: 1fr; } }
+
+.kv-inline { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; color: var(--color-secondary); }
+.kv-inline strong { color: var(--color-text); }
+
+.state { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; border-radius: 10px; background: var(--color-inset); border: 1px dashed var(--color-dashed); font-size: 13px; color: var(--color-secondary); }
+.state strong { color: var(--color-text); font-size: 14px; }
+.state--failed { background: var(--color-warning-tint); border: 1px solid var(--color-warning-border); color: var(--color-warning-strong); }
+
+/* Proportional rotation timeline (live). */
+.ltl { display: flex; flex-direction: column; gap: 10px; align-self: stretch; position: relative; }
+.ltl__axis, .ltl__row { display: grid; grid-template-columns: 220px 1fr 150px; gap: 12px; align-items: center; }
+.ltl__ticks { position: relative; height: 18px; font-size: 11px; color: var(--color-muted); }
+.ltl__ticks span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.ltl__name { display: flex; flex-direction: column; gap: 2px; font-size: 13px; font-weight: 600; color: var(--color-text); }
+.ltl__name small { font-weight: 400; color: var(--color-muted); }
+.ltl__track { position: relative; height: 40px; border-radius: 8px; background: var(--color-subtle); overflow: hidden; }
+.ltl__seg { position: absolute; top: 4px; bottom: 4px; display: flex; align-items: center; gap: 4px; padding: 0 6px; border-radius: 6px; font-size: 11px; font-weight: 600; overflow: hidden; white-space: nowrap; }
+.ltl__seg--baseline { background: var(--color-note-bg); color: var(--color-text); border: 1px solid var(--color-control-border); }
+.ltl__seg--water { background: var(--color-info-bg); color: var(--color-info-text); }
+.ltl__seg--soil { background: var(--color-success-bg); color: var(--color-success-text); }
+.ltl__seg--rainfed { background-image: repeating-linear-gradient(135deg, transparent 0 6px, rgb(255 255 255 / 0.55) 6px 9px); }
+.ltl__playhead { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--color-forest); pointer-events: none; }
+.ltl__tp { position: absolute; top: 0; bottom: 0; width: 0; border-left: 2px dashed var(--color-warning); pointer-events: none; }
+.ltl__readout { font-size: 12px; color: var(--color-secondary); line-height: 1.35; }
+.ltl__readout b { color: var(--color-text); }
+.ltl__infeasible { font-size: 12px; color: var(--color-warning-strong); }
+.ltl__row--infeasible .ltl__track { outline: 1px solid var(--color-warning-border); }
+
+.stepper { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--color-secondary); }
+.stepper button { width: 24px; height: 24px; border-radius: 6px; border: 1px solid var(--color-control-border); background: var(--color-surface); font-weight: 700; cursor: pointer; }
+.stepper button:disabled { opacity: 0.4; cursor: not-allowed; }
+.stepper output { min-width: 52px; text-align: center; font-weight: 600; color: var(--color-text); }
+.stepper--changed output { color: var(--color-warning-text); }
+
+.replay-note { display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; border-radius: 10px; background: var(--color-warning-tint); border: 1px solid var(--color-warning-border); font-size: 13px; color: var(--color-warning-strong); }
+
+.number-input { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 10px; border-radius: 10px; border: 1px solid var(--color-control-border); background: var(--color-surface); font-size: 13px; }
+.number-input input { width: 72px; border: 0; font: inherit; color: var(--color-text); background: transparent; }
+.number-input--changed { border-color: var(--color-warning); }
+
+.metrics-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.metrics-table th, .metrics-table td { padding: 5px 6px; text-align: left; border-bottom: 1px solid var(--color-border); vertical-align: top; }
+.metrics-table th { font-weight: 600; color: var(--color-secondary); }
+.metrics-table td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.table-wrap { overflow-x: auto; align-self: stretch; }
+
+.ranking { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+.reasons { margin: 4px 0 0; padding-left: 18px; font-size: 12px; color: var(--color-warning-strong); }
+
+dialog.farm-dialog { width: min(640px, 92vw); border: 0; border-radius: 16px; padding: 24px; box-shadow: 0 20px 60px rgb(15 42 29 / 0.25); }
+dialog.farm-dialog::backdrop { background: rgb(15 42 29 / 0.35); }
+.form { display: flex; flex-direction: column; gap: 14px; }
+.form label, .form fieldset { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; color: var(--color-text); }
+.form fieldset { border: 1px solid var(--color-border); border-radius: 10px; padding: 10px 12px; }
+.form input[type='text'], .form input[type='number'], .form textarea { font: inherit; font-weight: 400; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--color-control-border); }
+.form .check { flex-direction: row; align-items: center; gap: 8px; font-weight: 400; }
+.form__actions { display: flex; justify-content: flex-end; gap: 10px; }
+
+.card-result { display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; border-radius: 12px; background: var(--color-success-tint); border: 1px solid var(--color-success-border); font-size: 13px; }
+.card-result a { color: var(--color-primary); font-weight: 600; }
+
+.live-map { height: 100%; min-height: 360px; }
+.live-map .footmap__canvas { height: 300px; }

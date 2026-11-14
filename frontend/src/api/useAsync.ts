@@ -5,7 +5,7 @@ export type AsyncState<T> =
   | { status: 'error'; error: Error }
   | { status: 'ready'; data: T }
 
-/** Minimal fetch-state hook. Swap for a query library if caching/refetching becomes necessary. */
+/** Minimal fetch-state hook. Pass a changing value in `deps` (e.g. a reload counter) to refetch. */
 export function useAsync<T>(fn: () => Promise<T>, deps: unknown[]): AsyncState<T> {
   const [state, setState] = useState<AsyncState<T>>({ status: 'loading' })
   useEffect(() => {

@@ -392,7 +392,7 @@ export interface FarmTimeMachineContracts {
   PairedDelta?: PairedDelta;
   ReplaySeries?: ReplaySeries;
   ReplayTrace?: ReplayTrace;
-  FarmerContext?: FarmerContext1;
+  FarmerContext?: FarmerContext;
   EnvironmentalTimeline?: EnvironmentalTimeline;
   Priorities?: Priorities;
   DecisionCardRequest?: DecisionCardRequest;
@@ -406,13 +406,13 @@ export interface Site {
   boundary_geojson?: BoundaryGeojson;
   timezone: Timezone;
   area_ha?: AreaHa;
-  farmer_context?: FarmerContext;
+  farmer_context?: SiteFarmerContext;
   is_demo?: IsDemo;
 }
 /**
- * Farmer-confirmed context (irrigation allocation, equipment, ...)
+ * Farmer-confirmed context as stored (FarmerContext contract, served by /sites/{id}/farmer-context)
  */
-export interface FarmerContext {
+export interface SiteFarmerContext {
   [k: string]: unknown;
 }
 /**
@@ -715,7 +715,7 @@ export interface ReplayTrace {
 /**
  * Farmer-confirmed inputs (value kind farmer_input). Unconfirmed fields stay null, never guessed.
  */
-export interface FarmerContext1 {
+export interface FarmerContext {
   value_kind?: ValueKind1;
   confirmed?: Confirmed;
   planting_history?: PlantingHistory;
@@ -774,7 +774,7 @@ export interface DecisionCard {
   chosen_strategy_id: ChosenStrategyId2;
   reason: Reason4;
   priorities: Priorities | null;
-  farmer_context: FarmerContext1 | null;
+  farmer_context: FarmerContext | null;
   run: SimulationRun;
   request: RunRequest;
   strategies: Strategies1;

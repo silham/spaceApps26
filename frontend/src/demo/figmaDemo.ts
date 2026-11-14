@@ -39,7 +39,7 @@ export interface StrategyView {
   id: string
   name: string
   tone: Tone
-  cells: [RotationCellView, RotationCellView, RotationCellView]
+  cells: readonly RotationCellView[]
   waterStress: MetricView
   soilCover: MetricView
 }
