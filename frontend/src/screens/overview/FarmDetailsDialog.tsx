@@ -51,6 +51,7 @@ export function FarmDetailsDialog({
       value_kind: 'farmer_input',
       available_crop_ids: limitCrops ? [...available] : null,
       equipment: (ctx.equipment ?? []).filter((e) => e.trim() !== ''),
+      ...(ctx.current_crop_id ? {} : { current_plant_date: null, last_harvest_date: null }),
     }
     api.saveFarmerContext(siteId, body).then(
       (saved) => {
@@ -90,6 +91,49 @@ export function FarmDetailsDialog({
           Harvest history
           <input type="text" value={ctx.harvest_history ?? ''} onChange={(e) => set('harvest_history', text(e.target.value))} />
         </label>
+        <fieldset>
+          <legend>On the field now</legend>
+          <span className="small muted">
+            Starts today&rsquo;s simulated soil water: a growing crop draws it down, bare soil does not. Left blank, the
+            model assumes bare soil over the last year and says so.
+          </span>
+          <label>
+            Crop
+            <select
+              value={ctx.current_crop_id ?? ''}
+              onChange={(e) => set('current_crop_id', e.target.value === '' ? null : e.target.value)}
+            >
+              <option value="">Nothing / not stated</option>
+              {crops.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          {ctx.current_crop_id && (
+            <>
+              <label>
+                Planted on
+                <input
+                  type="date"
+                  required
+                  value={ctx.current_plant_date ?? ''}
+                  onChange={(e) => set('current_plant_date', e.target.value === '' ? null : e.target.value)}
+                />
+              </label>
+              <label>
+                Harvested on (leave empty if still growing)
+                <input
+                  type="date"
+                  min={ctx.current_plant_date ?? undefined}
+                  value={ctx.last_harvest_date ?? ''}
+                  onChange={(e) => set('last_harvest_date', e.target.value === '' ? null : e.target.value)}
+                />
+              </label>
+            </>
+          )}
+        </fieldset>
         <fieldset>
           <legend>Soil</legend>
           <span className="small muted">Stored profile: {soilSummary}</span>

@@ -1,0 +1,54 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "p10": {
+      "items": {
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "title": "P10",
+      "type": "array"
+    },
+    "p50": {
+      "items": {
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "title": "P50",
+      "type": "array"
+    },
+    "p90": {
+      "items": {
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "title": "P90",
+      "type": "array"
+    }
+  },
+  "required": [
+    "p10",
+    "p50",
+    "p90"
+  ],
+  "title": "OutlookBand",
+  "type": "object"
+}

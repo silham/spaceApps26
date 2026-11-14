@@ -82,7 +82,20 @@ def _assumptions(detail: RunDetail, crops: dict[str, CropProfile]) -> list[str]:
         f"Weather: one source per run ({run.weather_source_id}); processing run "
         f"{run.input_versions.get('weather_processing_run_id')}.",
         f"Soil profile {run.input_versions.get('soil_profile_id')}; initial soil water "
-        f"{run.input_versions.get('initial_fraction_of_field_capacity')} of field capacity before warm-up.",
+        + (
+            f"{run.input_versions.get('initial_fraction_of_field_capacity')} of field capacity, simulated from the "
+            "last observed year (D16; no warm-up)."
+            if run.input_versions.get("initial_state", "").startswith("observed")
+            else f"{run.input_versions.get('initial_fraction_of_field_capacity')} of field capacity before warm-up."
+        ),
+        *(
+            [
+                f"Seasonal forecast {run.input_versions['forecast_source_id']} weights the past years drawn for the "
+                "first block (D16); it never supplies weather values."
+            ]
+            if run.input_versions.get("forecast_source_id")
+            else []
+        ),
         (
             f"Irrigation mode: fixed allocation of {run.allocation_mm:g} mm per irrigated season (never exceeded)."
             if run.mode is SimulationMode.FIXED_ALLOCATION and run.allocation_mm is not None

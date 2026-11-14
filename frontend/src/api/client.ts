@@ -23,6 +23,8 @@ import type {
   Source,
   Strategy,
   Validation,
+  PredictionHorizon,
+  WeatherOutlook,
 } from '../types/contracts'
 
 export class ApiError extends Error {
@@ -82,6 +84,9 @@ export const api = {
   sites: () => get<Site[]>('/sites'),
   createSite: (req: NewSiteRequest) => send<SiteLoadStatus>('POST', '/sites', req),
   siteLoad: (siteId: string) => get<SiteLoadStatus>(`/sites/${q(siteId)}/load`),
+  refreshSite: (siteId: string) => send<SiteLoadStatus>('POST', `/sites/${q(siteId)}/refresh`, {}),
+  horizon: (siteId: string) => get<PredictionHorizon>(`/sites/${q(siteId)}/horizon`),
+  outlook: (siteId: string) => get<WeatherOutlook>(`/sites/${q(siteId)}/outlook`),
   sources: () => get<Source[]>('/sources'),
   crops: () => get<CropProfile[]>('/crops'),
   /** Crops a user can put into a rotation (D15). */

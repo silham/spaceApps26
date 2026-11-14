@@ -1,12 +1,12 @@
 # Farm Time Machine — Development Guide
 
-Version 1.0 · 14 November 2026 · NASA Space Apps: Field Shift
+Version 1.1 · 15 November 2026 · NASA Space Apps: Field Shift (1.1: seasonal outlook and real calendar, D16)
 
 Status: agreed product direction; implementation stack, primary site, crop parameters, and final Figma design remain undecided. This guide combines the Farm Time Machine concept with the supplied Field Shift team research plan. It describes intended behavior, not completed implementation or validated results.
 
 ## 1. Mission
 
-Help farmers rehearse crop rotations against historical weather, compare water and soil-protection trade-offs, and understand uncertainty before planting. Combine NASA environmental data, local soil information, crop characteristics, and farmer priorities. Support farmer and agricultural expert judgment.
+Help farmers see what the coming seasons may bring at their field (rain, temperature and soil water), rehearse crop rotations under that outlook, compare water and soil-protection trade-offs, and understand uncertainty before planting. Combine NASA environmental data, local soil information, crop characteristics, and farmer priorities. Support farmer and agricultural expert judgment.
 
 Deliver a clear, working story: select a preset farm → inspect its history → confirm inputs → compare current practice and two alternatives → replay the same weather → inspect trade-offs and evidence → save a decision card.
 
@@ -57,7 +57,7 @@ Users must be able to inspect the complete journey from data collection through 
 
 ### Stretch / cut first
 
-Future-climate projections, arbitrary locations, second region, exact yield prediction, trained yield ML, voice support, complex 3D, radial calendars, and live custom-location APIs. No quantitative soil-carbon gain, pest reduction, or profit claim without a suitable model and evidence.
+Long-term future-climate projections (decades; seasonal forecast odds are in scope, D16), second region, exact yield prediction, trained yield ML, voice support, complex 3D, radial calendars, and live custom-location APIs. No quantitative soil-carbon gain, pest reduction, or profit claim without a suitable model and evidence.
 
 The primary site is selected after checking data, crop information, and farmer access. Western Kansas and Sri Lanka are candidates, not confirmed baselines. Flooded paddy needs ponding, percolation, drainage, and irrigation treatment; do not apply an upland bucket unchanged. Prefer an upland pilot if paddy behavior cannot be supported.
 
@@ -105,6 +105,7 @@ Default to compact summaries; open detail on demand. Use no more than one main c
 - Keep observed, estimated, farmer-entered, reanalysis, and simulated values distinguishable in storage and visuals.
 - Align data for computation without claiming resampling creates field-level detail. Preserve native footprint metadata.
 - Use one declared rainfall source per run; do not sum POWER and GPM rainfall. For source switching, document overlap checks and coverage changes.
+- A seasonal forecast (D16: ECMWF SEAS5 via Open-Meteo) is never used as weather in the water balance. It only weights which past years of the run's one weather source are drawn, from forecast anomalies taken against the forecast model's own hindcast climatology. Show its attribution and state that its skill is not evaluated at the field.
 - Use quality-filtered MODIS or finer suitable imagery for phenology. Low vegetation is not proof of bare soil; irrigation, harvest, clouds, mixed pixels, or crop type may explain it.
 - GWETROOT is a modeled/reanalysis quantity, not a direct field measurement. SMAP L4 also incorporates a land model. State these distinctions in evidence views.
 
@@ -131,6 +132,8 @@ Carry state across crops. Respect duration, harvest/termination dates, equipment
 Use identical weather and paired soil/management draws across strategies. Preserve within-block weather-variable relationships. Use season-aligned historical blocks and include consecutive-year replay to examine persistent drought. Independently sampled years do not preserve multiyear climate persistence. Record sample period, resampling method, seed, number of paths, horizon, parameter draws, and model version.
 
 Target 500 five-year paths only after simpler replay works. Check numerical stability at smaller/larger path counts. Show p10/p50/p90 as a central 80% simulation range; it is not automatically a calibrated prediction interval. Keep weather variability separate from parameter uncertainty. Historical resampling is not a future climate projection.
+
+For user farms (D16) the horizon is the real calendar: it starts the day after the last observed weather day. The first block's years are drawn with seasonal-forecast weights (tercile-conditioned resampling), blended with equal weights so that at least ten effective years remain; later blocks are drawn equally. The initial soil water is simulated from the last observed year under the crop the farmer reports on the field (bare soil otherwise, stated) instead of a declared fraction plus warm-up. Record the forecast source, weights, method and assumptions with every run.
 
 ## 8. Validation and credibility
 

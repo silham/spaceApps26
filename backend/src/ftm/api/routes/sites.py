@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from ftm.api.auth import UserDep, site_access, visible_sites
 from ftm.api.routes._geo import as_geojson
+from ftm.api.services import prediction as prediction_svc
 from ftm.api.services import rotations as rotation_svc
 from ftm.api.services import sites as site_svc
 from ftm.api.services.decisions import catalog_crops
@@ -16,12 +17,14 @@ from ftm.contracts.models import (
     FarmerContext,
     FarmUpdate,
     NewSiteRequest,
+    PredictionHorizon,
     RotationsUpdate,
     Site,
     SiteLoadStatus,
     Strategy,
+    WeatherOutlook,
 )
-from ftm.data.engine_inputs import latest_weather_source_id
+from ftm.data.engine_inputs import EngineInputsNotAvailableError, latest_weather_source_id
 from ftm.data.forcing import FLAG_SUFFIX, ForcingNotAvailableError, get_daily_forcing
 from ftm.data.vegetation import VegetationNotAvailableError, get_vi_composites
 from ftm.db.models import SiteRow, SourceRow
@@ -79,6 +82,44 @@ def get_load_status(site_id: str, session: SessionDep, user: UserDep) -> SiteLoa
         raise HTTPException(404, str(exc)) from None
 
 
+@router.post("/{site_id}/refresh", response_model=SiteLoadStatus, status_code=202)
+def refresh(site_id: str, session: SessionDep, user: UserDep) -> SiteLoadStatus:
+    """Fetch newer weather (older than 3 days) and a newer seasonal forecast (older than 7 days) in the
+    background (D16). Editing stays possible meanwhile; the outlook and runs use the newest data once stored."""
+    site_access(session, site_id, user)
+    try:
+        return site_svc.refresh_site(session, site_id)
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from None
+
+
+@router.get("/{site_id}/horizon", response_model=PredictionHorizon)
+def get_horizon(site_id: str, session: SessionDep, user: UserDep) -> PredictionHorizon:
+    """The comparison period on the real calendar: from the day after the last observed weather day (D16)."""
+    site_access(session, site_id, user)
+    _ready(session, site_id)
+    try:
+        return prediction_svc.horizon_for(session, site_id)
+    except (EngineInputsNotAvailableError, ValueError) as exc:
+        raise HTTPException(409, str(exc)) from None
+
+
+@router.get("/{site_id}/outlook", response_model=WeatherOutlook)
+def get_outlook(site_id: str, session: SessionDep, user: UserDep) -> WeatherOutlook:
+    """Forecast odds for the coming months and daily bands from forecast-weighted past years (D16)."""
+    site_access(session, site_id, user)
+    _ready(session, site_id)
+    try:
+        return prediction_svc.outlook_for(session, site_id)
+    except (EngineInputsNotAvailableError, ValueError) as exc:
+        raise HTTPException(409, str(exc)) from None
+
+
+def _ready(session: Session, site_id: str) -> None:
+    if site_svc.load_status(session, site_id).status != "done":
+        raise HTTPException(409, "Wait for the farm's data load to finish")
+
+
 @router.get("/{site_id}", response_model=Site)
 def get_site(site_id: str, session: SessionDep, user: UserDep) -> Site:
     return _to_contract(session, site_access(session, site_id, user))
@@ -101,6 +142,12 @@ def put_farmer_context(site_id: str, ctx: FarmerContext, session: SessionDep, us
     known = set(catalog_crops())
     if ctx.available_crop_ids is not None and (bad := sorted(set(ctx.available_crop_ids) - known)):
         raise HTTPException(422, f"unknown crop id(s) {bad}; known: {sorted(known)}")
+    if ctx.current_crop_id is not None and ctx.current_crop_id not in known:
+        raise HTTPException(422, f"unknown crop {ctx.current_crop_id!r} on the field now; known: {sorted(known)}")
+    if ctx.current_crop_id is not None and ctx.current_plant_date is None:
+        raise HTTPException(422, "Give the planting date of the crop on the field now")
+    if ctx.current_plant_date and ctx.last_harvest_date and ctx.last_harvest_date < ctx.current_plant_date:
+        raise HTTPException(422, "The harvest date is before the planting date")
     ctx = ctx.model_copy(update={"updated_at": datetime.now(UTC)})
     row.farmer_context = ctx.model_dump(mode="json")
     session.commit()

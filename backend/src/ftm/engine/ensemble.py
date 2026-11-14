@@ -29,7 +29,7 @@ from typing import Protocol
 import numpy as np
 import pandas as pd
 
-from ftm.contracts.models import RANGE_LABEL, SimulationMode, Strategy
+from ftm.contracts.models import RANGE_LABEL, SeasonPlan, SimulationMode, Strategy
 from ftm.engine.forcing import RAIN, TMAX, WIND, usable, usable_values
 from ftm.engine.kc import rhmin_pct
 from ftm.engine.params import CropEntry, SoilSpec
@@ -150,13 +150,29 @@ def usable_blocks(
     return BlockPool(usable_years=years, excluded=excluded, pool_range=pool_range)
 
 
-def bootstrap_paths(pool: BlockPool, *, n_paths: int, horizon_years: int, seed: int) -> list[tuple[int, ...]]:
+def bootstrap_paths(
+    pool: BlockPool,
+    *,
+    n_paths: int,
+    horizon_years: int,
+    seed: int,
+    first_block_weights: Mapping[int, float] | None = None,
+) -> list[tuple[int, ...]]:
+    """Seeded draws of whole season blocks. ``first_block_weights`` (D16) sets the odds of each pool year for
+    the first block only, from the seasonal forecast; later blocks stay equally likely. Without weights the
+    draws are exactly the unweighted ones."""
     if not pool.pool_years:
         raise ValueError("no usable season blocks in the sample pool; run blocked (see excluded blocks for reasons)")
     if n_paths < 1:
         raise ValueError("n_paths must be >= 1")
     rng = np.random.default_rng(seed)
-    draws = rng.choice(np.asarray(pool.pool_years), size=(n_paths, horizon_years), replace=True)
+    years = np.asarray(pool.pool_years)
+    draws = rng.choice(years, size=(n_paths, horizon_years), replace=True)
+    if first_block_weights is not None:
+        p = np.asarray([max(float(first_block_weights.get(int(y), 0.0)), 0.0) for y in years])
+        if p.sum() <= 0:
+            raise ValueError("forecast weights give no pool year a chance; run blocked")
+        draws[:, 0] = rng.choice(years, size=n_paths, replace=True, p=p / p.sum())
     return [tuple(int(y) for y in row) for row in draws]
 
 
@@ -220,15 +236,24 @@ def run_strategies_on_path(
     *,
     mode: SimulationMode,
     allocation_mm_per_season: float | None,
+    standing: SeasonPlan | None = None,
 ) -> tuple[dict[str, pd.DataFrame], dict[str, tuple[str, ...]]]:
-    """Run every strategy on the *same* weather frame (identical forcing, horizon and soil)."""
+    """Run every strategy on the *same* weather frame (identical forcing, horizon and soil).
+
+    ``standing`` (D16): the crop the farmer reports on the field now, still growing at the horizon start. It is
+    simulated before every strategy's own seasons (cover and water use) but is not one of them: its days get
+    season id -2, so per-season results keep the strategy's own season numbering."""
     weather = _path_weather(path_forcing)
     dates = pd.DatetimeIndex(path_forcing["strategy_date"])
     awc, depth = config.awc_mm_per_m, config.soil.data_depth_m
     first = (path_forcing["block"] == 0).to_numpy()
     traces, notes = {}, {}
     for strat in strategies:
-        sch = daily_schedule(strat, crops, config.soil, dates, weather)
+        planned = strat if standing is None else strat.model_copy(update={"seasons": [standing, *strat.seasons]})
+        sch = daily_schedule(planned, crops, config.soil, dates, weather)
+        season_ids = sch.season_id
+        if standing is not None:  # the standing crop is planted first, so it is schedule season 0
+            season_ids = np.where(season_ids == 0, -2, np.where(season_ids > 0, season_ids - 1, season_ids))
         arrays = (
             weather.rain_mm,
             weather.et0_mm,
@@ -238,7 +263,7 @@ def run_strategies_on_path(
             sch.cn,
             sch.crop_day,
             sch.irrigable,
-            sch.season_id,
+            season_ids,
         )
         state: SoilState = state_at_fraction(
             config.initial_fraction, awc_mm_per_m=awc, profile_depth_m=depth, depth_m=float(sch.zr_m[0])
@@ -264,7 +289,7 @@ def run_strategies_on_path(
         trace["crop_id"] = sch.crop_id
         trace["in_crop"] = sch.crop_day
         trace["in_initial_stage"] = sch.in_initial_stage
-        trace["season_id"] = sch.season_id
+        trace["season_id"] = season_ids
         traces[strat.id] = trace
         notes[strat.id] = sch.notes
     return traces, notes
@@ -340,13 +365,20 @@ def _run_paths(
     mode: SimulationMode,
     allocation_mm_per_season: float | None,
     keep_traces: bool,
+    standing: SeasonPlan | None = None,
 ) -> list[PathOutcome]:
     anchor_md = horizon[0].strftime("%m-%d")
     outcomes = []
     for years in paths:
         pf = build_path_forcing(weather, years, anchor_md=anchor_md, base_year=horizon[0].year)
         traces, notes = run_strategies_on_path(
-            pf, strategies, crops, config, mode=mode, allocation_mm_per_season=allocation_mm_per_season
+            pf,
+            strategies,
+            crops,
+            config,
+            mode=mode,
+            allocation_mm_per_season=allocation_mm_per_season,
+            standing=standing,
         )
         by_id = {s.id: s for s in strategies}
         metrics = {sid: {**path_metrics(t), **yield_metrics(t, by_id[sid], crops)} for sid, t in traces.items()}
@@ -368,10 +400,18 @@ def run_ensemble(
     seed: int,
     pool_range: tuple[int, int] | None = None,
     keep_traces: bool = False,
+    first_block_weights: Mapping[int, float] | None = None,
+    standing: SeasonPlan | None = None,
 ) -> tuple[BlockPool, list[PathOutcome]]:
     """Seeded bootstrap of whole season blocks from the sample pool; strategies share each path's weather."""
     pool = usable_blocks(forcing, et0, horizon[0].strftime("%m-%d"), pool_range)
-    paths = bootstrap_paths(pool, n_paths=n_paths, horizon_years=horizon_blocks(horizon), seed=seed)
+    paths = bootstrap_paths(
+        pool,
+        n_paths=n_paths,
+        horizon_years=horizon_blocks(horizon),
+        seed=seed,
+        first_block_weights=first_block_weights,
+    )
     outcomes = _run_paths(
         daily_weather(forcing, et0),
         paths,
@@ -382,6 +422,7 @@ def run_ensemble(
         mode=mode,
         allocation_mm_per_season=allocation_mm_per_season,
         keep_traces=keep_traces,
+        standing=standing,
     )
     return pool, outcomes
 
@@ -399,6 +440,7 @@ def run_replay(
     years: tuple[int, ...],
     pool_range: tuple[int, int] | None = None,
     keep_traces: bool = True,
+    standing: SeasonPlan | None = None,
 ) -> tuple[BlockPool, PathOutcome]:
     """Replay one consecutive run of historical years (held-out years allowed: replay builds no range).
 
@@ -421,6 +463,7 @@ def run_replay(
         mode=mode,
         allocation_mm_per_season=allocation_mm_per_season,
         keep_traces=keep_traces,
+        standing=standing,
     )
     return pool, outcome
 

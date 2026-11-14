@@ -21,6 +21,7 @@ import pandas as pd
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from ftm.api.services.prediction import Prediction, prediction_for
 from ftm.config import get_settings
 from ftm.contracts.models import (
     FarmerContext,
@@ -31,6 +32,7 @@ from ftm.contracts.models import (
     Result,
     RunDetail,
     RunRequest,
+    SeasonPlan,
     SimulationMode,
     SimulationRun,
     Strategy,
@@ -45,6 +47,7 @@ from ftm.db.models import PairedDeltaRow, ResultRow, SimulationRunRow, SiteRow, 
 from ftm.engine.ensemble import MIN_PATHS_FOR_RANGE, MODEL_VERSION, PathOutcome, SoilRunConfig, run_replay
 from ftm.engine.et0 import compute_et0
 from ftm.engine.forcing import RAIN, usable_values
+from ftm.engine.params import CropEntry
 from ftm.engine.runner import UNSUPPORTED_CLAIMS, EngineInputError, EngineOutput, EngineRequest, run_engine
 from ftm.engine.scenarios import SCENARIO_HORIZON, Scenario
 from ftm.engine.sensitivity import shift_planting
@@ -85,6 +88,7 @@ class _Prepared:
     inputs: SiteEngineInputs
     scenario: Scenario
     farmer: FarmerContext | None
+    prediction: Prediction | None = None  # D16: user farms run on the real calendar with forecast weights
 
 
 # Loading 45 years of daily forcing and computing ET0 takes ~1 s; replays reuse it per weather processing run.
@@ -119,8 +123,12 @@ def _prepare(session: Session, site_id: str) -> _Prepared:
             f"no rotations are saved for farm {site_id!r}, so it is observe-only: choose crops and build at least "
             "one rotation first (D15); reviewed strategies exist for ks-field-2 only (D5, D13)"
         )
+    prediction: Prediction | None = None
     try:
-        inputs = load_site_engine_inputs(session, site_id)
+        if user_strategies:
+            prediction, inputs, _ = prediction_for(session, site_id, selectable_crops())
+        else:
+            inputs = load_site_engine_inputs(session, site_id)
         weather_key = inputs.forcing.attrs.get("processing_run_id") or inputs.weather_source.id
         key = (site_id, weather_key, tuple(s.id for s in user_strategies))
         with _cache_lock:
@@ -133,7 +141,9 @@ def _prepare(session: Session, site_id: str) -> _Prepared:
             scenario = build_site_scenario(inputs)
     except (EngineInputsNotAvailableError, CatalogError) as exc:
         raise SiteNotReadyError(str(exc)) from exc
-    prepared = _Prepared(inputs, scenario, _farmer_context(session, site_id))
+    except ValueError as exc:  # e.g. no usable recent weather to start today's soil water from
+        raise SiteNotReadyError(str(exc)) from exc
+    prepared = _Prepared(inputs, scenario, _farmer_context(session, site_id), prediction)
     with _cache_lock:
         _prepared_cache[key] = prepared
     return prepared
@@ -147,7 +157,17 @@ def _strategies(scenario: Scenario, req: RunRequest) -> list[Strategy]:
     return [shift_planting(s, req.planting_shift_days.get(s.id, 0)) for s in scenario.strategies]
 
 
+def _with_standing_crop(p: _Prepared, standing: SeasonPlan | None = None) -> dict[str, CropEntry]:
+    st = standing or (p.prediction.standing if p.prediction else None)
+    if st is None or st.crop_id is None or st.crop_id in p.scenario.crops:
+        return dict(p.scenario.crops)
+    from ftm.api.services.rotations import selectable_crops
+
+    return {**p.scenario.crops, st.crop_id: selectable_crops()[st.crop_id]}
+
+
 def _engine_request(p: _Prepared, req: RunRequest, *, keep_traces: bool) -> EngineRequest:
+    pr = p.prediction
     available = set(p.farmer.available_crop_ids) if p.farmer and p.farmer.available_crop_ids is not None else None
     return EngineRequest(
         site=p.inputs.site,
@@ -156,12 +176,23 @@ def _engine_request(p: _Prepared, req: RunRequest, *, keep_traces: bool) -> Engi
         forcing=p.inputs.forcing,
         weather_source=p.inputs.weather_source,
         soil=p.inputs.soil,
-        crops=p.scenario.crops,
+        crops=_with_standing_crop(p),
         strategies=_strategies(p.scenario, req),
-        horizon=SCENARIO_HORIZON,
+        horizon=pr.horizon if pr else SCENARIO_HORIZON,
         mode=req.mode,
         allocation_mm_per_season=req.allocation_mm,
-        initial_fraction=INITIAL_FRACTION,
+        initial_fraction=pr.initial.fraction if pr else INITIAL_FRACTION,
+        warmup=pr is None,
+        initial_note=(
+            f"Initial soil water: simulated {pr.initial.storage_mm:.0f} mm on {pr.initial.as_of} "
+            f"from observed weather. {pr.initial.assumption}"
+            if pr
+            else None
+        ),
+        first_block_weights=pr.weights.as_dict() if pr and pr.weights else None,
+        forecast_source_id=pr.forecast_source_id if pr else None,
+        forecast_notes=pr.notes if pr else (),
+        standing=pr.standing if pr else None,
         n_paths=req.n_paths,
         seed=req.seed,
         pool_range=DEFAULT_POOL,
@@ -181,15 +212,27 @@ def _hash(p: _Prepared, ereq: EngineRequest, req: RunRequest) -> str:
             "strategies": [s.model_dump(mode="json") for s in ereq.strategies],
             "available_crop_ids": sorted(ereq.available_crop_ids) if ereq.available_crop_ids is not None else None,
             "initial_fraction": ereq.initial_fraction,
+            "warmup": ereq.warmup,
+            "horizon": [d.isoformat() for d in ereq.horizon],
+            "first_block_weights": (
+                {str(k): round(v, 6) for k, v in sorted(ereq.first_block_weights.items())}
+                if ereq.first_block_weights is not None
+                else None
+            ),
+            "forecast_source_id": ereq.forecast_source_id,
+            "standing": ereq.standing.model_dump(mode="json") if ereq.standing else None,
             "pool": ereq.pool_range,
             "model_version": MODEL_VERSION,
         }
     )
 
 
-def _window_rain(forcing: pd.DataFrame, years: list[int]) -> float | None:
+def _window_rain(forcing: pd.DataFrame, years: list[int], anchor_md: str = "01-01") -> float | None:
+    """Total rain over the replayed blocks: each block runs from the horizon's month-day in year Y for a year."""
     rain = pd.Series(usable_values(forcing, RAIN), index=forcing.index)
-    part = rain[rain.index.year.isin(years)]
+    start = pd.Timestamp(f"{years[0]}-{anchor_md}")
+    end = pd.Timestamp(f"{years[-1]}-{anchor_md}") + pd.DateOffset(years=1) - pd.Timedelta(days=1)
+    part = rain.loc[start:end]
     if part.empty or part.isna().any():
         return None  # missing rain is not zero rain
     return round(float(part.sum()), 1)
@@ -245,6 +288,10 @@ def deltas_from_outcomes(
     return out
 
 
+def _anchor(run: SimulationRun) -> str:
+    return _run_setup(run)[0][0].strftime("%m-%d")
+
+
 def _detail_payload(
     out: EngineOutput, req: RunRequest, strategies: list[Strategy], p: _Prepared, source_ids: list[str]
 ) -> dict[str, Any]:
@@ -257,7 +304,7 @@ def _detail_payload(
                 enabled=bool(w["enabled"]),
                 reason=None if w["reason"] is None else str(w["reason"]),
                 in_sample_pool=bool(w["in_sample_pool"]),
-                rain_mm=_window_rain(p.inputs.forcing, years) if w["enabled"] else None,
+                rain_mm=_window_rain(p.inputs.forcing, years, _anchor(out.run)) if w["enabled"] else None,
             )
         )
     detail = RunDetail(
@@ -421,6 +468,22 @@ def turning_point(series: list[ReplaySeries], dates: list[date]) -> tuple[date |
     return dates[k], f"largest difference in root-zone soil water between strategies ({spread[k]:.0f} mm)"
 
 
+def _run_setup(run: SimulationRun) -> tuple[tuple[date, date], float, bool, SeasonPlan | None]:
+    """The horizon and initial state a stored run used, so a replay matches its run (not today's prediction)."""
+    iv = run.input_versions
+    horizon = SCENARIO_HORIZON
+    if " to " in iv.get("horizon", ""):
+        a, b = iv["horizon"].split(" to ")
+        horizon = (date.fromisoformat(a.strip()), date.fromisoformat(b.strip()))
+    try:
+        initial = float(iv.get("initial_fraction_of_field_capacity", INITIAL_FRACTION))
+    except ValueError:
+        initial = INITIAL_FRACTION
+    warmup = not iv.get("initial_state", "").startswith("observed")
+    standing = SeasonPlan.model_validate_json(iv["standing_season"]) if iv.get("standing_season") else None
+    return horizon, initial, warmup, standing
+
+
 def replay(session: Session, run_id: str, years: tuple[int, ...]) -> ReplayTrace:
     with _cache_lock:
         hit = _replay_cache.get((run_id, years))
@@ -433,6 +496,7 @@ def replay(session: Session, run_id: str, years: tuple[int, ...]) -> ReplayTrace
     if not window.enabled:
         raise RunBlockedError(window.reason or "replay window unavailable")
     p = _prepare(session, detail.run.site_id)
+    horizon, initial, warmup, standing = _run_setup(detail.run)
     feasible = [s for s in detail.strategies if s.feasibility is None or s.feasibility.feasible]
     if not feasible:
         raise RunBlockedError("no feasible strategy to replay")
@@ -441,14 +505,15 @@ def replay(session: Session, run_id: str, years: tuple[int, ...]) -> ReplayTrace
             p.inputs.forcing,
             _et0(p),
             feasible,
-            p.scenario.crops,
-            SoilRunConfig(soil=p.inputs.soil, initial_fraction=INITIAL_FRACTION),
-            horizon=SCENARIO_HORIZON,
+            _with_standing_crop(p, standing),
+            SoilRunConfig(soil=p.inputs.soil, initial_fraction=initial, warmup=warmup),
+            horizon=horizon,
             mode=detail.run.mode,
             allocation_mm_per_season=detail.run.allocation_mm,
             years=years,
             pool_range=DEFAULT_POOL,
             keep_traces=True,
+            standing=standing,
         )
     except ValueError as exc:
         raise RunBlockedError(str(exc)) from exc

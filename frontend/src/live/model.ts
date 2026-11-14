@@ -12,6 +12,7 @@ import type { MetricView, PairedDeltaView, Tone } from '../demo/figmaDemo'
 import type {
   CropProfile,
   FarmerContext,
+  ForecastOdds,
   PairedDelta,
   Result,
   RunDetail,
@@ -84,6 +85,20 @@ export function changesSince(
   }
   if (farmerUpdatedAfterRun) out.push('farm details')
   return out
+}
+
+/**
+ * D16: a stored run was made on an older horizon or forecast than the outlook now shown (newer weather or a newer
+ * seasonal forecast arrived), so its results are outdated until it is rerun.
+ */
+export function predictionChanged(
+  run: RunDetail | null,
+  outlook: { horizon_start: string; horizon_end: string; forecast_source_id?: string | null } | null,
+): boolean {
+  if (!run || !outlook) return false
+  const iv = run.run.input_versions ?? {}
+  const horizon = `${outlook.horizon_start} to ${outlook.horizon_end}`
+  return iv.horizon !== horizon || (iv.forecast_source_id ?? null) !== (outlook.forecast_source_id ?? null)
 }
 
 /** Validation the API would apply; the UI disables Run with this message instead of sending it. */
@@ -181,9 +196,11 @@ export function driestWindow(run: RunDetail) {
 
 // --------------------------------------------------------------------------- user-built rotations (D15)
 
-/** Mirrors the backend SCENARIO_HORIZON: planting dates must fall inside it. */
-export const ROTATION_START = '2027-01-01'
-export const ROTATION_END = '2028-12-31'
+/** The comparison period on the real calendar (D16), from GET /sites/{id}/horizon: planting must fall inside it. */
+export interface Horizon {
+  start: string
+  end: string
+}
 export const MAX_ROTATIONS = 3 // mirrors contracts MAX_ROTATIONS
 export const MAX_SEASONS = 4 // mirrors contracts MAX_SEASONS_PER_ROTATION
 
@@ -220,7 +237,12 @@ export function harvestDate(plantDate: string, crop: CropProfile | undefined): s
 }
 
 /** The first thing the API would refuse, in words; null when the rotations can be saved. */
-export function rotationsProblem(rotations: RotationDraft[], crops: Map<string, CropProfile>): string | null {
+export function rotationsProblem(
+  rotations: RotationDraft[],
+  crops: Map<string, CropProfile>,
+  horizon: Horizon,
+): string | null {
+  const { start: first, end: last } = horizon
   if (rotations.length < 1 || rotations.length > MAX_ROTATIONS) return `Build 1 to ${MAX_ROTATIONS} rotations.`
   for (const [i, r] of rotations.entries()) {
     const where = `Rotation ${i + 1}`
@@ -232,11 +254,10 @@ export function rotationsProblem(rotations: RotationDraft[], crops: Map<string, 
       const crop = crops.get(s.crop_id)
       if (!crop) return `${at}: choose a crop.`
       if (!s.plant_date) return `${at}: choose a planting date.`
-      if (s.plant_date < ROTATION_START || s.plant_date > ROTATION_END)
-        return `${at}: planting must be between ${ROTATION_START} and ${ROTATION_END}.`
+      if (s.plant_date < first || s.plant_date > last) return `${at}: planting must be between ${first} and ${last}.`
       const end = harvestDate(s.plant_date, crop)
       if (end == null) return `${at}: ${crop.name} has no complete growth-stage lengths.`
-      if (end > ROTATION_END) return `${at}: ${crop.name} planted on ${s.plant_date} would be harvested ${end}, after the comparison ends (${ROTATION_END}).`
+      if (end > last) return `${at}: ${crop.name} planted on ${s.plant_date} would be harvested ${end}, after the comparison ends (${last}).`
       if (s.usual_yield.trim() !== '') {
         const y = Number(s.usual_yield)
         if (!(y > 0 && y <= 30)) return `${at}: usual yield must be between 0 and 30 t/ha, or left empty.`
@@ -288,3 +309,19 @@ export const seasonResults = (results: Result[], strategyId: string, metric: str
   results
     .filter((r) => r.strategy_id === strategyId && r.metric === metric && r.season_index != null)
     .sort((a, b) => (a.season_index as number) - (b.season_index as number))
+
+// --------------------------------------------------------------------------- seasonal outlook (D16)
+
+/** Below this the most likely tercile is not called a signal (equal odds are 1/3 each). Wording choice only. */
+export const CLEAR_SIGNAL = 0.45
+
+/** "Wetter than usual" style wording for the most likely tercile; "No clear signal" when odds stay near 1/3. */
+export function oddsSummary(o: Pick<ForecastOdds, 'variable' | 'below' | 'near' | 'above'>): string {
+  const words = o.variable === 'rain' ? ['drier', 'near normal', 'wetter'] : ['cooler', 'near normal', 'warmer']
+  const probs = [o.below, o.near, o.above]
+  const k = probs.indexOf(Math.max(...probs))
+  const p = probs[k] ?? 0
+  if (p < CLEAR_SIGNAL) return 'No clear signal'
+  const share = `${Math.round(p * 100)}%`
+  return k === 1 ? `${share} of members near normal` : `${share} of members ${words[k]} than usual`
+}

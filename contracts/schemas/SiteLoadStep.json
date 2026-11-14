@@ -5,7 +5,8 @@
       "enum": [
         "weather",
         "soil",
-        "vegetation"
+        "vegetation",
+        "forecast"
       ],
       "title": "Name",
       "type": "string"

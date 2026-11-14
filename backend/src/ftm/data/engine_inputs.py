@@ -23,8 +23,9 @@ from ftm.engine.forcing import from_store_frame
 from ftm.engine.params import SoilSpec, soil_spec_from_profile
 from ftm.engine.scenarios import Scenario, build_ks_field_2
 
-# Full weather record loaded by scripts/load_power.py (1981-2025); the sample pool is a subset (validation plan s1).
-RECORD = (date(1981, 1, 1), date(2025, 12, 31))
+# Weather record start loaded by scripts/load_power.py; it runs to the latest POWER day (D16). The sample pool is a
+# subset (validation plan s1).
+RECORD_START = date(1981, 1, 1)
 # Validation plan v1.2 section 1: ET0-based ranges draw from 1984-2019; 2020-2025 are held out.
 DEFAULT_POOL = (1984, 2019)
 # M3 integrates AWC over 0-1 m (soil adapters' DEFAULT_DEPTH_M).
@@ -119,8 +120,10 @@ def load_site_engine_inputs(session: Session, site_id: str, weather_source_id: s
         )
     site, source = site_contract(site_row), source_contract(src_row)
     profile = SoilProfile.model_validate(soil_row.params)
-    start = source.coverage_start or RECORD[0]
-    end = source.coverage_end or RECORD[1]
+    if source.coverage_end is None:
+        raise EngineInputsNotAvailableError(f"weather source {source.id!r} has no coverage end recorded")
+    start = source.coverage_start or RECORD_START
+    end = source.coverage_end
     try:
         forcing = from_store_frame(get_daily_forcing(site.id, start, end, source.id, session=session))
     except ForcingNotAvailableError as exc:

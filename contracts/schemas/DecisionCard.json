@@ -225,6 +225,44 @@
           "default": null,
           "title": "Market Use"
         },
+        "current_crop_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Current Crop Id"
+        },
+        "current_plant_date": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Current Plant Date"
+        },
+        "last_harvest_date": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Harvest Date"
+        },
         "updated_at": {
           "anyOf": [
             {
@@ -1213,6 +1251,7 @@
         "farmer_input",
         "literature",
         "simulated",
+        "forecast",
         "demo"
       ],
       "title": "ValueKind",

@@ -49,15 +49,7 @@ export function Sidebar({ view, onNavigate, user }: { view: View; onNavigate: (v
         ))}
       </nav>
       <div className="spacer" />
-      <div className="sidebar__challenge">
-        <span className="tile">
-          <Icon src={trophy} size={16} />
-        </span>
-        <div>
-          <strong>NASA Space Apps 2026</strong>
-          <span>Challenge submission</span>
-        </div>
-      </div>
+
       <div className="sidebar__divider" />
       <button
         type="button"

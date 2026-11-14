@@ -1,0 +1,293 @@
+{
+  "$defs": {
+    "ForecastOdds": {
+      "additionalProperties": false,
+      "description": "Seasonal-forecast odds for one window: the share of ensemble members below / near / above normal.",
+      "properties": {
+        "window": {
+          "description": "e.g. 'Nov–Jan'",
+          "title": "Window",
+          "type": "string"
+        },
+        "months": {
+          "description": "First day of each month in the window",
+          "items": {
+            "format": "date",
+            "type": "string"
+          },
+          "title": "Months",
+          "type": "array"
+        },
+        "variable": {
+          "enum": [
+            "rain",
+            "temperature"
+          ],
+          "title": "Variable",
+          "type": "string"
+        },
+        "below": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Below",
+          "type": "number"
+        },
+        "near": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Near",
+          "type": "number"
+        },
+        "above": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Above",
+          "type": "number"
+        },
+        "member_count": {
+          "title": "Member Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "window",
+        "months",
+        "variable",
+        "below",
+        "near",
+        "above",
+        "member_count"
+      ],
+      "title": "ForecastOdds",
+      "type": "object"
+    },
+    "OutlookBand": {
+      "additionalProperties": false,
+      "properties": {
+        "p10": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "P10",
+          "type": "array"
+        },
+        "p50": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "P50",
+          "type": "array"
+        },
+        "p90": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "P90",
+          "type": "array"
+        }
+      },
+      "required": [
+        "p10",
+        "p50",
+        "p90"
+      ],
+      "title": "OutlookBand",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "The coming months at a farm: forecast odds plus daily bands from forecast-weighted past years.",
+  "properties": {
+    "site_id": {
+      "title": "Site Id",
+      "type": "string"
+    },
+    "observed_end": {
+      "format": "date",
+      "title": "Observed End",
+      "type": "string"
+    },
+    "horizon_start": {
+      "format": "date",
+      "title": "Horizon Start",
+      "type": "string"
+    },
+    "horizon_end": {
+      "format": "date",
+      "title": "Horizon End",
+      "type": "string"
+    },
+    "forecast_source_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "None: no forecast available; every past year equally likely",
+      "title": "Forecast Source Id"
+    },
+    "forecast_retrieved_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Forecast Retrieved At"
+    },
+    "odds": {
+      "items": {
+        "$ref": "#/$defs/ForecastOdds"
+      },
+      "title": "Odds",
+      "type": "array"
+    },
+    "effective_sample_size": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Of the weighted past years; small values mean few years carry the outlook",
+      "title": "Effective Sample Size"
+    },
+    "dates": {
+      "items": {
+        "format": "date",
+        "type": "string"
+      },
+      "title": "Dates",
+      "type": "array"
+    },
+    "rain_mm": {
+      "$ref": "#/$defs/OutlookBand"
+    },
+    "rain_cumulative_mm": {
+      "$ref": "#/$defs/OutlookBand",
+      "description": "Rain from the horizon start, totalled per path"
+    },
+    "tmin_c": {
+      "$ref": "#/$defs/OutlookBand"
+    },
+    "tmax_c": {
+      "$ref": "#/$defs/OutlookBand"
+    },
+    "storage_mm": {
+      "$ref": "#/$defs/OutlookBand",
+      "description": "Simulated soil water (whole profile) under the field-now crop"
+    },
+    "soil_water_now_mm": {
+      "description": "Simulated, not measured",
+      "title": "Soil Water Now Mm",
+      "type": "number"
+    },
+    "soil_water_capacity_mm": {
+      "title": "Soil Water Capacity Mm",
+      "type": "number"
+    },
+    "initial_assumption": {
+      "title": "Initial Assumption",
+      "type": "string"
+    },
+    "n_paths": {
+      "title": "N Paths",
+      "type": "integer"
+    },
+    "range_label": {
+      "default": "central 80% simulation range (p10–p90)",
+      "title": "Range Label",
+      "type": "string"
+    },
+    "assumptions": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Assumptions",
+      "type": "array"
+    },
+    "source_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Source Ids",
+      "type": "array"
+    },
+    "attribution": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Attribution"
+    },
+    "limitations": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Limitations",
+      "type": "array"
+    },
+    "is_demo": {
+      "default": false,
+      "title": "Is Demo",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "site_id",
+    "observed_end",
+    "horizon_start",
+    "horizon_end",
+    "forecast_source_id",
+    "odds",
+    "dates",
+    "rain_mm",
+    "rain_cumulative_mm",
+    "tmin_c",
+    "tmax_c",
+    "storage_mm",
+    "soil_water_now_mm",
+    "soil_water_capacity_mm",
+    "initial_assumption",
+    "n_paths",
+    "source_ids"
+  ],
+  "title": "WeatherOutlook",
+  "type": "object"
+}

@@ -60,7 +60,15 @@ export type Variables = string[];
  * Keeps observed, estimated, farmer, reanalysis, literature and simulated values distinguishable.
  */
 export type ValueKind =
-  "observed" | "reanalysis" | "modeled" | "estimated" | "farmer_input" | "literature" | "simulated" | "demo";
+  | "observed"
+  | "reanalysis"
+  | "modeled"
+  | "estimated"
+  | "farmer_input"
+  | "literature"
+  | "simulated"
+  | "forecast"
+  | "demo";
 export type SpatialResolution = string | null;
 export type TemporalResolution = string | null;
 export type CoverageStart = string | null;
@@ -374,6 +382,9 @@ export type Equipment = string[];
  */
 export type AvailableCropIds = string[] | null;
 export type MarketUse = string | null;
+export type CurrentCropId = string | null;
+export type CurrentPlantDate = string | null;
+export type LastHarvestDate = string | null;
 export type UpdatedAt = string | null;
 export type SiteId7 = string;
 export type Start = string;
@@ -431,7 +442,7 @@ export type Longitude1 = number;
 export type BoundaryGeojson1 = {
   [k: string]: unknown;
 } | null;
-export type Name7 = "weather" | "soil" | "vegetation";
+export type Name7 = "weather" | "soil" | "vegetation" | "forecast";
 /**
  * Product being loaded, e.g. 'NASA POWER daily'
  */
@@ -447,9 +458,61 @@ export type FinishedAt = string | null;
  * False: observe only, no locally reviewed strategies (D13)
  */
 export type HasStrategies = boolean;
+export type SiteId11 = string;
+/**
+ * Last day with usable NASA POWER rain and temperature
+ */
+export type ObservedEnd = string;
+export type Start1 = string;
+export type End1 = string;
+export type WeatherSourceId2 = string;
+/**
+ * e.g. 'Nov–Jan'
+ */
+export type Window = string;
+/**
+ * First day of each month in the window
+ */
+export type Months = string[];
+export type Variable1 = "rain" | "temperature";
+export type Below = number;
+export type Near = number;
+export type Above = number;
+export type MemberCount = number;
+export type P102 = (number | null)[];
+export type P502 = (number | null)[];
+export type P902 = (number | null)[];
+export type SiteId12 = string;
+export type ObservedEnd1 = string;
+export type HorizonStart = string;
+export type HorizonEnd = string;
+/**
+ * None: no forecast available; every past year equally likely
+ */
+export type ForecastSourceId = string | null;
+export type ForecastRetrievedAt = string | null;
+export type Odds = ForecastOdds[];
+/**
+ * Of the weighted past years; small values mean few years carry the outlook
+ */
+export type EffectiveSampleSize = number | null;
+export type Dates2 = string[];
+/**
+ * Simulated, not measured
+ */
+export type SoilWaterNowMm = number;
+export type SoilWaterCapacityMm = number;
+export type InitialAssumption = string;
+export type NPaths2 = number;
+export type RangeLabel2 = string;
+export type Assumptions1 = string[];
+export type SourceIds8 = string[];
+export type Attribution1 = string | null;
+export type Limitations5 = string[];
+export type IsDemo13 = boolean;
 
 /**
- * Schema version 1.5.0. Generated - do not edit.
+ * Schema version 1.6.0. Generated - do not edit.
  */
 export interface FarmTimeMachineContracts {
   User?: User;
@@ -487,6 +550,10 @@ export interface FarmTimeMachineContracts {
   NewSiteRequest?: NewSiteRequest;
   SiteLoadStep?: SiteLoadStep;
   SiteLoadStatus?: SiteLoadStatus;
+  PredictionHorizon?: PredictionHorizon;
+  ForecastOdds?: ForecastOdds;
+  OutlookBand?: OutlookBand;
+  WeatherOutlook?: WeatherOutlook;
 }
 export interface User {
   id: Id;
@@ -864,6 +931,9 @@ export interface FarmerContext {
   equipment?: Equipment;
   available_crop_ids?: AvailableCropIds;
   market_use?: MarketUse;
+  current_crop_id?: CurrentCropId;
+  current_plant_date?: CurrentPlantDate;
+  last_harvest_date?: LastHarvestDate;
   updated_at?: UpdatedAt;
 }
 /**
@@ -951,4 +1021,76 @@ export interface SiteLoadStatus {
   started_at?: StartedAt;
   finished_at?: FinishedAt;
   has_strategies: HasStrategies;
+}
+/**
+ * The comparison horizon on the real calendar: it starts the day after the last observed weather day.
+ */
+export interface PredictionHorizon {
+  site_id: SiteId11;
+  observed_end: ObservedEnd;
+  start: Start1;
+  end: End1;
+  weather_source_id: WeatherSourceId2;
+}
+/**
+ * Seasonal-forecast odds for one window: the share of ensemble members below / near / above normal.
+ */
+export interface ForecastOdds {
+  window: Window;
+  months: Months;
+  variable: Variable1;
+  below: Below;
+  near: Near;
+  above: Above;
+  member_count: MemberCount;
+}
+export interface OutlookBand {
+  p10: P102;
+  p50: P502;
+  p90: P902;
+}
+/**
+ * The coming months at a farm: forecast odds plus daily bands from forecast-weighted past years.
+ */
+export interface WeatherOutlook {
+  site_id: SiteId12;
+  observed_end: ObservedEnd1;
+  horizon_start: HorizonStart;
+  horizon_end: HorizonEnd;
+  forecast_source_id: ForecastSourceId;
+  forecast_retrieved_at?: ForecastRetrievedAt;
+  odds: Odds;
+  effective_sample_size?: EffectiveSampleSize;
+  dates: Dates2;
+  rain_mm: OutlookBand;
+  rain_cumulative_mm: OutlookBand1;
+  tmin_c: OutlookBand;
+  tmax_c: OutlookBand;
+  storage_mm: OutlookBand2;
+  soil_water_now_mm: SoilWaterNowMm;
+  soil_water_capacity_mm: SoilWaterCapacityMm;
+  initial_assumption: InitialAssumption;
+  n_paths: NPaths2;
+  range_label?: RangeLabel2;
+  assumptions?: Assumptions1;
+  source_ids: SourceIds8;
+  attribution?: Attribution1;
+  limitations?: Limitations5;
+  is_demo?: IsDemo13;
+}
+/**
+ * Rain from the horizon start, totalled per path
+ */
+export interface OutlookBand1 {
+  p10: P102;
+  p50: P502;
+  p90: P902;
+}
+/**
+ * Simulated soil water (whole profile) under the field-now crop
+ */
+export interface OutlookBand2 {
+  p10: P102;
+  p50: P502;
+  p90: P902;
 }

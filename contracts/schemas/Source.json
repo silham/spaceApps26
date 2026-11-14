@@ -10,6 +10,7 @@
         "farmer_input",
         "literature",
         "simulated",
+        "forecast",
         "demo"
       ],
       "title": "ValueKind",
