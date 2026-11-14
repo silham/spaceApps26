@@ -1,0 +1,1371 @@
+{
+  "$defs": {
+    "CropProfile": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "kc_ini": {
+          "$ref": "#/$defs/ParamValue"
+        },
+        "kc_mid": {
+          "$ref": "#/$defs/ParamValue"
+        },
+        "kc_end": {
+          "$ref": "#/$defs/ParamValue"
+        },
+        "stage_lengths_days": {
+          "additionalProperties": {
+            "$ref": "#/$defs/ParamValue"
+          },
+          "propertyNames": {
+            "enum": [
+              "ini",
+              "dev",
+              "mid",
+              "late"
+            ]
+          },
+          "title": "Stage Lengths Days",
+          "type": "object"
+        },
+        "max_root_depth_m": {
+          "$ref": "#/$defs/ParamValue"
+        },
+        "depletion_fraction_p": {
+          "$ref": "#/$defs/ParamValue"
+        },
+        "planting_window": {
+          "anyOf": [
+            {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "string"
+                }
+              ],
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "MM-DD start/end",
+          "title": "Planting Window"
+        },
+        "is_cover_crop": {
+          "default": false,
+          "title": "Is Cover Crop",
+          "type": "boolean"
+        },
+        "notes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Notes"
+        },
+        "is_demo": {
+          "default": false,
+          "title": "Is Demo",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "kc_ini",
+        "kc_mid",
+        "kc_end",
+        "stage_lengths_days",
+        "max_root_depth_m",
+        "depletion_fraction_p"
+      ],
+      "title": "CropProfile",
+      "type": "object"
+    },
+    "DecisionRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "site_id": {
+          "title": "Site Id",
+          "type": "string"
+        },
+        "chosen_strategy_id": {
+          "title": "Chosen Strategy Id",
+          "type": "string"
+        },
+        "run_id": {
+          "title": "Run Id",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "site_id",
+        "chosen_strategy_id",
+        "run_id",
+        "reason",
+        "created_at"
+      ],
+      "title": "DecisionRecord",
+      "type": "object"
+    },
+    "Feasibility": {
+      "additionalProperties": false,
+      "properties": {
+        "feasible": {
+          "title": "Feasible",
+          "type": "boolean"
+        },
+        "reasons": {
+          "description": "Human-readable; required when infeasible",
+          "items": {
+            "type": "string"
+          },
+          "title": "Reasons",
+          "type": "array"
+        }
+      },
+      "required": [
+        "feasible"
+      ],
+      "title": "Feasibility",
+      "type": "object"
+    },
+    "JourneyStage": {
+      "additionalProperties": false,
+      "description": "Payload for one Data Journey card (AGENTS.md rule 4).",
+      "properties": {
+        "stage": {
+          "$ref": "#/$defs/JourneyStageName"
+        },
+        "status": {
+          "$ref": "#/$defs/StageStatus"
+        },
+        "summary": {
+          "description": "One plain-language sentence",
+          "title": "Summary",
+          "type": "string"
+        },
+        "source_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Ids",
+          "type": "array"
+        },
+        "processing_run_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Processing Run Id"
+        },
+        "chart": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Data for the stage's single chart",
+          "title": "Chart"
+        },
+        "details": {
+          "additionalProperties": true,
+          "title": "Details",
+          "type": "object"
+        },
+        "is_demo": {
+          "default": false,
+          "title": "Is Demo",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "stage",
+        "status",
+        "summary"
+      ],
+      "title": "JourneyStage",
+      "type": "object"
+    },
+    "JourneyStageName": {
+      "enum": [
+        "collect",
+        "check",
+        "clean",
+        "handle_gaps",
+        "align",
+        "extract",
+        "simulate",
+        "validate",
+        "compare"
+      ],
+      "title": "JourneyStageName",
+      "type": "string"
+    },
+    "Observation": {
+      "additionalProperties": false,
+      "properties": {
+        "site_id": {
+          "title": "Site Id",
+          "type": "string"
+        },
+        "source_id": {
+          "title": "Source Id",
+          "type": "string"
+        },
+        "observed_at": {
+          "description": "Original timestamp, timezone-aware",
+          "format": "date-time",
+          "title": "Observed At",
+          "type": "string"
+        },
+        "variable": {
+          "title": "Variable",
+          "type": "string"
+        },
+        "unit": {
+          "title": "Unit",
+          "type": "string"
+        },
+        "raw_value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "As delivered by the source; never modified",
+          "title": "Raw Value"
+        },
+        "processed_value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Processed Value"
+        },
+        "quality_flag": {
+          "$ref": "#/$defs/QualityFlag",
+          "default": "ok"
+        },
+        "value_kind": {
+          "$ref": "#/$defs/ValueKind"
+        },
+        "imputation_method": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Imputation Method"
+        },
+        "processing_run_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Processing Run Id"
+        }
+      },
+      "required": [
+        "site_id",
+        "source_id",
+        "observed_at",
+        "variable",
+        "unit",
+        "raw_value",
+        "value_kind"
+      ],
+      "title": "Observation",
+      "type": "object"
+    },
+    "ParamValue": {
+      "additionalProperties": false,
+      "description": "A literature/local parameter. ``value=None`` means missing: the claim it supports is blocked.",
+      "properties": {
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Value"
+        },
+        "unit": {
+          "title": "Unit",
+          "type": "string"
+        },
+        "reference": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Citation (DOI/URL/table). Required when value is set.",
+          "title": "Reference"
+        },
+        "region_relevance": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Region Relevance"
+        },
+        "uncertainty": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Uncertainty"
+        }
+      },
+      "required": [
+        "value",
+        "unit",
+        "reference"
+      ],
+      "title": "ParamValue",
+      "type": "object"
+    },
+    "ProcessingRun": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "string"
+        },
+        "site_id": {
+          "title": "Site Id",
+          "type": "string"
+        },
+        "input_source_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Input Source Ids",
+          "type": "array"
+        },
+        "steps": {
+          "items": {
+            "$ref": "#/$defs/ProcessingStep"
+          },
+          "title": "Steps",
+          "type": "array"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "summary": {
+          "additionalProperties": true,
+          "title": "Summary",
+          "type": "object"
+        }
+      },
+      "required": [
+        "id",
+        "version",
+        "site_id",
+        "input_source_ids",
+        "steps",
+        "created_at"
+      ],
+      "title": "ProcessingRun",
+      "type": "object"
+    },
+    "ProcessingStep": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "params": {
+          "additionalProperties": true,
+          "title": "Params",
+          "type": "object"
+        },
+        "affected_count": {
+          "default": 0,
+          "title": "Affected Count",
+          "type": "integer"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "reason"
+      ],
+      "title": "ProcessingStep",
+      "type": "object"
+    },
+    "QualityFlag": {
+      "enum": [
+        "ok",
+        "flagged",
+        "rejected",
+        "missing",
+        "duplicate",
+        "estimated"
+      ],
+      "title": "QualityFlag",
+      "type": "string"
+    },
+    "Result": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "run_id": {
+          "title": "Run Id",
+          "type": "string"
+        },
+        "strategy_id": {
+          "title": "Strategy Id",
+          "type": "string"
+        },
+        "metric": {
+          "title": "Metric",
+          "type": "string"
+        },
+        "unit": {
+          "title": "Unit",
+          "type": "string"
+        },
+        "p10": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "P10"
+        },
+        "p50": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "P50"
+        },
+        "p90": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "P90"
+        },
+        "range_label": {
+          "default": "central 80% simulation range (p10–p90)",
+          "title": "Range Label",
+          "type": "string"
+        },
+        "sample_count": {
+          "title": "Sample Count",
+          "type": "integer"
+        },
+        "trace_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Parquet traces under results/",
+          "title": "Trace Path"
+        },
+        "source_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Ids",
+          "type": "array"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        },
+        "is_demo": {
+          "default": false,
+          "title": "Is Demo",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "run_id",
+        "strategy_id",
+        "metric",
+        "unit",
+        "p10",
+        "p50",
+        "p90",
+        "sample_count",
+        "source_ids"
+      ],
+      "title": "Result",
+      "type": "object"
+    },
+    "SeasonPlan": {
+      "additionalProperties": false,
+      "properties": {
+        "crop_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "None = fallow",
+          "title": "Crop Id"
+        },
+        "plant_date": {
+          "format": "date",
+          "title": "Plant Date",
+          "type": "string"
+        },
+        "end_date": {
+          "description": "Harvest or termination date",
+          "format": "date",
+          "title": "End Date",
+          "type": "string"
+        },
+        "irrigation_rule": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Irrigation Rule"
+        },
+        "residue_management": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Residue Management"
+        }
+      },
+      "required": [
+        "crop_id",
+        "plant_date",
+        "end_date"
+      ],
+      "title": "SeasonPlan",
+      "type": "object"
+    },
+    "SimulationMode": {
+      "enum": [
+        "irrigation_needed",
+        "fixed_allocation"
+      ],
+      "title": "SimulationMode",
+      "type": "string"
+    },
+    "SimulationRun": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "site_id": {
+          "title": "Site Id",
+          "type": "string"
+        },
+        "strategy_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Strategy Ids",
+          "type": "array"
+        },
+        "mode": {
+          "$ref": "#/$defs/SimulationMode"
+        },
+        "allocation_mm": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Required for fixed_allocation mode",
+          "title": "Allocation Mm"
+        },
+        "weather_source_id": {
+          "description": "Exactly one rainfall/weather source per run",
+          "title": "Weather Source Id",
+          "type": "string"
+        },
+        "resampling_method": {
+          "title": "Resampling Method",
+          "type": "string"
+        },
+        "sample_period": {
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "format": "date",
+              "type": "string"
+            }
+          ],
+          "title": "Sample Period",
+          "type": "array"
+        },
+        "n_paths": {
+          "title": "N Paths",
+          "type": "integer"
+        },
+        "horizon_years": {
+          "title": "Horizon Years",
+          "type": "integer"
+        },
+        "seed": {
+          "title": "Seed",
+          "type": "integer"
+        },
+        "model_version": {
+          "title": "Model Version",
+          "type": "string"
+        },
+        "input_versions": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Input Versions",
+          "type": "object"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "is_demo": {
+          "default": false,
+          "title": "Is Demo",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "site_id",
+        "strategy_ids",
+        "mode",
+        "weather_source_id",
+        "resampling_method",
+        "sample_period",
+        "n_paths",
+        "horizon_years",
+        "seed",
+        "model_version",
+        "created_at"
+      ],
+      "title": "SimulationRun",
+      "type": "object"
+    },
+    "Site": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "latitude": {
+          "maximum": 90,
+          "minimum": -90,
+          "title": "Latitude",
+          "type": "number"
+        },
+        "longitude": {
+          "maximum": 180,
+          "minimum": -180,
+          "title": "Longitude",
+          "type": "number"
+        },
+        "boundary_geojson": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Boundary Geojson"
+        },
+        "timezone": {
+          "description": "IANA timezone used for analysis, e.g. 'America/Chicago'",
+          "title": "Timezone",
+          "type": "string"
+        },
+        "area_ha": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Area Ha"
+        },
+        "farmer_context": {
+          "additionalProperties": true,
+          "description": "Farmer-confirmed context (irrigation allocation, equipment, ...)",
+          "title": "Farmer Context",
+          "type": "object"
+        },
+        "is_demo": {
+          "default": false,
+          "title": "Is Demo",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "latitude",
+        "longitude",
+        "timezone"
+      ],
+      "title": "Site",
+      "type": "object"
+    },
+    "SoilProfile": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "site_id": {
+          "title": "Site Id",
+          "type": "string"
+        },
+        "available_water_capacity_mm_per_m": {
+          "$ref": "#/$defs/ParamValue"
+        },
+        "root_zone_depth_m": {
+          "$ref": "#/$defs/ParamValue"
+        },
+        "texture": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Texture"
+        },
+        "source_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Ids",
+          "type": "array"
+        },
+        "is_demo": {
+          "default": false,
+          "title": "Is Demo",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "site_id",
+        "available_water_capacity_mm_per_m",
+        "root_zone_depth_m",
+        "source_ids"
+      ],
+      "title": "SoilProfile",
+      "type": "object"
+    },
+    "Source": {
+      "additionalProperties": false,
+      "description": "Source register entry. Only list sources actually used (AGENTS.md rule 2).",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "provider": {
+          "title": "Provider",
+          "type": "string"
+        },
+        "product": {
+          "title": "Product",
+          "type": "string"
+        },
+        "version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Version"
+        },
+        "variables": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Variables",
+          "type": "array"
+        },
+        "units": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "variable -> unit",
+          "title": "Units",
+          "type": "object"
+        },
+        "kind": {
+          "$ref": "#/$defs/ValueKind"
+        },
+        "spatial_resolution": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Spatial Resolution"
+        },
+        "temporal_resolution": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Temporal Resolution"
+        },
+        "coverage_start": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Coverage Start"
+        },
+        "coverage_end": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Coverage End"
+        },
+        "retrieved_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Retrieved At"
+        },
+        "url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Url"
+        },
+        "doi": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Doi"
+        },
+        "license": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "License"
+        },
+        "attribution": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Attribution"
+        },
+        "qa_notes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Qa Notes"
+        },
+        "limitations": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Limitations"
+        },
+        "footprint_geojson": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Native pixel/grid footprint",
+          "title": "Footprint Geojson"
+        },
+        "raw_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Path of the immutable raw snapshot, relative to data/",
+          "title": "Raw Path"
+        },
+        "raw_sha256": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Raw Sha256"
+        },
+        "is_demo": {
+          "default": false,
+          "title": "Is Demo",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "provider",
+        "product",
+        "variables",
+        "units",
+        "kind"
+      ],
+      "title": "Source",
+      "type": "object"
+    },
+    "StageStatus": {
+      "enum": [
+        "not_started",
+        "ok",
+        "warning",
+        "failed",
+        "unavailable"
+      ],
+      "title": "StageStatus",
+      "type": "string"
+    },
+    "Strategy": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "site_id": {
+          "title": "Site Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "is_baseline": {
+          "default": false,
+          "title": "Is Baseline",
+          "type": "boolean"
+        },
+        "seasons": {
+          "items": {
+            "$ref": "#/$defs/SeasonPlan"
+          },
+          "title": "Seasons",
+          "type": "array"
+        },
+        "feasibility": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Feasibility"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "is_demo": {
+          "default": false,
+          "title": "Is Demo",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "site_id",
+        "name",
+        "seasons"
+      ],
+      "title": "Strategy",
+      "type": "object"
+    },
+    "Validation": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "target": {
+          "title": "Target",
+          "type": "string"
+        },
+        "reference": {
+          "title": "Reference",
+          "type": "string"
+        },
+        "calibration_period": {
+          "anyOf": [
+            {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "format": "date",
+                  "type": "string"
+                }
+              ],
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Calibration Period"
+        },
+        "test_period": {
+          "anyOf": [
+            {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "format": "date",
+                  "type": "string"
+                }
+              ],
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Test Period"
+        },
+        "sample_count": {
+          "title": "Sample Count",
+          "type": "integer"
+        },
+        "metrics": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "title": "Metrics",
+          "type": "object"
+        },
+        "failures": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Failures",
+          "type": "array"
+        },
+        "independence_notes": {
+          "title": "Independence Notes",
+          "type": "string"
+        },
+        "is_demo": {
+          "default": false,
+          "title": "Is Demo",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "target",
+        "reference",
+        "sample_count",
+        "independence_notes"
+      ],
+      "title": "Validation",
+      "type": "object"
+    },
+    "ValueKind": {
+      "description": "Keeps observed, estimated, farmer, reanalysis, literature and simulated values distinguishable.",
+      "enum": [
+        "observed",
+        "reanalysis",
+        "estimated",
+        "farmer_input",
+        "literature",
+        "simulated",
+        "demo"
+      ],
+      "title": "ValueKind",
+      "type": "string"
+    }
+  },
+  "title": "FarmTimeMachineContracts",
+  "description": "Schema version 1.0.0. Generated - do not edit.",
+  "type": "object",
+  "properties": {
+    "Site": {
+      "$ref": "#/$defs/Site"
+    },
+    "Source": {
+      "$ref": "#/$defs/Source"
+    },
+    "Observation": {
+      "$ref": "#/$defs/Observation"
+    },
+    "ProcessingRun": {
+      "$ref": "#/$defs/ProcessingRun"
+    },
+    "CropProfile": {
+      "$ref": "#/$defs/CropProfile"
+    },
+    "SoilProfile": {
+      "$ref": "#/$defs/SoilProfile"
+    },
+    "Strategy": {
+      "$ref": "#/$defs/Strategy"
+    },
+    "SimulationRun": {
+      "$ref": "#/$defs/SimulationRun"
+    },
+    "Result": {
+      "$ref": "#/$defs/Result"
+    },
+    "Validation": {
+      "$ref": "#/$defs/Validation"
+    },
+    "DecisionRecord": {
+      "$ref": "#/$defs/DecisionRecord"
+    },
+    "JourneyStage": {
+      "$ref": "#/$defs/JourneyStage"
+    }
+  }
+}

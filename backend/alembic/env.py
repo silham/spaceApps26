@@ -2,10 +2,10 @@
 
 from logging.config import fileConfig
 
-from alembic import context
 from geoalchemy2 import alembic_helpers
 from sqlalchemy import engine_from_config, pool
 
+from alembic import context
 from ftm.config import get_settings
 from ftm.db.models import Base
 
@@ -16,13 +16,14 @@ if config.config_file_name is not None:
 
 target_metadata = Base.metadata
 
-# Ignore PostGIS / tiger tables that ship with the postgis image.
-_IGNORED_SCHEMAS = {"tiger", "tiger_data", "topology"}
-_IGNORED_TABLES = {"spatial_ref_sys"}
+# The postgis image ships extra tables (spatial_ref_sys, TIGER geocoder, topology). Alembic manages only
+# tables defined in ftm.db.models; everything else in the database is ignored.
+_OUR_TABLES = set(target_metadata.tables)
 
 
 def include_object(obj, name, type_, reflected, compare_to):  # type: ignore[no-untyped-def]
-    if type_ == "table" and (name in _IGNORED_TABLES or getattr(obj, "schema", None) in _IGNORED_SCHEMAS):
+    table_name = name if type_ == "table" else getattr(getattr(obj, "table", None), "name", None)
+    if table_name is not None and table_name not in _OUR_TABLES:
         return False
     return alembic_helpers.include_object(obj, name, type_, reflected, compare_to)
 

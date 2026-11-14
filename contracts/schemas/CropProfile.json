@@ -1,0 +1,166 @@
+{
+  "$defs": {
+    "ParamValue": {
+      "additionalProperties": false,
+      "description": "A literature/local parameter. ``value=None`` means missing: the claim it supports is blocked.",
+      "properties": {
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Value"
+        },
+        "unit": {
+          "title": "Unit",
+          "type": "string"
+        },
+        "reference": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Citation (DOI/URL/table). Required when value is set.",
+          "title": "Reference"
+        },
+        "region_relevance": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Region Relevance"
+        },
+        "uncertainty": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Uncertainty"
+        }
+      },
+      "required": [
+        "value",
+        "unit",
+        "reference"
+      ],
+      "title": "ParamValue",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "kc_ini": {
+      "$ref": "#/$defs/ParamValue"
+    },
+    "kc_mid": {
+      "$ref": "#/$defs/ParamValue"
+    },
+    "kc_end": {
+      "$ref": "#/$defs/ParamValue"
+    },
+    "stage_lengths_days": {
+      "additionalProperties": {
+        "$ref": "#/$defs/ParamValue"
+      },
+      "propertyNames": {
+        "enum": [
+          "ini",
+          "dev",
+          "mid",
+          "late"
+        ]
+      },
+      "title": "Stage Lengths Days",
+      "type": "object"
+    },
+    "max_root_depth_m": {
+      "$ref": "#/$defs/ParamValue"
+    },
+    "depletion_fraction_p": {
+      "$ref": "#/$defs/ParamValue"
+    },
+    "planting_window": {
+      "anyOf": [
+        {
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "MM-DD start/end",
+      "title": "Planting Window"
+    },
+    "is_cover_crop": {
+      "default": false,
+      "title": "Is Cover Crop",
+      "type": "boolean"
+    },
+    "notes": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Notes"
+    },
+    "is_demo": {
+      "default": false,
+      "title": "Is Demo",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "id",
+    "name",
+    "kc_ini",
+    "kc_mid",
+    "kc_end",
+    "stage_lengths_days",
+    "max_root_depth_m",
+    "depletion_fraction_p"
+  ],
+  "title": "CropProfile",
+  "type": "object"
+}

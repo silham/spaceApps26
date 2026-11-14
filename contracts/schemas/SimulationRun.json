@@ -1,0 +1,120 @@
+{
+  "$defs": {
+    "SimulationMode": {
+      "enum": [
+        "irrigation_needed",
+        "fixed_allocation"
+      ],
+      "title": "SimulationMode",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "site_id": {
+      "title": "Site Id",
+      "type": "string"
+    },
+    "strategy_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Strategy Ids",
+      "type": "array"
+    },
+    "mode": {
+      "$ref": "#/$defs/SimulationMode"
+    },
+    "allocation_mm": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Required for fixed_allocation mode",
+      "title": "Allocation Mm"
+    },
+    "weather_source_id": {
+      "description": "Exactly one rainfall/weather source per run",
+      "title": "Weather Source Id",
+      "type": "string"
+    },
+    "resampling_method": {
+      "title": "Resampling Method",
+      "type": "string"
+    },
+    "sample_period": {
+      "maxItems": 2,
+      "minItems": 2,
+      "prefixItems": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "format": "date",
+          "type": "string"
+        }
+      ],
+      "title": "Sample Period",
+      "type": "array"
+    },
+    "n_paths": {
+      "title": "N Paths",
+      "type": "integer"
+    },
+    "horizon_years": {
+      "title": "Horizon Years",
+      "type": "integer"
+    },
+    "seed": {
+      "title": "Seed",
+      "type": "integer"
+    },
+    "model_version": {
+      "title": "Model Version",
+      "type": "string"
+    },
+    "input_versions": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Input Versions",
+      "type": "object"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "is_demo": {
+      "default": false,
+      "title": "Is Demo",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "id",
+    "site_id",
+    "strategy_ids",
+    "mode",
+    "weather_source_id",
+    "resampling_method",
+    "sample_period",
+    "n_paths",
+    "horizon_years",
+    "seed",
+    "model_version",
+    "created_at"
+  ],
+  "title": "SimulationRun",
+  "type": "object"
+}

@@ -1,0 +1,95 @@
+{
+  "$defs": {
+    "JourneyStageName": {
+      "enum": [
+        "collect",
+        "check",
+        "clean",
+        "handle_gaps",
+        "align",
+        "extract",
+        "simulate",
+        "validate",
+        "compare"
+      ],
+      "title": "JourneyStageName",
+      "type": "string"
+    },
+    "StageStatus": {
+      "enum": [
+        "not_started",
+        "ok",
+        "warning",
+        "failed",
+        "unavailable"
+      ],
+      "title": "StageStatus",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Payload for one Data Journey card (AGENTS.md rule 4).",
+  "properties": {
+    "stage": {
+      "$ref": "#/$defs/JourneyStageName"
+    },
+    "status": {
+      "$ref": "#/$defs/StageStatus"
+    },
+    "summary": {
+      "description": "One plain-language sentence",
+      "title": "Summary",
+      "type": "string"
+    },
+    "source_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Source Ids",
+      "type": "array"
+    },
+    "processing_run_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Processing Run Id"
+    },
+    "chart": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Data for the stage's single chart",
+      "title": "Chart"
+    },
+    "details": {
+      "additionalProperties": true,
+      "title": "Details",
+      "type": "object"
+    },
+    "is_demo": {
+      "default": false,
+      "title": "Is Demo",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "stage",
+    "status",
+    "summary"
+  ],
+  "title": "JourneyStage",
+  "type": "object"
+}

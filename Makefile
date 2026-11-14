@@ -37,11 +37,11 @@ test:
 	$(FRONTEND) run typecheck
 
 lint:
-	$(BACKEND) ruff check . && cd backend && uv run ruff format --check .
+	$(BACKEND) ruff check . && uv run ruff format --check .
 	$(FRONTEND) run lint
 
 format:
-	$(BACKEND) ruff check --fix . && cd backend && uv run ruff format .
+	$(BACKEND) ruff check --fix . && uv run ruff format .
 
 backup:        ## pg_dump + static files tarball for the offline demo
 	mkdir -p backups
