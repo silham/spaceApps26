@@ -18,4 +18,4 @@ Replace or confirm them with M5 and local contacts.
   and a **Kansas-local season length** in `engine_extras.local_calendar`. The source is USDA NASS Kansas planting and
   harvest dates, split in the FAO-56 Table 11 Idaho proportions 160:75:75:25. `season_days` and `reference` are
   **null until the NASS dates are entered**, so the crop is infeasible until then. A length without a reference is
-  rejected.
+  rejected. Fill it with `uv run python scripts/derive_wheat_season.py --write` (needs `NASS_API_KEY`).

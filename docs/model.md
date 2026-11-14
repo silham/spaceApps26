@@ -250,6 +250,7 @@ M5 owns the analyses in `ftm.validation.sensitivity` and `ftm.validation.coverag
 - Its stage lengths come from `engine_extras.local_calendar`: a cited season length split 160:75:75:25 (the FAO-56 Idaho row's proportions), with the rounding put into the last stage.
 - A season length without a reference is rejected.
 - While the length is null, every strategy using this wheat is infeasible: "missing cited parameters (stage_lengths_days.*)".
+- `scripts/derive_wheat_season.py --write` fills it from USDA NASS Crop Progress through M3's adapter. It takes the median of statewide 50 % planted to 50 % harvested over seasons harvested 1984–2019; held-out years are never read. It needs `NASS_API_KEY`.
 
 **Site run:** `scripts/run_engine_site.py --site-id ks-field-2 --weather-source <id>`. It reads the site, weather source and soil profile from the DB, and the POWER grid elevation (858 m) from the raw snapshot. It stops if anything is missing.
 
