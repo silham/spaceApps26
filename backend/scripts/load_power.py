@@ -29,8 +29,12 @@ PARAMETERS = (*nasa_power.DEFAULT_PARAMETERS, "T2MDEW")
 
 
 def _multipolygon(path: Path) -> dict[str, Any]:
-    """The site boundary column is MULTIPOLYGON: wrap a single Polygon, unwrap a Feature."""
+    """The site boundary column is MULTIPOLYGON: wrap a single Polygon, unwrap a Feature or a one-feature collection."""
     g = json.loads(path.read_text(encoding="utf-8"))
+    if g.get("type") == "FeatureCollection":
+        if len(g["features"]) != 1:
+            raise SystemExit(f"--boundary FeatureCollection must hold exactly one feature, got {len(g['features'])}")
+        g = g["features"][0]
     g = g.get("geometry", g)
     if g["type"] == "Polygon":
         return {"type": "MultiPolygon", "coordinates": [g["coordinates"]]}

@@ -15,57 +15,22 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from datetime import date
 from pathlib import Path
 
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ftm.config import get_settings
-from ftm.contracts.models import RANGE_LABEL, Site, SoilProfile, Source
+from ftm.contracts.models import RANGE_LABEL, Site, SoilProfile
 from ftm.contracts.models import SimulationMode as Mode
-from ftm.data.forcing import get_daily_forcing
-from ftm.db.models import SiteRow, SoilProfileRow, SourceRow
+from ftm.data import engine_inputs
+from ftm.db.models import SoilProfileRow
 from ftm.db.session import get_engine
-from ftm.engine.forcing import from_store_frame
 from ftm.engine.params import soil_spec_from_profile
 from ftm.engine.runner import EngineInputError, EngineOutput, EngineRequest, run_engine
 from ftm.engine.scenarios import SCENARIO_HORIZON, build_ks_field_2
 from ftm.engine.sensitivity import make_run_fn
 
-# Validation plan v1.2 section 1: ET0-based ranges draw from 1984-2019; 2020-2025 are held out.
-DEFAULT_POOL = (1984, 2019)
-RECORD = (date(1981, 1, 1), date(2025, 12, 31))
-
-
-def _site(row: SiteRow) -> Site:
-    return Site(
-        id=row.id,
-        name=row.name,
-        latitude=row.latitude,
-        longitude=row.longitude,
-        timezone=row.timezone,
-        area_ha=row.area_ha,
-        farmer_context=row.farmer_context or {},
-        is_demo=row.is_demo,
-    )
-
-
-def _source(row: SourceRow) -> Source:
-    fields = {k: getattr(row, k) for k in Source.model_fields if k != "footprint_geojson"}
-    return Source.model_validate(fields)
-
-
-def _elevation(source: Source) -> tuple[float, str]:
-    """POWER grid-cell elevation from the immutable raw snapshot (fallback until Site.elevation_m exists)."""
-    from ftm.data.adapters import nasa_power
-
-    if not source.raw_path:
-        raise SystemExit(f"weather source {source.id} has no raw snapshot path; elevation unknown, run stopped")
-    parsed = nasa_power.parse_daily((get_settings().data_dir / source.raw_path).read_bytes())
-    if parsed.elevation_m is None:
-        raise SystemExit("POWER reported no elevation; the engine never assumes one")
-    return float(parsed.elevation_m), f"{parsed.elevation_m:.0f} m, POWER grid-cell elevation ({source.id})"
+DEFAULT_POOL = engine_inputs.DEFAULT_POOL
 
 
 def _awc_bounds(site: Site, cli: list[float] | None) -> tuple[float | None, float | None, str]:
@@ -117,7 +82,7 @@ def _print(out: EngineOutput) -> None:
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--site-id", required=True)
-    ap.add_argument("--weather-source", required=True, help="source id printed by scripts/load_power.py")
+    ap.add_argument("--weather-source", help="source id printed by scripts/load_power.py (default: the newest)")
     ap.add_argument("--soil-profile", help="soil_profile id (default: the site's newest profile)")
     ap.add_argument("--pool", nargs=2, type=int, default=DEFAULT_POOL, metavar=("FIRST", "LAST"))
     ap.add_argument("--paths", type=int, default=200)
@@ -139,29 +104,20 @@ def main() -> None:
     sys.stdout.reconfigure(errors="replace")  # type: ignore[union-attr]  # Windows code pages (e.g. cp932)
 
     with Session(get_engine()) as s:
-        site_row = s.get(SiteRow, args.site_id)
-        if site_row is None:
-            raise SystemExit(f"site {args.site_id!r} is not in the database; run scripts/load_power.py first")
-        src_row = s.get(SourceRow, args.weather_source)
-        if src_row is None:
-            raise SystemExit(f"weather source {args.weather_source!r} is not in the database")
-        q = (
-            select(SoilProfileRow)
-            .where(SoilProfileRow.site_id == args.site_id)
-            .order_by(SoilProfileRow.created_at.desc())
-        )
-        soil_row = s.get(SoilProfileRow, args.soil_profile) if args.soil_profile else s.scalars(q).first()
-        if soil_row is None:
-            raise SystemExit(
-                f"no soil profile for {args.site_id!r}; run scripts/load_soil.py --site-id {args.site_id} "
-                "--source ssurgo (the engine never assumes a soil for a real site)"
-            )
-        site, source = _site(site_row), _source(src_row)
-        profile = SoilProfile.model_validate(soil_row.params)
-        forcing = from_store_frame(get_daily_forcing(site.id, *RECORD, source.id, session=s))
-
-    elevation, note = _elevation(source)
-    soil = soil_spec_from_profile(profile, data_depth_m=1.0)  # M3 integrates AWC over 0-1 m (DEFAULT_DEPTH_M)
+        try:
+            inputs = engine_inputs.load_site_engine_inputs(s, args.site_id, args.weather_source)
+        except engine_inputs.EngineInputsNotAvailableError as exc:
+            raise SystemExit(str(exc)) from exc
+        if args.soil_profile:
+            row = s.get(SoilProfileRow, args.soil_profile)
+            if row is None:
+                raise SystemExit(f"soil profile {args.soil_profile!r} is not in the database")
+            profile = SoilProfile.model_validate(row.params)
+            soil = soil_spec_from_profile(profile, data_depth_m=engine_inputs.SOIL_DATA_DEPTH_M)
+        else:
+            profile, soil = inputs.soil_profile, inputs.soil
+    site, source, forcing = inputs.site, inputs.weather_source, inputs.forcing
+    elevation, note = inputs.elevation_m, inputs.elevation_note
     if args.site_id != "ks-field-2":
         raise SystemExit("strategies are defined for ks-field-2 only (D5); other sites need their own scenarios")
     pool_years = list(range(args.pool[0], args.pool[1] + 1))
