@@ -68,11 +68,28 @@
       "region_relevance": "Generic",
       "uncertainty": "Soil-texture adjustment of 5-10% possible"
     },
-    "ky_season": {"value": 1.05, "unit": "-", "reference": "FAO-56 Chapter 8 Table 24 'Seasonal yield response functions from FAO Irrigation and Drainage Paper No. 33' (Doorenbos & Kassam 1979), value 1.05", "region_relevance": "Generic; applied to the whole growing period, water-limited yield only", "uncertainty": "Seasonal Ky only (stage-specific values are not in Table 24); varies with variety and climate"},
+    "ky_season": {
+      "value": 1.05,
+      "unit": "-",
+      "reference": "FAO-56 Chapter 8 Table 24 'Seasonal yield response functions from FAO Irrigation and Drainage Paper No. 33' (Doorenbos & Kassam 1979), value 1.05",
+      "region_relevance": "Generic; applied to the whole growing period, water-limited yield only",
+      "uncertainty": "Seasonal Ky only (stage-specific values are not in Table 24); varies with variety and climate"
+    },
     "planting_window": null,
     "is_cover_crop": false,
     "notes": "Same FAO-56 Table 12 Kc, root depth, p and height as winter-wheat. Stage lengths are local (D4): NASS Kansas season length split in the FAO-56 Table 11 Idaho proportions 160:75:75:25. Until a cited season length is entered, every strategy using this crop is infeasible.",
-    "is_demo": false
+    "is_demo": false,
+    "family": "Poaceae",
+    "legume": false,
+    "traits_reference": "USDA PLANTS Database (plants.usda.gov), family of Triticum aestivum; legume nitrogen fixation: Mohler & Johnson (2009) Crop Rotation on Organic Farms: A Planning Manual, SARE/NRAES-177",
+    "t_base_c": {
+      "value": 0.0,
+      "unit": "degC",
+      "reference": "FAO AquaCrop default crop file via AquaCrop-OSPy crop_params.py (Apache-2.0, github.com/aquacropos/aquacrop), 'Wheat' Tbase 0.0 degC",
+      "region_relevance": "Generic AquaCrop default (calibrated on other sites); wheat uses the generic Wheat file",
+      "uncertainty": "Not varietal; cultivars differ by a few degrees"
+    },
+    "table11_planting_months": null
   },
   "engine_extras": {
     "max_height_m": {

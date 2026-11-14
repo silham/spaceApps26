@@ -78,7 +78,20 @@
     "planting_window": null,
     "is_cover_crop": false,
     "notes": "",
-    "is_demo": false
+    "is_demo": false,
+    "family": "Malvaceae",
+    "legume": false,
+    "traits_reference": "USDA PLANTS Database (plants.usda.gov), family of Gossypium hirsutum; legume nitrogen fixation: Mohler & Johnson (2009) Crop Rotation on Organic Farms: A Planning Manual, SARE/NRAES-177",
+    "t_base_c": {
+      "value": 12.0,
+      "unit": "degC",
+      "reference": "FAO AquaCrop default crop file via AquaCrop-OSPy crop_params.py (Apache-2.0, github.com/aquacropos/aquacrop), 'Cotton' Tbase 12.0 degC",
+      "region_relevance": "Generic AquaCrop default (calibrated on other sites)",
+      "uncertainty": "Not varietal; cultivars differ by a few degrees"
+    },
+    "table11_planting_months": [
+      4
+    ]
   },
   "engine_extras": {
     "max_height_m": {

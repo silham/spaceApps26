@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { api } from '../api/client'
 import { useAsync } from '../api/useAsync'
 import { StateView } from '../components/StateView'
+import { SoilRules, SuggestionsPanel } from './SuggestionsPanel'
 import { Badge, SelectControl } from '../components/ui'
 import {
   MAX_ROTATIONS,
@@ -132,6 +133,23 @@ export function RotationPlannerScreen({
         after the latest weather on record, {horizon.observed_end}) to {horizon.end}.
       </StateView>
 
+      <SuggestionsPanel
+        siteId={siteId}
+        crops={[...cropMap.values()]}
+        onUse={(c) => {
+          const draft: RotationDraft = {
+            name: c.name.slice(0, 120),
+            seasons: c.seasons
+              .filter((x) => x.crop_id)
+              .map((x) => ({ crop_id: x.crop_id as string, plant_date: x.plant_date, irrigated: Boolean(x.irrigation_rule), usual_yield: '' })),
+          }
+          // Added as an alternative: the first rotation stays current practice; with three already, the last is replaced.
+          setRotations(rotations.length < MAX_ROTATIONS ? [...rotations, draft] : [...rotations.slice(0, -1), draft])
+          setStrategies([])
+          setSavedNote(`“${c.name}” added below as an alternative. Save and compare to run it with your other rotations.`)
+        }}
+      />
+
       <div className="rot-grid">
         {rotations.map((rotation, i) => {
           const stored = strategies[i] // cleared on any edit, so it always belongs to what is shown
@@ -256,6 +274,7 @@ export function RotationPlannerScreen({
                 </button>
               )}
 
+              {stored?.soil_health && stored.soil_health.length > 0 && <SoilRules rules={stored.soil_health} />}
               {stored?.feasibility && !stored.feasibility.feasible && (
                 <p role="note" className="alert">
                   ⚠ Not feasible: {stored.feasibility.reasons?.join('; ') || 'no reason recorded'}

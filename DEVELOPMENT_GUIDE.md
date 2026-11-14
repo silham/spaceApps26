@@ -135,6 +135,8 @@ Target 500 five-year paths only after simpler replay works. Check numerical stab
 
 For user farms (D16) the horizon is the real calendar: it starts the day after the last observed weather day. The first block's years are drawn with seasonal-forecast weights (tercile-conditioned resampling), blended with equal weights so that at least ten effective years remain; later blocks are drawn equally. The initial soil water is simulated from the last observed year under the crop the farmer reports on the field (bare soil otherwise, stated) instead of a declared fraction plus warm-up. Record the forecast source, weights, method and assumptions with every run.
 
+Suggested rotations (D16) apply the same rules: constraints (irrigation possible, crops, a farmer's relative-yield floor, planting within a month of the FAO-56 Table 11 row's month and an establishment temperature test from a cited base temperature) filter candidates; the farmer's priority order ranks the non-dominated set with stated tie tolerances; nothing is combined into a hidden score. Soil-health indicators are conditional rules (crop families alternate, a legume precedes a non-legume, family diversity) from cited crop traits, counted and explained, never converted into nitrogen or carbon numbers.
+
 ## 8. Validation and credibility
 
 1. Test units, mass balance, physical bounds, crop-calendar feasibility, shared forcing, carryover, and deterministic reproducibility.

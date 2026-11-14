@@ -95,6 +95,46 @@
       ],
       "title": "SeasonPlan",
       "type": "object"
+    },
+    "SoilRuleResult": {
+      "additionalProperties": false,
+      "description": "A soil-health rule of thumb for a rotation (D16), stated conditionally, never a numeric gain.",
+      "properties": {
+        "rule_id": {
+          "title": "Rule Id",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "met",
+            "not_met",
+            "unknown"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "explanation": {
+          "title": "Explanation",
+          "type": "string"
+        },
+        "reference": {
+          "title": "Reference",
+          "type": "string"
+        }
+      },
+      "required": [
+        "rule_id",
+        "label",
+        "status",
+        "explanation",
+        "reference"
+      ],
+      "title": "SoilRuleResult",
+      "type": "object"
     }
   },
   "additionalProperties": false,
@@ -133,6 +173,14 @@
         }
       ],
       "default": null
+    },
+    "soil_health": {
+      "description": "Computed when served (D16)",
+      "items": {
+        "$ref": "#/$defs/SoilRuleResult"
+      },
+      "title": "Soil Health",
+      "type": "array"
     },
     "is_demo": {
       "default": false,

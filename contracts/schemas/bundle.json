@@ -1,5 +1,85 @@
 {
   "$defs": {
+    "CandidateMetric": {
+      "additionalProperties": false,
+      "properties": {
+        "metric": {
+          "title": "Metric",
+          "type": "string"
+        },
+        "unit": {
+          "title": "Unit",
+          "type": "string"
+        },
+        "season_index": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Season Index"
+        },
+        "p10": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "P10"
+        },
+        "p50": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "P50"
+        },
+        "p90": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "P90"
+        },
+        "delta_p50_vs_current": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Median of the per-path difference to the farm's current practice",
+          "title": "Delta P50 Vs Current"
+        }
+      },
+      "required": [
+        "metric",
+        "unit",
+        "p10",
+        "p50",
+        "p90"
+      ],
+      "title": "CandidateMetric",
+      "type": "object"
+    },
     "CropProfile": {
       "additionalProperties": false,
       "properties": {
@@ -75,6 +155,73 @@
           "default": null,
           "description": "MM-DD start/end",
           "title": "Planting Window"
+        },
+        "family": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Botanical family, e.g. 'Poaceae'",
+          "title": "Family"
+        },
+        "legume": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Fixes nitrogen with rhizobia (a legume)",
+          "title": "Legume"
+        },
+        "traits_reference": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Citation for family and legume",
+          "title": "Traits Reference"
+        },
+        "t_base_c": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ParamValue"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Base temperature below which the crop does not develop (degC)"
+        },
+        "table11_planting_months": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Planting month(s) of the FAO-56 Table 11 row the stage lengths come from (northern hemisphere)",
+          "title": "Table11 Planting Months"
         },
         "is_cover_crop": {
           "default": false,
@@ -1557,6 +1704,233 @@
       "title": "QualityFlag",
       "type": "string"
     },
+    "RecommendationJob": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "site_id": {
+          "title": "Site Id",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "queued",
+            "running",
+            "done",
+            "failed"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "progress": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Progress",
+          "type": "number"
+        },
+        "message": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Message"
+        },
+        "request": {
+          "$ref": "#/$defs/RecommendationRequest"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "finished_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Finished At"
+        },
+        "horizon_start": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Horizon Start"
+        },
+        "horizon_end": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Horizon End"
+        },
+        "candidates_considered": {
+          "default": 0,
+          "title": "Candidates Considered",
+          "type": "integer"
+        },
+        "candidates": {
+          "items": {
+            "$ref": "#/$defs/RotationCandidate"
+          },
+          "title": "Candidates",
+          "type": "array"
+        },
+        "current_practice": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RotationCandidate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "n_paths": {
+          "default": 0,
+          "title": "N Paths",
+          "type": "integer"
+        },
+        "range_label": {
+          "default": "central 80% simulation range (p10–p90)",
+          "title": "Range Label",
+          "type": "string"
+        },
+        "source_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Ids",
+          "type": "array"
+        },
+        "assumptions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Assumptions",
+          "type": "array"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "site_id",
+        "status",
+        "progress",
+        "request",
+        "created_at"
+      ],
+      "title": "RecommendationJob",
+      "type": "object"
+    },
+    "RecommendationRequest": {
+      "additionalProperties": false,
+      "description": "Farmer priorities order the feasible options; constraints filter them (guide §4). Stored with the job.",
+      "properties": {
+        "priorities": {
+          "items": {
+            "enum": [
+              "cover",
+              "irrigation",
+              "soil_health"
+            ],
+            "type": "string"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "title": "Priorities",
+          "type": "array"
+        },
+        "irrigation_allowed": {
+          "default": true,
+          "title": "Irrigation Allowed",
+          "type": "boolean"
+        },
+        "max_irrigation_mm": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Over the whole comparison period",
+          "title": "Max Irrigation Mm"
+        },
+        "exclude_crop_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Exclude Crop Ids",
+          "type": "array"
+        },
+        "require_crop_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Require Crop Id"
+        },
+        "max_seasons": {
+          "default": 3,
+          "maximum": 3,
+          "minimum": 1,
+          "title": "Max Seasons",
+          "type": "integer"
+        },
+        "min_relative_yield_pct": {
+          "default": 60.0,
+          "description": "Every season's median relative yield must reach this (farmer floor)",
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Min Relative Yield Pct",
+          "type": "number"
+        }
+      },
+      "title": "RecommendationRequest",
+      "type": "object"
+    },
     "RegisterRequest": {
       "additionalProperties": false,
       "properties": {
@@ -2018,6 +2392,83 @@
         "source_ids"
       ],
       "title": "Result",
+      "type": "object"
+    },
+    "RotationCandidate": {
+      "additionalProperties": false,
+      "properties": {
+        "rank": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "1 = best in the farmer's priority order; None for current practice",
+          "title": "Rank"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "seasons": {
+          "items": {
+            "$ref": "#/$defs/SeasonPlan"
+          },
+          "title": "Seasons",
+          "type": "array"
+        },
+        "metrics": {
+          "items": {
+            "$ref": "#/$defs/CandidateMetric"
+          },
+          "title": "Metrics",
+          "type": "array"
+        },
+        "soil_health": {
+          "items": {
+            "$ref": "#/$defs/SoilRuleResult"
+          },
+          "title": "Soil Health",
+          "type": "array"
+        },
+        "soil_rules_met": {
+          "title": "Soil Rules Met",
+          "type": "integer"
+        },
+        "non_dominated": {
+          "title": "Non Dominated",
+          "type": "boolean"
+        },
+        "why": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Why",
+          "type": "array"
+        },
+        "trade_offs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Trade Offs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "rank",
+        "name",
+        "seasons",
+        "metrics",
+        "soil_health",
+        "soil_rules_met",
+        "non_dominated",
+        "why",
+        "trade_offs"
+      ],
+      "title": "RotationCandidate",
       "type": "object"
     },
     "RotationInput": {
@@ -2691,6 +3142,46 @@
       "title": "SoilProfile",
       "type": "object"
     },
+    "SoilRuleResult": {
+      "additionalProperties": false,
+      "description": "A soil-health rule of thumb for a rotation (D16), stated conditionally, never a numeric gain.",
+      "properties": {
+        "rule_id": {
+          "title": "Rule Id",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "met",
+            "not_met",
+            "unknown"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "explanation": {
+          "title": "Explanation",
+          "type": "string"
+        },
+        "reference": {
+          "title": "Reference",
+          "type": "string"
+        }
+      },
+      "required": [
+        "rule_id",
+        "label",
+        "status",
+        "explanation",
+        "reference"
+      ],
+      "title": "SoilRuleResult",
+      "type": "object"
+    },
     "Source": {
       "additionalProperties": false,
       "description": "Source register entry. Only list sources actually used (AGENTS.md rule 2).",
@@ -2976,6 +3467,14 @@
             }
           ],
           "default": null
+        },
+        "soil_health": {
+          "description": "Computed when served (D16)",
+          "items": {
+            "$ref": "#/$defs/SoilRuleResult"
+          },
+          "title": "Soil Health",
+          "type": "array"
         },
         "is_demo": {
           "default": false,
@@ -3469,6 +3968,21 @@
     },
     "WeatherOutlook": {
       "$ref": "#/$defs/WeatherOutlook"
+    },
+    "SoilRuleResult": {
+      "$ref": "#/$defs/SoilRuleResult"
+    },
+    "RecommendationRequest": {
+      "$ref": "#/$defs/RecommendationRequest"
+    },
+    "CandidateMetric": {
+      "$ref": "#/$defs/CandidateMetric"
+    },
+    "RotationCandidate": {
+      "$ref": "#/$defs/RotationCandidate"
+    },
+    "RecommendationJob": {
+      "$ref": "#/$defs/RecommendationJob"
     }
   }
 }

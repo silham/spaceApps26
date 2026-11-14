@@ -1,0 +1,273 @@
+{
+  "$defs": {
+    "CandidateMetric": {
+      "additionalProperties": false,
+      "properties": {
+        "metric": {
+          "title": "Metric",
+          "type": "string"
+        },
+        "unit": {
+          "title": "Unit",
+          "type": "string"
+        },
+        "season_index": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Season Index"
+        },
+        "p10": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "P10"
+        },
+        "p50": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "P50"
+        },
+        "p90": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "P90"
+        },
+        "delta_p50_vs_current": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Median of the per-path difference to the farm's current practice",
+          "title": "Delta P50 Vs Current"
+        }
+      },
+      "required": [
+        "metric",
+        "unit",
+        "p10",
+        "p50",
+        "p90"
+      ],
+      "title": "CandidateMetric",
+      "type": "object"
+    },
+    "SeasonPlan": {
+      "additionalProperties": false,
+      "properties": {
+        "crop_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "None = fallow",
+          "title": "Crop Id"
+        },
+        "plant_date": {
+          "format": "date",
+          "title": "Plant Date",
+          "type": "string"
+        },
+        "end_date": {
+          "description": "Harvest or termination date",
+          "format": "date",
+          "title": "End Date",
+          "type": "string"
+        },
+        "irrigation_rule": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Irrigation Rule"
+        },
+        "residue_management": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Residue Management"
+        },
+        "usual_yield_t_ha": {
+          "anyOf": [
+            {
+              "maximum": 30,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The farmer's own usual yield for this crop; never a prediction",
+          "title": "Usual Yield T Ha"
+        }
+      },
+      "required": [
+        "crop_id",
+        "plant_date",
+        "end_date"
+      ],
+      "title": "SeasonPlan",
+      "type": "object"
+    },
+    "SoilRuleResult": {
+      "additionalProperties": false,
+      "description": "A soil-health rule of thumb for a rotation (D16), stated conditionally, never a numeric gain.",
+      "properties": {
+        "rule_id": {
+          "title": "Rule Id",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "met",
+            "not_met",
+            "unknown"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "explanation": {
+          "title": "Explanation",
+          "type": "string"
+        },
+        "reference": {
+          "title": "Reference",
+          "type": "string"
+        }
+      },
+      "required": [
+        "rule_id",
+        "label",
+        "status",
+        "explanation",
+        "reference"
+      ],
+      "title": "SoilRuleResult",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "rank": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "1 = best in the farmer's priority order; None for current practice",
+      "title": "Rank"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "seasons": {
+      "items": {
+        "$ref": "#/$defs/SeasonPlan"
+      },
+      "title": "Seasons",
+      "type": "array"
+    },
+    "metrics": {
+      "items": {
+        "$ref": "#/$defs/CandidateMetric"
+      },
+      "title": "Metrics",
+      "type": "array"
+    },
+    "soil_health": {
+      "items": {
+        "$ref": "#/$defs/SoilRuleResult"
+      },
+      "title": "Soil Health",
+      "type": "array"
+    },
+    "soil_rules_met": {
+      "title": "Soil Rules Met",
+      "type": "integer"
+    },
+    "non_dominated": {
+      "title": "Non Dominated",
+      "type": "boolean"
+    },
+    "why": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Why",
+      "type": "array"
+    },
+    "trade_offs": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Trade Offs",
+      "type": "array"
+    }
+  },
+  "required": [
+    "rank",
+    "name",
+    "seasons",
+    "metrics",
+    "soil_health",
+    "soil_rules_met",
+    "non_dominated",
+    "why",
+    "trade_offs"
+  ],
+  "title": "RotationCandidate",
+  "type": "object"
+}

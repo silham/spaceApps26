@@ -148,7 +148,7 @@ def save_rotations(session: Session, site: SiteRow, req: RotationsUpdate) -> lis
         if old.id not in keep:
             old.superseded = True
     for s in strategies:
-        data = s.model_dump(mode="json")
+        data = s.model_dump(mode="json", exclude={"soil_health"})
         row = session.get(StrategyRow, s.id)
         if row is None:
             session.add(StrategyRow(**data))
@@ -156,7 +156,7 @@ def save_rotations(session: Session, site: SiteRow, req: RotationsUpdate) -> lis
             row.name, row.is_baseline = data["name"], data["is_baseline"]
             row.seasons, row.feasibility, row.superseded = data["seasons"], data["feasibility"], False
     session.commit()
-    return strategies
+    return with_soil_health(session, site.id, strategies)
 
 
 def active_strategies(session: Session, site_id: str) -> list[Strategy]:
@@ -166,3 +166,16 @@ def active_strategies(session: Session, site_id: str) -> list[Strategy]:
         .order_by(StrategyRow.is_baseline.desc(), StrategyRow.created_at, StrategyRow.id)
     )
     return [Strategy.model_validate(r) for r in rows]
+
+
+def with_soil_health(session: Session, site_id: str, strategies: list[Strategy]) -> list[Strategy]:
+    """D16: soil-health indicators for serving; the crop on the field now (if any) precedes each rotation."""
+    from ftm.api.services.prediction import prediction_for
+    from ftm.engine.soil_health import soil_rules
+
+    crops = selectable_crops()
+    try:
+        before = prediction_for(session, site_id, crops)[0].standing
+    except Exception:  # weather not ready: rules without the crop on the field now
+        before = None
+    return [s.model_copy(update={"soil_health": soil_rules(s, crops, before=before)}) for s in strategies]

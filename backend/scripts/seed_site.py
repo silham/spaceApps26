@@ -37,7 +37,7 @@ def main() -> None:
         for st in scen.strategies:
             feas = check_feasibility(st, scen.crops, horizon=SCENARIO_HORIZON, soil=inputs.soil)
             row = st.model_copy(update={"feasibility": feas})
-            s.merge(StrategyRow(**row.model_dump(mode="json")))
+            s.merge(StrategyRow(**row.model_dump(mode="json", exclude={"soil_health"})))
             print(f"{st.id}: {'feasible' if feas.feasible else 'NOT feasible: ' + '; '.join(feas.reasons)}")
     n_lit = len(LITERATURE_SOURCES)
     print(f"Seeded {len(scen.strategies)} strategies for {args.site_id} and {n_lit} literature sources")

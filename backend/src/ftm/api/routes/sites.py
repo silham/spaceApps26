@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from ftm.api.auth import UserDep, site_access, visible_sites
 from ftm.api.routes._geo import as_geojson
 from ftm.api.services import prediction as prediction_svc
+from ftm.api.services import recommendations as recommendation_svc
 from ftm.api.services import rotations as rotation_svc
 from ftm.api.services import sites as site_svc
 from ftm.api.services.decisions import catalog_crops
@@ -18,6 +19,8 @@ from ftm.contracts.models import (
     FarmUpdate,
     NewSiteRequest,
     PredictionHorizon,
+    RecommendationJob,
+    RecommendationRequest,
     RotationsUpdate,
     Site,
     SiteLoadStatus,
@@ -118,6 +121,31 @@ def get_outlook(site_id: str, session: SessionDep, user: UserDep) -> WeatherOutl
 def _ready(session: Session, site_id: str) -> None:
     if site_svc.load_status(session, site_id).status != "done":
         raise HTTPException(409, "Wait for the farm's data load to finish")
+
+
+@router.post("/{site_id}/recommendations", response_model=RecommendationJob, status_code=202)
+def start_recommendations(
+    site_id: str, req: RecommendationRequest, session: SessionDep, user: UserDep
+) -> RecommendationJob:
+    """Search for rotations that suit the predicted weather, ordered by the farmer's priorities (D16). Poll
+    ``GET /sites/{id}/recommendations/{job_id}``; takes about a minute."""
+    row = site_access(session, site_id, user)
+    if row.archived:
+        raise HTTPException(409, "Restore this farm before asking for suggestions")
+    _ready(session, site_id)
+    try:
+        return recommendation_svc.start(session, site_id, req)
+    except recommendation_svc.RecommendationError as exc:
+        raise HTTPException(422, str(exc)) from None
+
+
+@router.get("/{site_id}/recommendations/{job_id}", response_model=RecommendationJob)
+def get_recommendations(site_id: str, job_id: str, session: SessionDep, user: UserDep) -> RecommendationJob:
+    site_access(session, site_id, user)
+    try:
+        return recommendation_svc.get(job_id, site_id)
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from None
 
 
 @router.get("/{site_id}", response_model=Site)

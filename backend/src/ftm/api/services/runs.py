@@ -375,7 +375,7 @@ def create_run(session: Session, req: RunRequest, *, owner_user_id: str | None =
     run = out.run
     for st in p.scenario.strategies:  # results reference strategy rows; register any the seed script has not
         if session.get(StrategyRow, st.id) is None:
-            session.add(StrategyRow(**st.model_dump(mode="json")))
+            session.add(StrategyRow(**st.model_dump(mode="json", exclude={"soil_health"})))
     session.add(
         SimulationRunRow(
             id=run.id,

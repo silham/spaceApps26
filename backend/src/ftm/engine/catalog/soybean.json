@@ -78,7 +78,20 @@
     "planting_window": null,
     "is_cover_crop": false,
     "notes": "Table 11 prints the development stage as '30/35'; 35 d is used because it gives the printed 140 d total.",
-    "is_demo": false
+    "is_demo": false,
+    "family": "Fabaceae",
+    "legume": true,
+    "traits_reference": "USDA PLANTS Database (plants.usda.gov), family of Glycine max; legume nitrogen fixation: Mohler & Johnson (2009) Crop Rotation on Organic Farms: A Planning Manual, SARE/NRAES-177",
+    "t_base_c": {
+      "value": 5.0,
+      "unit": "degC",
+      "reference": "FAO AquaCrop default crop file via AquaCrop-OSPy crop_params.py (Apache-2.0, github.com/aquacropos/aquacrop), 'Soybean' Tbase 5.0 degC",
+      "region_relevance": "Generic AquaCrop default (calibrated on other sites)",
+      "uncertainty": "Not varietal; cultivars differ by a few degrees"
+    },
+    "table11_planting_months": [
+      5
+    ]
   },
   "engine_extras": {
     "max_height_m": {

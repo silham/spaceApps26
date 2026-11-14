@@ -208,3 +208,33 @@ def test_crop_on_the_field_now_runs_ahead_of_every_rotation(session: Session, fa
     assert any("crop on the field now" in lim for lim in results[0].limitations)
     replay = svc.replay(session, detail.run.id, tuple(detail.replay_windows[0].years))
     assert any(c == "maize-grain" for c in replay.series[1].crop_id[:30])  # rotation 2 starts under the maize
+
+
+def test_suggestions_job_on_a_southern_farm(session: Session, farm: SiteRow) -> None:
+    from datetime import UTC, datetime
+
+    from ftm.api.services import recommendations as rec
+    from ftm.contracts.models import RecommendationJob, RecommendationRequest
+    from ftm.engine.recommend import in_table11_months
+
+    rot.save_rotations(session, farm, _three())
+    req = RecommendationRequest(max_seasons=2, priorities=["soil_health", "cover", "irrigation"])
+    job = RecommendationJob(
+        id="rec_test", site_id=SITE, status="running", progress=0, request=req, created_at=datetime.now(UTC)
+    )
+    rec._jobs[job.id] = job
+    rec._compute(session, job.id)  # the job thread opens its own session; call the work directly
+    out = rec._jobs.pop(job.id)
+    assert out.status == "done" and out.candidates, out.message
+    crops = rot.selectable_crops()
+    for c in out.candidates:
+        assert all(in_table11_months(crops[s.crop_id], s.plant_date, True) for s in c.seasons if s.crop_id)
+        assert c.soil_health and c.why
+    assert any(a.startswith("Groundnut (peanut) is not suggested") for a in out.assumptions)
+    ranks = [c.rank for c in out.candidates]
+    assert ranks == sorted(ranks)
+    if out.current_practice is not None:  # bullets use the same per-path difference as the metric line
+        c = out.candidates[0]
+        irr = next(m for m in c.metrics if m.metric == "irrigation_mm")
+        if irr.delta_p50_vs_current and abs(irr.delta_p50_vs_current) >= 1:
+            assert any(f"{abs(irr.delta_p50_vs_current):.0f} mm" in t for t in c.trade_offs)

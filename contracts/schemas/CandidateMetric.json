@@ -1,0 +1,80 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "metric": {
+      "title": "Metric",
+      "type": "string"
+    },
+    "unit": {
+      "title": "Unit",
+      "type": "string"
+    },
+    "season_index": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Season Index"
+    },
+    "p10": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "P10"
+    },
+    "p50": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "P50"
+    },
+    "p90": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "P90"
+    },
+    "delta_p50_vs_current": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Median of the per-path difference to the farm's current practice",
+      "title": "Delta P50 Vs Current"
+    }
+  },
+  "required": [
+    "metric",
+    "unit",
+    "p10",
+    "p50",
+    "p90"
+  ],
+  "title": "CandidateMetric",
+  "type": "object"
+}

@@ -39,6 +39,7 @@ import { LivePrioritiesPanel } from './PrioritiesPanel'
 import { LiveRotation } from './LiveRotation'
 import { RunComparison } from './RunComparison'
 import { OutlookCard } from './OutlookCard'
+import { SoilRules } from '../SuggestionsPanel'
 import { TimelineCard } from './TimelineCard'
 import { HarvestTable } from './HarvestTable'
 import { TradeOffs } from './TradeOffs'
@@ -451,6 +452,23 @@ export function LiveOverview({
 
           <TradeOffs strategies={strategies} results={results} ranking={ranking} outdated={outdated} />
           <HarvestTable strategies={strategies} results={results} crops={cropMap} outdated={outdated} />
+          {storedRotations.status === 'ready' && storedRotations.data.some((s) => s.soil_health?.length) && (
+            <section className="card page-card" aria-labelledby="soil-health-h">
+              <div className="card-title card-title--small">
+                <h2 id="soil-health-h">Soil health of your rotations</h2>
+                <p>Rules of thumb from crop-rotation planning, stated as possibilities; no soil gain is calculated.</p>
+              </div>
+              <div className="soil-health-grid">
+                {storedRotations.data.map((s) => (
+                  <div key={s.id}>
+                    <strong>{s.name}</strong>
+                    <SoilRules rules={s.soil_health ?? []} />
+                  </div>
+                ))}
+              </div>
+              <p className="small muted">Source: {storedRotations.data.find((s) => s.soil_health?.length)?.soil_health?.[0]?.reference}</p>
+            </section>
+          )}
         </>
       )}
 

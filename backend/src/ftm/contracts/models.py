@@ -20,7 +20,9 @@ SCHEMA_VERSION = "1.6.0"
 # 1.4.0: additive (accounts, farm ownership, D14)
 # 1.5.0: additive (CropProfile.ky_season, SeasonPlan.usual_yield_t_ha, Result.season_index/crop_id, RotationInput
 #        and RotationsUpdate; user-built rotations and the water-limited relative-yield metric, D15)
-# 1.6.0: additive (ValueKind.FORECAST, SiteLoadStep "forecast", FarmerContext field-now inputs, PredictionHorizon,
+# 1.6.0: additive (CropProfile traits, SoilRuleResult, Strategy.soil_health, RecommendationRequest, RotationCandidate,
+#        RecommendationJob; ValueKind.FORECAST, SiteLoadStep "forecast", FarmerContext field-now inputs,
+#        PredictionHorizon,
 #        ForecastOdds, OutlookBand, WeatherOutlook; seasonal-forecast-weighted outlook on the real calendar, D16)
 
 # Wording agreed in DEVELOPMENT_GUIDE.md section 7: p10-p90 is NOT a calibrated prediction interval.
@@ -211,6 +213,17 @@ class CropProfile(Contract):
         description="FAO-33 seasonal yield response factor Ky (unit '-'); null blocks the yield claim for this crop",
     )
     planting_window: tuple[str, str] | None = Field(default=None, description="MM-DD start/end")
+    # D16 (1.6.0): rotation traits for soil-health indicators and suggestions. None = not cited, rule switched off.
+    family: str | None = Field(default=None, description="Botanical family, e.g. 'Poaceae'")
+    legume: bool | None = Field(default=None, description="Fixes nitrogen with rhizobia (a legume)")
+    traits_reference: str | None = Field(default=None, description="Citation for family and legume")
+    t_base_c: ParamValue | None = Field(
+        default=None, description="Base temperature below which the crop does not develop (degC)"
+    )
+    table11_planting_months: list[int] | None = Field(
+        default=None,
+        description="Planting month(s) of the FAO-56 Table 11 row the stage lengths come from (northern hemisphere)",
+    )
     is_cover_crop: bool = False
     notes: str | None = None
     is_demo: bool = False
@@ -242,6 +255,16 @@ class Feasibility(Contract):
     reasons: list[str] = Field(default_factory=list, description="Human-readable; required when infeasible")
 
 
+class SoilRuleResult(Contract):
+    """A soil-health rule of thumb for a rotation (D16), stated conditionally, never a numeric gain."""
+
+    rule_id: str
+    label: str
+    status: Literal["met", "not_met", "unknown"]
+    explanation: str
+    reference: str
+
+
 class Strategy(Contract):
     id: str
     site_id: str
@@ -249,6 +272,7 @@ class Strategy(Contract):
     is_baseline: bool = False
     seasons: list[SeasonPlan]
     feasibility: Feasibility | None = None
+    soil_health: list[SoilRuleResult] = Field(default_factory=list, description="Computed when served (D16)")
     is_demo: bool = False
 
 
@@ -699,6 +723,79 @@ class WeatherOutlook(Contract):
     is_demo: bool = False
 
 
+# --------------------------------------------------------------------------- suggested rotations (1.6.0, D16)
+
+Objective = Literal["cover", "irrigation", "soil_health"]
+
+
+class RecommendationRequest(Contract):
+    """Farmer priorities order the feasible options; constraints filter them (guide §4). Stored with the job."""
+
+    priorities: list[Objective] = Field(
+        default_factory=lambda: ["cover", "irrigation", "soil_health"], min_length=3, max_length=3
+    )
+    irrigation_allowed: bool = True
+    max_irrigation_mm: float | None = Field(default=None, ge=0, description="Over the whole comparison period")
+    exclude_crop_ids: list[str] = Field(default_factory=list)
+    require_crop_id: str | None = None
+    max_seasons: int = Field(default=3, ge=1, le=3)
+    min_relative_yield_pct: float = Field(
+        default=60.0, ge=0, le=100, description="Every season's median relative yield must reach this (farmer floor)"
+    )
+
+    @field_validator("priorities")
+    @classmethod
+    def _distinct(cls, v: list[str]) -> list[str]:
+        if len(set(v)) != 3:
+            raise ValueError("priorities must list cover, irrigation and soil_health once each")
+        return v
+
+
+class CandidateMetric(Contract):
+    metric: str
+    unit: str
+    season_index: int | None = None
+    p10: float | None
+    p50: float | None
+    p90: float | None
+    delta_p50_vs_current: float | None = Field(
+        default=None, description="Median of the per-path difference to the farm's current practice"
+    )
+
+
+class RotationCandidate(Contract):
+    rank: int | None = Field(description="1 = best in the farmer's priority order; None for current practice")
+    name: str
+    seasons: list[SeasonPlan]
+    metrics: list[CandidateMetric]
+    soil_health: list[SoilRuleResult]
+    soil_rules_met: int
+    non_dominated: bool
+    why: list[str]
+    trade_offs: list[str]
+
+
+class RecommendationJob(Contract):
+    id: str
+    site_id: str
+    status: Literal["queued", "running", "done", "failed"]
+    progress: float = Field(ge=0, le=1)
+    message: str | None = None
+    request: RecommendationRequest
+    created_at: datetime
+    finished_at: datetime | None = None
+    horizon_start: date | None = None
+    horizon_end: date | None = None
+    candidates_considered: int = 0
+    candidates: list[RotationCandidate] = Field(default_factory=list)
+    current_practice: RotationCandidate | None = None
+    n_paths: int = 0
+    range_label: str = RANGE_LABEL
+    source_ids: list[str] = Field(default_factory=list)
+    assumptions: list[str] = Field(default_factory=list)
+    limitations: list[str] = Field(default_factory=list)
+
+
 ALL_CONTRACTS: list[type[Contract]] = [
     User,
     ProfileUpdate,
@@ -739,4 +836,9 @@ ALL_CONTRACTS: list[type[Contract]] = [
     ForecastOdds,
     OutlookBand,
     WeatherOutlook,
+    SoilRuleResult,
+    RecommendationRequest,
+    CandidateMetric,
+    RotationCandidate,
+    RecommendationJob,
 ]
