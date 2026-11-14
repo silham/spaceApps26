@@ -41,7 +41,8 @@ def main() -> None:
 
     snap = modis_gee.fetch_cached(lat, lon, args.start, args.end)
     parsed = modis_gee.parse(snap.path.read_bytes())
-    source = modis_gee.build_source(snap, parsed)
+    footprint = modis_gee.pixel_footprint(lat, lon)  # the product's own pixel, for the map (Align card)
+    source = modis_gee.build_source(snap, parsed, footprint)
     obs, composites, qa_step = modis_gee.process(parsed.observations)
     obs, align_step = align_daily(
         obs,

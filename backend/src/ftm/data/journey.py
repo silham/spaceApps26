@@ -7,9 +7,10 @@ so the UI can show its empty state honestly instead of inventing content.
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ftm.contracts.models import JourneyStage, JourneyStageName, StageStatus
@@ -66,6 +67,9 @@ def build_journey(site_id: str, session: Session) -> list[JourneyStage]:
             stages[name] = JourneyStage.model_validate(stored[name.value])
         else:
             stages[name] = _missing(name, "No processed weather stored for this site yet (run scripts/load_site.py).")
+    if JourneyStageName.ALIGN in stages and stages[JourneyStageName.ALIGN].status != StageStatus.UNAVAILABLE:
+        al = stages[JourneyStageName.ALIGN]
+        al.chart = {"type": "footprint_map", "layers": footprint_layers(session, site, al.details, sources)}
     if modis_run and JourneyStageName.CHECK in stages:
         qa = next((s for s in modis_run.steps if s.get("name") == "modis_qa"), None)
         if qa:
@@ -96,6 +100,59 @@ def build_journey(site_id: str, session: Session) -> list[JourneyStage]:
             is_demo=is_demo,
         )
     return [stages[n] for n in ORDER]
+
+
+def footprint_layers(
+    session: Session, site: SiteRow, align_details: dict[str, Any], sources: dict[str, SourceRow]
+) -> dict[str, Any]:
+    """Map layers for the Align card: field boundary, satellite pixel(s), weather grid point.
+
+    Native footprints only; nothing is resampled, so the map shows how coarse each source really is.
+    """
+    feats: list[dict[str, Any]] = []
+    boundary = session.scalar(select(func.ST_AsGeoJSON(SiteRow.boundary)).where(SiteRow.id == site.id))
+    if boundary:
+        feats.append(
+            {
+                "type": "Feature",
+                "geometry": json.loads(boundary),
+                "properties": {
+                    "layer": "field_boundary",
+                    "label": "Field boundary (approximate)",
+                    "area_ha": site.area_ha,
+                },
+            }
+        )
+    for sid, src in sources.items():
+        if src.footprint is None:
+            continue
+        g = session.scalar(select(func.ST_AsGeoJSON(SourceRow.footprint)).where(SourceRow.id == sid))
+        feats.append(
+            {
+                "type": "Feature",
+                "geometry": json.loads(g),
+                "properties": {
+                    "layer": "source_footprint",
+                    "source_id": sid,
+                    "label": f"{src.product} pixel",
+                    "resolution": src.spatial_resolution,
+                },
+            }
+        )
+    gp = align_details.get("grid_point_lon_lat")
+    if gp:
+        feats.append(
+            {
+                "type": "Feature",
+                "geometry": {"type": "Point", "coordinates": gp},
+                "properties": {
+                    "layer": "weather_grid_point",
+                    "label": "Weather grid point (NASA POWER)",
+                    "resolution": align_details.get("native_resolution"),
+                },
+            }
+        )
+    return {"type": "FeatureCollection", "features": feats}
 
 
 def collect_stage(
