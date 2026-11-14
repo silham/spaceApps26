@@ -2,6 +2,7 @@ import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { FootprintFeature } from './payloads'
+import { OSM_ATTRIBUTION, OSM_STYLE, trackContainerSize } from './basemap'
 
 /** Legend entries by `properties.layer`. Wording follows docs/limitations.md. */
 const LAYERS: Record<string, { name: string; color: string; note: string }> = {
@@ -25,13 +26,15 @@ function boundsOf(features: FootprintFeature[]): [Pos, Pos] | null {
 }
 
 /**
- * Align card map: native footprints only, on a plain background. There is deliberately no imagery
- * basemap, so the map adds no unlisted data source and shows only what the pipeline used.
- * The weather grid point lies far outside the field, so it is off by default ("wider view").
+ * Align card map: native footprints over an OpenStreetMap basemap that is for orientation only and
+ * never used in a calculation (D13). The weather grid point lies far outside the field, so it is off
+ * by default ("wider view").
  */
 export function FootprintMap({ features }: { features: FootprintFeature[] }) {
   const el = useRef<HTMLDivElement>(null)
   const map = useRef<maplibregl.Map | null>(null)
+  // isStyleLoaded() is false whenever tiles are still fetching, so readiness is tracked from 'load'.
+  const [ready, setReady] = useState(false)
   const hasGrid = features.some((f) => f.layer === 'weather_grid_point')
   // With no outline or pixel to zoom to, the grid point is all there is, so show it rather than an empty map.
   const [wide, setWide] = useState(() => !features.some((f) => f.layer !== 'weather_grid_point'))
@@ -41,7 +44,7 @@ export function FootprintMap({ features }: { features: FootprintFeature[] }) {
     if (!el.current) return
     const m = new maplibregl.Map({
       container: el.current,
-      style: { version: 8, sources: {}, layers: [{ id: 'bg', type: 'background', paint: { 'background-color': '#eef1ef' } }] },
+      style: OSM_STYLE,
       attributionControl: false,
       interactive: true,
       center: [0, 0],
@@ -49,33 +52,33 @@ export function FootprintMap({ features }: { features: FootprintFeature[] }) {
     })
     m.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right')
     m.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-left')
+    const stopResize = trackContainerSize(m, el.current)
+    m.on('load', () => setReady(true))
     map.current = m
     return () => {
+      stopResize()
       m.remove()
       map.current = null
+      setReady(false)
     }
   }, [])
 
   useEffect(() => {
     const m = map.current
-    if (!m) return
-    const draw = () => {
-      for (const id of ['fill', 'line', 'point']) if (m.getLayer(id)) m.removeLayer(id)
-      if (m.getSource('fp')) m.removeSource('fp')
-      m.addSource('fp', {
-        type: 'geojson',
-        data: { type: 'FeatureCollection', features: shown.map((f) => ({ type: 'Feature', geometry: f.geometry, properties: { layer: f.layer } })) } as never,
-      })
-      const color = ['match', ['get', 'layer'], ...Object.entries(LAYERS).flatMap(([k, v]) => [k, v.color]), '#85938b'] as never
-      m.addLayer({ id: 'fill', type: 'fill', source: 'fp', filter: ['==', ['geometry-type'], 'Polygon'], paint: { 'fill-color': color, 'fill-opacity': 0.18 } })
-      m.addLayer({ id: 'line', type: 'line', source: 'fp', filter: ['==', ['geometry-type'], 'Polygon'], paint: { 'line-color': color, 'line-width': 2 } })
-      m.addLayer({ id: 'point', type: 'circle', source: 'fp', filter: ['==', ['geometry-type'], 'Point'], paint: { 'circle-color': color, 'circle-radius': 7, 'circle-stroke-width': 2, 'circle-stroke-color': '#fff' } })
-      const b = boundsOf(shown)
-      if (b) m.fitBounds(b, { padding: 48, maxZoom: 17, duration: 0 })
-    }
-    if (m.isStyleLoaded()) draw()
-    else m.once('load', draw)
-  }, [shown])
+    if (!m || !ready) return
+    for (const id of ['fill', 'line', 'point']) if (m.getLayer(id)) m.removeLayer(id)
+    if (m.getSource('fp')) m.removeSource('fp')
+    m.addSource('fp', {
+      type: 'geojson',
+      data: { type: 'FeatureCollection', features: shown.map((f) => ({ type: 'Feature', geometry: f.geometry, properties: { layer: f.layer } })) } as never,
+    })
+    const color = ['match', ['get', 'layer'], ...Object.entries(LAYERS).flatMap(([k, v]) => [k, v.color]), '#85938b'] as never
+    m.addLayer({ id: 'fill', type: 'fill', source: 'fp', filter: ['==', ['geometry-type'], 'Polygon'], paint: { 'fill-color': color, 'fill-opacity': 0.18 } })
+    m.addLayer({ id: 'line', type: 'line', source: 'fp', filter: ['==', ['geometry-type'], 'Polygon'], paint: { 'line-color': color, 'line-width': 2 } })
+    m.addLayer({ id: 'point', type: 'circle', source: 'fp', filter: ['==', ['geometry-type'], 'Point'], paint: { 'circle-color': color, 'circle-radius': 7, 'circle-stroke-width': 2, 'circle-stroke-color': '#fff' } })
+    const b = boundsOf(shown)
+    if (b) m.fitBounds(b, { padding: 48, maxZoom: 17, duration: 0 })
+  }, [shown, ready])
 
   const present = Object.entries(LAYERS).filter(([k]) => shown.some((f) => f.layer === k))
   return (
@@ -88,6 +91,7 @@ export function FootprintMap({ features }: { features: FootprintFeature[] }) {
           </button>
         )}
       </div>
+      <p className="small muted">Basemap {OSM_ATTRIBUTION}, for orientation only; it is not used in any calculation.</p>
       <ul className="footmap__legend small">
         {present.map(([k, v]) => (
           <li key={k}>

@@ -4,11 +4,14 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from ftm.api.auth import UserDep, card_access, run_access, site_access, visible_runs
 from ftm.api.services import decisions as svc
 from ftm.api.services import runs as run_svc
 from ftm.contracts.models import DecisionCard, DecisionCardRequest
+from ftm.db.models import DecisionRecordRow, SimulationRunRow
 from ftm.db.session import get_session
 
 router = APIRouter(prefix="/decision-cards", tags=["decisions"])
@@ -16,11 +19,13 @@ SessionDep = Annotated[Session, Depends(get_session)]
 
 
 @router.post("", response_model=DecisionCard, status_code=201)
-def create_decision_card(req: DecisionCardRequest, session: SessionDep) -> DecisionCard:
+def create_decision_card(req: DecisionCardRequest, session: SessionDep, user: UserDep) -> DecisionCard:
     """Freeze the chosen strategy, the farmer's reason and the evidence of the run it was chosen from.
 
     Refused (409) for an infeasible strategy or a strategy/site not in the run; 404 for an unknown run.
     """
+    run_access(session, req.run_id, user)
+    site_access(session, req.site_id, user)
     try:
         return svc.create_card(session, req)
     except run_svc.RunNotFoundError as exc:
@@ -30,22 +35,32 @@ def create_decision_card(req: DecisionCardRequest, session: SessionDep) -> Decis
 
 
 @router.get("", response_model=list[DecisionCard])
-def list_decision_cards(site_id: str, session: SessionDep) -> list[DecisionCard]:
-    return svc.list_cards(session, site_id)
+def list_decision_cards(site_id: str, session: SessionDep, user: UserDep) -> list[DecisionCard]:
+    site_access(session, site_id, user)
+    rows = session.scalars(
+        select(DecisionRecordRow)
+        .join(SimulationRunRow, DecisionRecordRow.run_id == SimulationRunRow.id)
+        .where(DecisionRecordRow.site_id == site_id, DecisionRecordRow.payload.is_not(None), visible_runs(user))
+        .order_by(DecisionRecordRow.created_at.desc())
+    )
+    return [svc.get_card(session, row.id)[0] for row in rows]
 
 
 @router.get("/{card_id}.json")
-def download_json(card_id: str, session: SessionDep) -> FileResponse:
+def download_json(card_id: str, session: SessionDep, user: UserDep) -> FileResponse:
+    card_access(session, card_id, user)
     return _file(session, card_id, "json")
 
 
 @router.get("/{card_id}.pdf")
-def download_pdf(card_id: str, session: SessionDep) -> FileResponse:
+def download_pdf(card_id: str, session: SessionDep, user: UserDep) -> FileResponse:
+    card_access(session, card_id, user)
     return _file(session, card_id, "pdf")
 
 
 @router.get("/{card_id}", response_model=DecisionCard)
-def get_decision_card(card_id: str, session: SessionDep) -> DecisionCard:
+def get_decision_card(card_id: str, session: SessionDep, user: UserDep) -> DecisionCard:
+    card_access(session, card_id, user)
     try:
         card, row = svc.get_card(session, card_id)
     except svc.DecisionNotFoundError as exc:

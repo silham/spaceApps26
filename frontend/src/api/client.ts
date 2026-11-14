@@ -1,4 +1,11 @@
 import type {
+  User,
+  RegisterRequest,
+  RotationsUpdate,
+  LoginRequest,
+  ProfileUpdate,
+  PasswordChange,
+  FarmUpdate,
   CropProfile,
   DecisionCard,
   DecisionCardRequest,
@@ -37,17 +44,18 @@ function detailText(detail: unknown): string | null {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`/api${path}`, init)
+  const res = await fetch(`/api${path}`, { ...init, credentials: 'same-origin' })
+  if (res.status === 401 && !path.startsWith('/auth/')) window.dispatchEvent(new Event('ftm-session-expired'))
   if (!res.ok) {
     const body = (await res.json().catch(() => ({}))) as { detail?: unknown }
     throw new ApiError(res.status, detailText(body.detail) ?? res.statusText)
   }
-  return (await res.json()) as T
+  return res.status === 204 ? undefined as T : (await res.json()) as T
 }
 
 const get = <T>(path: string) => request<T>(path)
 const send = <T>(method: 'POST' | 'PUT', path: string, body: unknown) =>
-  request<T>(path, { method, headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+  request<T>(path, { method, headers: { 'content-type': 'application/json', 'X-FTM-Request': '1' }, body: JSON.stringify(body) })
 const q = encodeURIComponent
 
 export interface Health {
@@ -62,12 +70,24 @@ export interface Health {
 export const apiUrl = (path: string) => `/api${path}`
 
 export const api = {
+  me: () => get<User>('/auth/me'),
+  register: (req: RegisterRequest) => send<User>('POST', '/auth/register', req),
+  login: (req: LoginRequest) => send<User>('POST', '/auth/login', req),
+  logout: () => send<void>('POST', '/auth/logout', {}),
+  updateProfile: (req: ProfileUpdate) => send<User>('PUT', '/auth/me', req),
+  changePassword: (req: PasswordChange) => send<void>('PUT', '/auth/password', req),
+  allSites: () => get<Site[]>('/sites?include_archived=true'),
+  updateSite: (id: string, req: FarmUpdate) => send<Site>('PUT', `/sites/${q(id)}`, req),
   health: () => get<Health>('/health'),
   sites: () => get<Site[]>('/sites'),
   createSite: (req: NewSiteRequest) => send<SiteLoadStatus>('POST', '/sites', req),
   siteLoad: (siteId: string) => get<SiteLoadStatus>(`/sites/${q(siteId)}/load`),
   sources: () => get<Source[]>('/sources'),
   crops: () => get<CropProfile[]>('/crops'),
+  /** Crops a user can put into a rotation (D15). */
+  rotationCrops: () => get<CropProfile[]>('/crops?for_rotations=true'),
+  saveRotations: (siteId: string, req: RotationsUpdate) =>
+    send<Strategy[]>('PUT', `/sites/${q(siteId)}/rotations`, req),
   validations: (siteId: string) => get<Validation[]>(`/validations?site_id=${q(siteId)}`),
   strategies: (siteId: string) => get<Strategy[]>(`/strategies?site_id=${q(siteId)}`),
   journey: (siteId: string) => get<JourneyStage[]>(`/journey/${q(siteId)}`),

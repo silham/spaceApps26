@@ -1,14 +1,15 @@
 import { expect, test } from '@playwright/test'
+import { API, registerInUi } from './auth'
 
 // Real API (network needed for NASA POWER / SoilGrids). Skipped when the API is not running.
 test('add a farm anywhere: place, outline, load, open observe-only', async ({ page, request }) => {
-  const ok = await request.get('http://localhost:8000/health').then((r) => r.ok()).catch(() => false)
+  const ok = await request.get(`${API}/health`).then((r) => r.ok()).catch(() => false)
   test.skip(!ok, 'API not running')
   test.setTimeout(600_000)
 
-  await page.goto('/')
-  await page.getByRole('navigation', { name: 'Main' }).getByRole('button', { name: 'Add a farm' }).click()
-  await expect(page.getByRole('heading', { name: 'Add a farm' })).toBeVisible()
+  // A new account has no farms, so My farms opens with the add-farm panel.
+  await registerInUi(page, 'addfarm')
+  await expect(page.getByRole('heading', { name: /Add a farm: where is your field/ })).toBeVisible()
 
   // Coordinates typed (the map click path is the same state); a farm in Mato Grosso, Brazil.
   await page.getByLabel('Latitude').fill('-12.55')

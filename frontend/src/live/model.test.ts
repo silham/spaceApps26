@@ -1,14 +1,22 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import type { PairedDelta, Result, RunDetail, Strategy } from '../types/contracts'
+import type { CropProfile, PairedDelta, Result, RunDetail, Strategy } from '../types/contracts'
 import {
   axisFor,
+  blankSeason,
   changesSince,
   draftProblem,
+  draftsFromStrategies,
   driestWindow,
+  harvestDate,
   pairedView,
   rankStrategies,
   requestFromDraft,
+  rotationsProblem,
+  rotationsRequest,
+  seasonDays,
+  seasonResults,
+  type RotationDraft,
 } from './model.ts'
 
 const strategy = (id: string, feasible = true): Strategy => ({
@@ -118,5 +126,82 @@ describe('presentation helpers', () => {
       ],
     } as unknown as RunDetail
     assert.deepEqual(driestWindow(run)?.years, [2, 3])
+  })
+})
+
+const param = (value: number | null) => ({ value, unit: 'days', reference: 'TEST' })
+const crop = (id: string, days: [number, number, number, number] | null): CropProfile =>
+  ({
+    id,
+    name: id,
+    stage_lengths_days: days
+      ? { ini: param(days[0]), dev: param(days[1]), mid: param(days[2]), late: param(days[3]) }
+      : { ini: param(null), dev: param(30), mid: param(30), late: param(30) },
+  }) as unknown as CropProfile
+const CROPS = new Map([
+  ['maize', crop('maize', [30, 40, 50, 50])], // 170 days
+  ['broken', crop('broken', null)],
+])
+const rotation = (...seasons: Partial<ReturnType<typeof blankSeason>>[]): RotationDraft => ({
+  name: 'A',
+  seasons: seasons.map((s) => ({ ...blankSeason(), crop_id: 'maize', plant_date: '2027-04-01', ...s })),
+})
+
+describe('rotation builder', () => {
+  it('computes harvest from the crop stage lengths and refuses incomplete crops', () => {
+    assert.equal(seasonDays(CROPS.get('maize')), 170)
+    assert.equal(harvestDate('2027-04-01', CROPS.get('maize')), '2027-09-18')
+    assert.equal(seasonDays(CROPS.get('broken')), null)
+    assert.equal(harvestDate('', CROPS.get('maize')), null)
+  })
+
+  it('accepts a valid rotation and builds the API request without blank yields', () => {
+    const r = rotation({ irrigated: true, usual_yield: '9' }, { plant_date: '2027-10-01', usual_yield: '' })
+    assert.equal(rotationsProblem([r], CROPS), null)
+    const req = rotationsRequest([r])
+    assert.deepEqual(req.rotations[0]?.seasons.map((s) => s.usual_yield_t_ha), [9, null])
+    assert.equal(req.rotations[0]?.seasons[0]?.irrigated, true)
+  })
+
+  it('names the first problem the API would refuse', () => {
+    assert.match(rotationsProblem([rotation({ crop_id: '' })], CROPS) ?? '', /choose a crop/)
+    assert.match(rotationsProblem([rotation({ plant_date: '2030-01-01' })], CROPS) ?? '', /between/)
+    assert.match(rotationsProblem([rotation({ plant_date: '2028-09-01' })], CROPS) ?? '', /after the comparison ends/)
+    assert.match(rotationsProblem([rotation({ crop_id: 'broken' })], CROPS) ?? '', /growth-stage/)
+    assert.match(rotationsProblem([rotation({ usual_yield: '99' })], CROPS) ?? '', /usual yield/)
+    assert.match(
+      rotationsProblem([rotation({}, { plant_date: '2027-06-01' })], CROPS) ?? '',
+      /starts before season 1 is harvested/,
+    )
+    assert.match(rotationsProblem([], CROPS) ?? '', /1 to 3/)
+    assert.match(rotationsProblem(Array(4).fill(rotation({})), CROPS) ?? '', /1 to 3/)
+  })
+
+  it('opens saved strategies as editable drafts in planting order, skipping fallow', () => {
+    const s = {
+      id: 'x',
+      name: 'Saved',
+      seasons: [
+        { crop_id: null, plant_date: '2027-12-01', end_date: '2027-12-31' },
+        { crop_id: 'maize', plant_date: '2027-10-01', end_date: '2028-03-01', irrigation_rule: 'r', usual_yield_t_ha: 8 },
+        { crop_id: 'maize', plant_date: '2027-04-01', end_date: '2027-09-18', irrigation_rule: null },
+      ],
+    } as unknown as Strategy
+    const [d] = draftsFromStrategies([s])
+    assert.deepEqual(d?.seasons.map((x) => [x.plant_date, x.irrigated, x.usual_yield]), [
+      ['2027-04-01', false, ''],
+      ['2027-10-01', true, '8'],
+    ])
+  })
+
+  it('lists per-season results in season order and ignores whole-run metrics', () => {
+    const r = (strategy_id: string, metric: string, season_index: number | null) =>
+      ({ strategy_id, metric, season_index }) as unknown as Result
+    const got = seasonResults(
+      [r('a', 'relative_yield_pct', 1), r('a', 'irrigation_mm', null), r('a', 'relative_yield_pct', 0), r('b', 'relative_yield_pct', 0)],
+      'a',
+      'relative_yield_pct',
+    )
+    assert.deepEqual(got.map((x) => x.season_index), [0, 1])
   })
 })

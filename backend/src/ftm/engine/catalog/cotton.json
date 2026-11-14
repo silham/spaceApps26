@@ -1,0 +1,93 @@
+{
+  "_status": "ILLUSTRATIVE generic FAO values, not locally calibrated. Added for user-built rotations (D15). Values transcribed from the FAO-56 online tables; midpoints are used where a table prints a range.",
+  "profile": {
+    "id": "cotton",
+    "name": "Cotton",
+    "kc_ini": {
+      "value": 0.35,
+      "unit": "-",
+      "reference": "FAO-56 (Allen et al. 1998) Table 12, Fibre crops group Kc ini 0.35 (row blank)",
+      "region_relevance": "Generic; Table 12 footnote 1: depends on wetting interval (FAO-56 Fig. 29/30, Annex 7)",
+      "uncertainty": "0.1-1.15 with wetting frequency (FAO-56 ch. 6)"
+    },
+    "kc_mid": {
+      "value": 1.175,
+      "unit": "-",
+      "reference": "FAO-56 (Allen et al. 1998) Table 12, Cotton Kc mid 1.15-1.20 (midpoint used)",
+      "region_relevance": "Sub-humid reference climate (RHmin 45%, u2 2 m/s); adjusted with FAO-56 eq. 62 at run time",
+      "uncertainty": "1.15-1.20"
+    },
+    "kc_end": {
+      "value": 0.6,
+      "unit": "-",
+      "reference": "FAO-56 (Allen et al. 1998) Table 12, Cotton Kc end 0.70-0.50 (midpoint used)",
+      "region_relevance": "Sub-humid reference climate; adjusted with FAO-56 eq. 65 when Kc end > 0.45",
+      "uncertainty": "0.50-0.70"
+    },
+    "stage_lengths_days": {
+      "ini": {
+        "value": 30,
+        "unit": "days",
+        "reference": "FAO-56 (Allen et al. 1998) Table 11, Cotton, April planting, 'Texas' row (30/50/55/45, total 180) (ini)",
+        "region_relevance": "Texas row; not site-specific",
+        "uncertainty": "Table 11 footnote: indicative only; varies with region, climate and variety"
+      },
+      "dev": {
+        "value": 50,
+        "unit": "days",
+        "reference": "FAO-56 (Allen et al. 1998) Table 11, Cotton, April planting, 'Texas' row (30/50/55/45, total 180) (dev)",
+        "region_relevance": "Texas row; not site-specific",
+        "uncertainty": "Table 11 footnote: indicative only; varies with region, climate and variety"
+      },
+      "mid": {
+        "value": 55,
+        "unit": "days",
+        "reference": "FAO-56 (Allen et al. 1998) Table 11, Cotton, April planting, 'Texas' row (30/50/55/45, total 180) (mid)",
+        "region_relevance": "Texas row; not site-specific",
+        "uncertainty": "Table 11 footnote: indicative only; varies with region, climate and variety"
+      },
+      "late": {
+        "value": 45,
+        "unit": "days",
+        "reference": "FAO-56 (Allen et al. 1998) Table 11, Cotton, April planting, 'Texas' row (30/50/55/45, total 180) (late)",
+        "region_relevance": "Texas row; not site-specific",
+        "uncertainty": "Table 11 footnote: indicative only; varies with region, climate and variety"
+      }
+    },
+    "max_root_depth_m": {
+      "value": 1.7,
+      "unit": "m",
+      "reference": "FAO-56 (Allen et al. 1998) Table 22, Cotton: Zr 1.0-1.7 m",
+      "region_relevance": "Larger value for modelling soil water stress (Table 22 footnote 1)",
+      "uncertainty": "1.0-1.7 m"
+    },
+    "depletion_fraction_p": {
+      "value": 0.65,
+      "unit": "-",
+      "reference": "FAO-56 (Allen et al. 1998) Table 22, Cotton: p 0.65",
+      "region_relevance": "Generic; p = p_table + 0.04(5 - ETc) at run time (Table 22 footnote 2)",
+      "uncertainty": "Soil-texture adjustment of 5-10% possible"
+    },
+    "ky_season": {
+      "value": 0.85,
+      "unit": "-",
+      "reference": "FAO-56 Chapter 8 Table 24 'Seasonal yield response functions from FAO Irrigation and Drainage Paper No. 33' (Doorenbos & Kassam 1979), value 0.85",
+      "region_relevance": "Generic; applied to the whole growing period, water-limited yield only",
+      "uncertainty": "Seasonal Ky only (stage-specific values are not in Table 24); varies with variety and climate"
+    },
+    "planting_window": null,
+    "is_cover_crop": false,
+    "notes": "",
+    "is_demo": false
+  },
+  "engine_extras": {
+    "max_height_m": {
+      "value": 1.35,
+      "unit": "m",
+      "reference": "FAO-56 (Allen et al. 1998) Table 12, Cotton h 1.2-1.5 m (midpoint used)",
+      "region_relevance": "Generic",
+      "uncertainty": "1.2-1.5 m"
+    },
+    "tr55_cover": "row_crops_straight_row_good"
+  }
+}

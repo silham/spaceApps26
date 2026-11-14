@@ -37,8 +37,30 @@ class TimestampMixin:
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class UserRow(TimestampMixin, Base):
+    __tablename__ = "app_user"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    username: Mapped[str] = mapped_column(String(64), unique=True)
+    display_name: Mapped[str] = mapped_column(String(100))
+    password_hash: Mapped[str] = mapped_column(Text)
+    failed_logins: Mapped[int] = mapped_column(Integer, default=0)
+    locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class UserSessionRow(Base):
+    __tablename__ = "user_session"
+
+    token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("app_user.id"), index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+
+
 class SiteRow(TimestampMixin, Base):
     __tablename__ = "site"
+
+    owner_user_id: Mapped[str | None] = mapped_column(ForeignKey("app_user.id"), index=True)
+    archived: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     name: Mapped[str] = mapped_column(String(200))
@@ -140,10 +162,14 @@ class StrategyRow(TimestampMixin, Base):
     seasons: Mapped[list[Any]] = mapped_column(default=list)
     feasibility: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     is_demo: Mapped[bool] = mapped_column(Boolean, default=False)
+    # A user-built rotation replaced by a newer save (D15). Kept, not deleted: earlier results reference it.
+    superseded: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
 
 
 class SimulationRunRow(TimestampMixin, Base):
     __tablename__ = "simulation_run"
+
+    owner_user_id: Mapped[str | None] = mapped_column(ForeignKey("app_user.id"), index=True)
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     site_id: Mapped[str] = mapped_column(ForeignKey("site.id"))
@@ -179,6 +205,8 @@ class ResultRow(TimestampMixin, Base):
     p50: Mapped[float | None] = mapped_column(Float)
     p90: Mapped[float | None] = mapped_column(Float)
     sample_count: Mapped[int] = mapped_column(Integer)
+    season_index: Mapped[int | None] = mapped_column(Integer)
+    crop_id: Mapped[str | None] = mapped_column(String(64))
     trace_path: Mapped[str | None] = mapped_column(Text)
     source_ids: Mapped[list[Any]] = mapped_column(default=list)
     limitations: Mapped[list[Any]] = mapped_column(default=list)

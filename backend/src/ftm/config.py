@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     exports_dir: Path = REPO_ROOT / "exports"  # decision cards (JSON + PDF), D1 static files
     cors_origins: list[str] = ["http://localhost:5173"]
     demo_mode: bool = True
+    session_cookie_secure: bool = False  # enable for HTTPS deployments
+    session_days: int = Field(default=7, ge=1, le=30)
     # Earth Engine Cloud project (plain EE_PROJECT, as in .env.example). Credentials never live here.
     ee_project: str | None = Field(default=None, validation_alias="EE_PROJECT")
     # USDA NASS Quick Stats API key (plain NASS_API_KEY in .env). Never logged or stored in raw files.

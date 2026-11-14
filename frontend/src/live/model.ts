@@ -10,10 +10,12 @@
  */
 import type { MetricView, PairedDeltaView, Tone } from '../demo/figmaDemo'
 import type {
+  CropProfile,
   FarmerContext,
   PairedDelta,
   Result,
   RunDetail,
+  RotationsUpdate,
   RunRequest,
   SimulationMode,
   Strategy,
@@ -176,3 +178,113 @@ export function driestWindow(run: RunDetail) {
   const ok = run.replay_windows.filter((w) => w.enabled && w.rain_mm != null)
   return ok.length ? ok.reduce((a, b) => ((b.rain_mm as number) < (a.rain_mm as number) ? b : a)) : null
 }
+
+// --------------------------------------------------------------------------- user-built rotations (D15)
+
+/** Mirrors the backend SCENARIO_HORIZON: planting dates must fall inside it. */
+export const ROTATION_START = '2027-01-01'
+export const ROTATION_END = '2028-12-31'
+export const MAX_ROTATIONS = 3 // mirrors contracts MAX_ROTATIONS
+export const MAX_SEASONS = 4 // mirrors contracts MAX_SEASONS_PER_ROTATION
+
+export interface SeasonDraft {
+  crop_id: string
+  plant_date: string
+  irrigated: boolean
+  usual_yield: string // text from the input; empty = not given
+}
+export interface RotationDraft {
+  name: string
+  seasons: SeasonDraft[]
+}
+
+export const blankSeason = (): SeasonDraft => ({ crop_id: '', plant_date: '', irrigated: false, usual_yield: '' })
+
+const DAY_MS = 86_400_000
+const parseDay = (iso: string) => Date.parse(`${iso}T00:00:00Z`)
+const isoDay = (ms: number) => new Date(ms).toISOString().slice(0, 10)
+
+/** Days from planting to maturity: the sum of the crop's FAO-56 stage lengths (null while any is missing). */
+export function seasonDays(crop: CropProfile | undefined): number | null {
+  if (!crop) return null
+  const lengths = Object.values(crop.stage_lengths_days)
+  if (lengths.length < 4 || lengths.some((l) => l.value == null)) return null
+  return lengths.reduce((sum, l) => sum + (l.value as number), 0)
+}
+
+/** Harvest date as the server computes it: planting date plus the stage lengths. */
+export function harvestDate(plantDate: string, crop: CropProfile | undefined): string | null {
+  const days = seasonDays(crop)
+  if (!plantDate || days == null || Number.isNaN(parseDay(plantDate))) return null
+  return isoDay(parseDay(plantDate) + days * DAY_MS)
+}
+
+/** The first thing the API would refuse, in words; null when the rotations can be saved. */
+export function rotationsProblem(rotations: RotationDraft[], crops: Map<string, CropProfile>): string | null {
+  if (rotations.length < 1 || rotations.length > MAX_ROTATIONS) return `Build 1 to ${MAX_ROTATIONS} rotations.`
+  for (const [i, r] of rotations.entries()) {
+    const where = `Rotation ${i + 1}`
+    if (!r.name.trim()) return `${where}: give it a name.`
+    if (r.seasons.length < 1) return `${where}: add at least one season.`
+    const dated: { plant: string; end: string; n: number }[] = []
+    for (const [j, s] of r.seasons.entries()) {
+      const at = `${where}, season ${j + 1}`
+      const crop = crops.get(s.crop_id)
+      if (!crop) return `${at}: choose a crop.`
+      if (!s.plant_date) return `${at}: choose a planting date.`
+      if (s.plant_date < ROTATION_START || s.plant_date > ROTATION_END)
+        return `${at}: planting must be between ${ROTATION_START} and ${ROTATION_END}.`
+      const end = harvestDate(s.plant_date, crop)
+      if (end == null) return `${at}: ${crop.name} has no complete growth-stage lengths.`
+      if (end > ROTATION_END) return `${at}: ${crop.name} planted on ${s.plant_date} would be harvested ${end}, after the comparison ends (${ROTATION_END}).`
+      if (s.usual_yield.trim() !== '') {
+        const y = Number(s.usual_yield)
+        if (!(y > 0 && y <= 30)) return `${at}: usual yield must be between 0 and 30 t/ha, or left empty.`
+      }
+      dated.push({ plant: s.plant_date, end, n: j + 1 })
+    }
+    dated.sort((a, b) => a.plant.localeCompare(b.plant))
+    for (let k = 1; k < dated.length; k++) {
+      const prev = dated[k - 1]!
+      const cur = dated[k]!
+      if (cur.plant <= prev.end) return `${where}: season ${cur.n} starts before season ${prev.n} is harvested (${prev.end}).`
+    }
+  }
+  return null
+}
+
+/** Saved strategies turned back into editable drafts (so the builder opens with what is already stored). */
+export function draftsFromStrategies(strategies: Strategy[]): RotationDraft[] {
+  return strategies.map((s) => ({
+    name: s.name,
+    seasons: [...s.seasons]
+      .filter((x) => x.crop_id != null)
+      .sort((a, b) => a.plant_date.localeCompare(b.plant_date))
+      .map((x) => ({
+        crop_id: x.crop_id as string,
+        plant_date: x.plant_date,
+        irrigated: x.irrigation_rule != null,
+        usual_yield: x.usual_yield_t_ha == null ? '' : String(x.usual_yield_t_ha),
+      })),
+  }))
+}
+
+export function rotationsRequest(rotations: RotationDraft[]): RotationsUpdate {
+  // The generated type is a fixed-length tuple; rotationsProblem() has already enforced 1 to 3.
+  const list = rotations.map((r) => ({
+    name: r.name.trim(),
+    seasons: r.seasons.map((s) => ({
+      crop_id: s.crop_id,
+      plant_date: s.plant_date,
+      irrigated: s.irrigated,
+      usual_yield_t_ha: s.usual_yield.trim() === '' ? null : Number(s.usual_yield),
+    })),
+  }))
+  return { rotations: list as unknown as RotationsUpdate['rotations'] }
+}
+
+/** Per-season results of one metric (relative yield, t/ha), in season order. */
+export const seasonResults = (results: Result[], strategyId: string, metric: string) =>
+  results
+    .filter((r) => r.strategy_id === strategyId && r.metric === metric && r.season_index != null)
+    .sort((a, b) => (a.season_index as number) - (b.season_index as number))

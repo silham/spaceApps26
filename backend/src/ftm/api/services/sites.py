@@ -23,7 +23,7 @@ from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
 from ftm.contracts.models import MAX_NEW_SITE_AREA_HA, NewSiteRequest, SiteLoadStatus, SiteLoadStep
-from ftm.data.engine_inputs import SCENARIO_BUILDERS
+from ftm.data.engine_inputs import SCENARIO_BUILDERS, latest_weather_source_id
 from ftm.db.models import SiteRow, StrategyRow
 from ftm.provenance import inputs_hash
 
@@ -48,15 +48,32 @@ def in_conus(lat: float, lon: float) -> bool:
     return 24.0 <= lat <= 49.5 and -125.0 <= lon <= -66.5
 
 
-def site_id_for(req: NewSiteRequest) -> str:
-    slug = re.sub(r"[^a-z0-9]+", "-", req.name.lower()).strip("-")[:32] or "farm"
-    return f"{slug}-{inputs_hash({'lat': round(req.latitude, 5), 'lon': round(req.longitude, 5)})[:8]}"
+# Ids derived from the site id (soil profile ``soil_<site>_<source>``, validation ``val_phenology_<site>_<utc>``) are
+# stored in 64-character columns; with the longest source id that leaves 32 characters for the site id.
+MAX_SITE_ID_LEN = 32
+SLUG_LEN = 14
+
+
+def site_id_for(req: NewSiteRequest, owner_user_id: str | None = None) -> str:
+    """``<name slug>-<8 hex of the coordinates>[-<8 hex of the owner>]``: at most 32 characters, stable per farm."""
+    slug = re.sub(r"[^a-z0-9]+", "-", req.name.lower()).strip("-")[:SLUG_LEN].strip("-") or "farm"
+    site_id = f"{slug}-{inputs_hash({'lat': round(req.latitude, 5), 'lon': round(req.longitude, 5)})[:8]}"
+    if owner_user_id:
+        site_id += "-" + inputs_hash({"owner": owner_user_id})[:8]
+    return site_id
 
 
 def has_strategies(session: Session, site_id: str) -> bool:
     return (
         site_id in SCENARIO_BUILDERS
-        or (session.scalar(select(func.count()).select_from(StrategyRow).where(StrategyRow.site_id == site_id)) or 0)
+        or (
+            session.scalar(
+                select(func.count())
+                .select_from(StrategyRow)
+                .where(StrategyRow.site_id == site_id, StrategyRow.superseded.is_(False))
+            )
+            or 0
+        )
         > 0
     )
 
@@ -111,16 +128,21 @@ def _steps(lat: float, lon: float) -> list[SiteLoadStep]:
     ]
 
 
-def create_site(session: Session, req: NewSiteRequest) -> SiteLoadStatus:
-    site_id = site_id_for(req)
+def create_site(session: Session, req: NewSiteRequest, *, owner_user_id: str | None = None) -> SiteLoadStatus:
+    site_id = site_id_for(req, owner_user_id)
     with _lock:
         job = _jobs.get(site_id)
     if job is not None and job.status in ("queued", "running"):
         return job
-    if session.get(SiteRow, site_id) is not None:
-        return load_status(session, site_id)
     tz = _timezone(req.latitude, req.longitude)
     boundary, area_ha = _check_boundary(session, req)
+    if session.get(SiteRow, site_id) is not None:
+        # Same farm again: only a failed (or interrupted) load is restarted ("try again"); otherwise report it.
+        current = load_status(session, site_id)
+        if current.status != "failed":
+            return current
+    else:
+        _add_site_row(session, site_id, req, tz, boundary, area_ha, owner_user_id)
     job = SiteLoadStatus(
         site_id=site_id, status="queued", steps=_steps(req.latitude, req.longitude), has_strategies=False
     )
@@ -130,6 +152,32 @@ def create_site(session: Session, req: NewSiteRequest) -> SiteLoadStatus:
         target=_load, args=(site_id, req, tz, boundary, area_ha), name=f"load-{site_id}", daemon=True
     ).start()
     return job
+
+
+def _add_site_row(
+    session: Session,
+    site_id: str,
+    req: NewSiteRequest,
+    tz: str,
+    boundary: dict[str, Any] | None,
+    area_ha: float | None,
+    owner_user_id: str | None,
+) -> None:
+    # The row exists from the start so the farm is listed (with its load progress) while data loads.
+    session.add(
+        SiteRow(
+            id=site_id,
+            name=req.name.strip(),
+            latitude=req.latitude,
+            longitude=req.longitude,
+            timezone=tz,
+            area_ha=area_ha,
+            owner_user_id=owner_user_id,
+            farmer_context={},
+            boundary=func.ST_SetSRID(func.ST_GeomFromGeoJSON(json.dumps(boundary)), 4326) if boundary else None,
+        )
+    )
+    session.commit()
 
 
 def _set(site_id: str, **changes: Any) -> None:
@@ -196,7 +244,7 @@ def _load_steps(
         _set_step(site_id, "weather", "running")
         ok, msg = _run_script("load_power.py", *power)
         _set_step(site_id, "weather", "done" if ok else "failed", msg or None)
-        if not ok:  # without weather there is no site row and nothing else can be aligned
+        if not ok:  # without weather nothing else can be aligned; the farm row stays and reports the failure
             _set(site_id, status="failed", finished_at=datetime.now(UTC))
             return
 
@@ -221,4 +269,20 @@ def load_status(session: Session, site_id: str) -> SiteLoadStatus:
     row = session.get(SiteRow, site_id)
     if row is None:
         raise LookupError(f"site {site_id!r} not found")
+    if latest_weather_source_id(session, site_id) is None:
+        # The farm row is stored before loading starts, so a row alone does not mean data loaded: a load that
+        # failed, or was cut off by an API restart, leaves no weather. Report it so the user can try again.
+        return SiteLoadStatus(
+            site_id=site_id,
+            status="failed",
+            steps=[
+                SiteLoadStep(
+                    name="weather",
+                    source="NASA POWER daily",
+                    status="failed",
+                    message="no weather is stored for this farm; the load failed or was interrupted",
+                )
+            ],
+            has_strategies=strategies,
+        )
     return SiteLoadStatus(site_id=site_id, status="done", steps=[], has_strategies=strategies)

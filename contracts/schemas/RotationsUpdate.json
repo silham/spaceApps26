@@ -1,0 +1,89 @@
+{
+  "$defs": {
+    "RotationInput": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "seasons": {
+          "items": {
+            "$ref": "#/$defs/RotationSeasonInput"
+          },
+          "maxItems": 4,
+          "minItems": 1,
+          "title": "Seasons",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name",
+        "seasons"
+      ],
+      "title": "RotationInput",
+      "type": "object"
+    },
+    "RotationSeasonInput": {
+      "additionalProperties": false,
+      "properties": {
+        "crop_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Crop Id",
+          "type": "string"
+        },
+        "plant_date": {
+          "format": "date",
+          "title": "Plant Date",
+          "type": "string"
+        },
+        "irrigated": {
+          "default": false,
+          "title": "Irrigated",
+          "type": "boolean"
+        },
+        "usual_yield_t_ha": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "maximum": 30,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Usual Yield T Ha"
+        }
+      },
+      "required": [
+        "crop_id",
+        "plant_date"
+      ],
+      "title": "RotationSeasonInput",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "rotations": {
+      "description": "The first rotation is current practice (the baseline)",
+      "items": {
+        "$ref": "#/$defs/RotationInput"
+      },
+      "maxItems": 3,
+      "minItems": 1,
+      "title": "Rotations",
+      "type": "array"
+    }
+  },
+  "required": [
+    "rotations"
+  ],
+  "title": "RotationsUpdate",
+  "type": "object"
+}

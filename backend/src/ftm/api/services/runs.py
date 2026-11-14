@@ -89,7 +89,7 @@ class _Prepared:
 
 # Loading 45 years of daily forcing and computing ET0 takes ~1 s; replays reuse it per weather processing run.
 _cache_lock = threading.Lock()
-_prepared_cache: dict[tuple[str, str], _Prepared] = {}
+_prepared_cache: dict[tuple[str, str, tuple[str, ...]], _Prepared] = {}
 _et0_cache: dict[tuple[str, str], pd.DataFrame] = {}
 _replay_cache: dict[tuple[str, tuple[int, ...]], ReplayTrace] = {}
 
@@ -104,21 +104,33 @@ def _farmer_context(session: Session, site_id: str) -> FarmerContext | None:
         return None  # legacy free-form context: not a confirmed farmer input
 
 
+farmer_context_for = _farmer_context
+
+
 def _prepare(session: Session, site_id: str) -> _Prepared:
+    from ftm.api.services.rotations import active_strategies, selectable_crops
     from ftm.data.engine_inputs import SCENARIO_BUILDERS, EngineInputsNotAvailableError
     from ftm.engine.params import CatalogError
+    from ftm.engine.scenarios import build_user_scenario
 
-    if site_id not in SCENARIO_BUILDERS:  # observe-only farm (D13): refuse before loading any engine input
+    user_strategies = [] if site_id in SCENARIO_BUILDERS else active_strategies(session, site_id)
+    if site_id not in SCENARIO_BUILDERS and not user_strategies:  # observe-only farm until rotations are saved
         raise SiteNotReadyError(
-            f"no strategies are defined for site {site_id!r}: this farm is observe-only. Comparisons need locally "
-            "reviewed strategies and crop calendars, which exist for ks-field-2 only (D5, D13)"
+            f"no rotations are saved for farm {site_id!r}, so it is observe-only: choose crops and build at least "
+            "one rotation first (D15); reviewed strategies exist for ks-field-2 only (D5, D13)"
         )
     try:
         inputs = load_site_engine_inputs(session, site_id)
-        key = (site_id, inputs.forcing.attrs.get("processing_run_id") or inputs.weather_source.id)
+        weather_key = inputs.forcing.attrs.get("processing_run_id") or inputs.weather_source.id
+        key = (site_id, weather_key, tuple(s.id for s in user_strategies))
         with _cache_lock:
             cached = _prepared_cache.get(key)
-        scenario = cached.scenario if cached else build_site_scenario(inputs)
+        if cached:
+            scenario = cached.scenario
+        elif user_strategies:
+            scenario = build_user_scenario(user_strategies, selectable_crops())
+        else:
+            scenario = build_site_scenario(inputs)
     except (EngineInputsNotAvailableError, CatalogError) as exc:
         raise SiteNotReadyError(str(exc)) from exc
     prepared = _Prepared(inputs, scenario, _farmer_context(session, site_id))
@@ -291,13 +303,17 @@ def detail_from_row(row: SimulationRunRow, *, cached: bool = False) -> RunDetail
     return RunDetail.model_validate({**data, "run": _run_from_row(row), "cached": cached})
 
 
-def create_run(session: Session, req: RunRequest) -> RunDetail:
+def create_run(session: Session, req: RunRequest, *, owner_user_id: str | None = None) -> RunDetail:
     p = _prepare(session, req.site_id)
     ereq = _engine_request(p, req, keep_traces=True)
     key = _hash(p, ereq, req)
     existing = session.scalars(
         select(SimulationRunRow)
-        .where(SimulationRunRow.inputs_hash == key, SimulationRunRow.detail.is_not(None))
+        .where(
+            SimulationRunRow.inputs_hash == key,
+            SimulationRunRow.detail.is_not(None),
+            SimulationRunRow.owner_user_id == owner_user_id,
+        )
         .order_by(SimulationRunRow.created_at.desc())
     ).first()
     if existing is not None:
@@ -316,6 +332,7 @@ def create_run(session: Session, req: RunRequest) -> RunDetail:
     session.add(
         SimulationRunRow(
             id=run.id,
+            owner_user_id=owner_user_id,
             site_id=run.site_id,
             strategy_ids=run.strategy_ids,
             mode=run.mode.value,

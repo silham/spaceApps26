@@ -41,6 +41,18 @@
         "depletion_fraction_p": {
           "$ref": "#/$defs/ParamValue"
         },
+        "ky_season": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ParamValue"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "FAO-33 seasonal yield response factor Ky (unit '-'); null blocks the yield claim for this crop"
+        },
         "planting_window": {
           "anyOf": [
             {
@@ -582,6 +594,32 @@
           "title": "Sample Count",
           "type": "integer"
         },
+        "season_index": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Per-season metrics: index in the plant-date order",
+          "title": "Season Index"
+        },
+        "crop_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Per-season metrics: the crop of that season",
+          "title": "Crop Id"
+        },
         "trace_path": {
           "anyOf": [
             {
@@ -732,6 +770,21 @@
           ],
           "default": null,
           "title": "Residue Management"
+        },
+        "usual_yield_t_ha": {
+          "anyOf": [
+            {
+              "maximum": 30,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The farmer's own usual yield for this crop; never a prediction",
+          "title": "Usual Yield T Ha"
         }
       },
       "required": [

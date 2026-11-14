@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from ftm.api.auth import UserDep, source_ids_for_user
 from ftm.api.routes._geo import as_geojson
 from ftm.contracts.models import Source
 from ftm.db.models import SourceRow
@@ -21,13 +22,18 @@ def _to_contract(session: Session, row: SourceRow) -> Source:
 
 
 @router.get("", response_model=list[Source])
-def list_sources(session: SessionDep) -> list[Source]:
-    return [_to_contract(session, r) for r in session.scalars(select(SourceRow).order_by(SourceRow.id))]
+def list_sources(session: SessionDep, user: UserDep) -> list[Source]:
+    return [
+        _to_contract(session, r)
+        for r in session.scalars(
+            select(SourceRow).where(SourceRow.id.in_(source_ids_for_user(session, user))).order_by(SourceRow.id)
+        )
+    ]
 
 
 @router.get("/{source_id}", response_model=Source)
-def get_source(source_id: str, session: SessionDep) -> Source:
+def get_source(source_id: str, session: SessionDep, user: UserDep) -> Source:
     row = session.get(SourceRow, source_id)
-    if row is None:
+    if row is None or source_id not in source_ids_for_user(session, user):
         raise HTTPException(404, f"Source {source_id!r} not found")
     return _to_contract(session, row)

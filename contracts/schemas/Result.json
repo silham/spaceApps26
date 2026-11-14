@@ -63,6 +63,32 @@
       "title": "Sample Count",
       "type": "integer"
     },
+    "season_index": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Per-season metrics: index in the plant-date order",
+      "title": "Season Index"
+    },
+    "crop_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Per-season metrics: the crop of that season",
+      "title": "Crop Id"
+    },
     "trace_path": {
       "anyOf": [
         {

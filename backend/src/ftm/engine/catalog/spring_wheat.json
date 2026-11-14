@@ -1,0 +1,93 @@
+{
+  "_status": "ILLUSTRATIVE generic FAO values, not locally calibrated. Added for user-built rotations (D15). Values transcribed from the FAO-56 online tables; midpoints are used where a table prints a range.",
+  "profile": {
+    "id": "spring-wheat",
+    "name": "Spring wheat",
+    "kc_ini": {
+      "value": 0.3,
+      "unit": "-",
+      "reference": "FAO-56 (Allen et al. 1998) Table 12, Cereals group Kc ini 0.3 (row blank)",
+      "region_relevance": "Generic; Table 12 footnote 1: depends on wetting interval (FAO-56 Fig. 29/30, Annex 7)",
+      "uncertainty": "0.1-1.15 with wetting frequency (FAO-56 ch. 6)"
+    },
+    "kc_mid": {
+      "value": 1.15,
+      "unit": "-",
+      "reference": "FAO-56 (Allen et al. 1998) Table 12, Spring Wheat Kc mid 1.15",
+      "region_relevance": "Sub-humid reference climate (RHmin 45%, u2 2 m/s); adjusted with FAO-56 eq. 62 at run time",
+      "uncertainty": "Generic value"
+    },
+    "kc_end": {
+      "value": 0.325,
+      "unit": "-",
+      "reference": "FAO-56 (Allen et al. 1998) Table 12, Spring Wheat Kc end 0.25-0.4 (midpoint used; footnote 10: the higher value for hand-harvested crops)",
+      "region_relevance": "Sub-humid reference climate; adjusted with FAO-56 eq. 65 when Kc end > 0.45",
+      "uncertainty": "0.25-0.40"
+    },
+    "stage_lengths_days": {
+      "ini": {
+        "value": 20,
+        "unit": "days",
+        "reference": "FAO-56 (Allen et al. 1998) Table 11, cereals row 'Barley/Oats/Wheat', March/April planting, 35-45 deg latitude (20/25/60/30, total 135) (ini)",
+        "region_relevance": "Table 11 has no row labelled 'Spring wheat'; this unlabelled small-grain row is the closest and is disclosed as an assumption",
+        "uncertainty": "Table 11 footnote: indicative only; varies with region, climate and variety"
+      },
+      "dev": {
+        "value": 25,
+        "unit": "days",
+        "reference": "FAO-56 (Allen et al. 1998) Table 11, cereals row 'Barley/Oats/Wheat', March/April planting, 35-45 deg latitude (20/25/60/30, total 135) (dev)",
+        "region_relevance": "Table 11 has no row labelled 'Spring wheat'; this unlabelled small-grain row is the closest and is disclosed as an assumption",
+        "uncertainty": "Table 11 footnote: indicative only; varies with region, climate and variety"
+      },
+      "mid": {
+        "value": 60,
+        "unit": "days",
+        "reference": "FAO-56 (Allen et al. 1998) Table 11, cereals row 'Barley/Oats/Wheat', March/April planting, 35-45 deg latitude (20/25/60/30, total 135) (mid)",
+        "region_relevance": "Table 11 has no row labelled 'Spring wheat'; this unlabelled small-grain row is the closest and is disclosed as an assumption",
+        "uncertainty": "Table 11 footnote: indicative only; varies with region, climate and variety"
+      },
+      "late": {
+        "value": 30,
+        "unit": "days",
+        "reference": "FAO-56 (Allen et al. 1998) Table 11, cereals row 'Barley/Oats/Wheat', March/April planting, 35-45 deg latitude (20/25/60/30, total 135) (late)",
+        "region_relevance": "Table 11 has no row labelled 'Spring wheat'; this unlabelled small-grain row is the closest and is disclosed as an assumption",
+        "uncertainty": "Table 11 footnote: indicative only; varies with region, climate and variety"
+      }
+    },
+    "max_root_depth_m": {
+      "value": 1.5,
+      "unit": "m",
+      "reference": "FAO-56 (Allen et al. 1998) Table 22, Spring Wheat: Zr 1.0-1.5 m",
+      "region_relevance": "Larger value for modelling soil water stress (Table 22 footnote 1)",
+      "uncertainty": "1.0-1.5 m"
+    },
+    "depletion_fraction_p": {
+      "value": 0.55,
+      "unit": "-",
+      "reference": "FAO-56 (Allen et al. 1998) Table 22, Spring Wheat: p 0.55",
+      "region_relevance": "Generic; p = p_table + 0.04(5 - ETc) at run time (Table 22 footnote 2)",
+      "uncertainty": "Soil-texture adjustment of 5-10% possible"
+    },
+    "ky_season": {
+      "value": 1.15,
+      "unit": "-",
+      "reference": "FAO-56 Chapter 8 Table 24 'Seasonal yield response functions from FAO Irrigation and Drainage Paper No. 33' (Doorenbos & Kassam 1979), value 1.15",
+      "region_relevance": "Generic; applied to the whole growing period, water-limited yield only",
+      "uncertainty": "Seasonal Ky only (stage-specific values are not in Table 24); varies with variety and climate"
+    },
+    "planting_window": null,
+    "is_cover_crop": false,
+    "notes": "Stage lengths come from the generic small-grain row, not a row labelled spring wheat.",
+    "is_demo": false
+  },
+  "engine_extras": {
+    "max_height_m": {
+      "value": 1.0,
+      "unit": "m",
+      "reference": "FAO-56 (Allen et al. 1998) Table 12, Spring Wheat h 1 m",
+      "region_relevance": "Generic",
+      "uncertainty": "Generic"
+    },
+    "tr55_cover": "small_grain_straight_row_good"
+  }
+}

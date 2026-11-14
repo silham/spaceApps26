@@ -4,7 +4,16 @@
   "textures": {
     "sandy_loam": {"theta_fc": [0.18, 0.28], "theta_wp": [0.06, 0.16], "awc_m3_m3": [0.11, 0.15], "rew_mm": [6, 10], "tew_mm": [15, 20], "annex7_class": "medium", "tr55_hsg": "A"},
     "loam": {"theta_fc": [0.20, 0.30], "theta_wp": [0.07, 0.17], "awc_m3_m3": [0.13, 0.18], "rew_mm": [8, 10], "tew_mm": [16, 22], "annex7_class": "medium", "tr55_hsg": "B"},
-    "silt_loam": {"theta_fc": [0.22, 0.36], "theta_wp": [0.09, 0.21], "awc_m3_m3": [0.13, 0.19], "rew_mm": [8, 11], "tew_mm": [18, 25], "annex7_class": "medium", "tr55_hsg": "B"}
+    "silt_loam": {"theta_fc": [0.22, 0.36], "theta_wp": [0.09, 0.21], "awc_m3_m3": [0.13, 0.19], "rew_mm": [8, 11], "tew_mm": [18, 25], "annex7_class": "medium", "tr55_hsg": "B"},
+    "sand": {"theta_fc": [0.07, 0.17], "theta_wp": [0.02, 0.07], "awc_m3_m3": [0.05, 0.11], "rew_mm": [2, 7], "tew_mm": [6, 12], "annex7_class": "coarse", "tr55_hsg": "A"},
+    "loamy_sand": {"theta_fc": [0.11, 0.19], "theta_wp": [0.03, 0.10], "awc_m3_m3": [0.06, 0.12], "rew_mm": [4, 8], "tew_mm": [9, 14], "annex7_class": "coarse", "tr55_hsg": "A"},
+    "silty_clay_loam": {"theta_fc": [0.30, 0.37], "theta_wp": [0.17, 0.24], "awc_m3_m3": [0.13, 0.18], "rew_mm": [8, 11], "tew_mm": [22, 27], "annex7_class": "medium", "tr55_hsg": "D"},
+    "silty_clay": {"theta_fc": [0.30, 0.42], "theta_wp": [0.17, 0.29], "awc_m3_m3": [0.13, 0.19], "rew_mm": [8, 12], "tew_mm": [22, 28], "annex7_class": "medium", "tr55_hsg": "D"},
+    "clay": {"theta_fc": [0.32, 0.40], "theta_wp": [0.20, 0.24], "awc_m3_m3": [0.12, 0.20], "rew_mm": [8, 12], "tew_mm": [22, 29], "annex7_class": "medium", "tr55_hsg": "D"},
+    "sandy_clay_loam": {"theta_fc": null, "theta_wp": null, "awc_m3_m3": null, "rew_mm": null, "tew_mm": null, "annex7_class": "medium", "tr55_hsg": "C"},
+    "clay_loam": {"theta_fc": null, "theta_wp": null, "awc_m3_m3": null, "rew_mm": null, "tew_mm": null, "annex7_class": "medium", "tr55_hsg": "D"},
+    "sandy_clay": {"theta_fc": null, "theta_wp": null, "awc_m3_m3": null, "rew_mm": null, "tew_mm": null, "annex7_class": "medium", "tr55_hsg": "D"}
   },
+  "_notes_added_d15": "sand, loamy_sand, silty_clay_loam, silty_clay and clay were added for user-built rotations (D15) from the same Table 19 (values as printed online; silty clay theta_fc is printed '0-30 - 0.42', read as 0.30-0.42). annex7_class: coarse = sand and loamy sand (Fig. 30a); the finer classes use the medium/fine formula of Fig. 30b. tr55_hsg follows TR-55 Appendix A (A: sand, loamy sand, sandy loam; B: silt loam, loam; D: silty clay loam, silty clay, clay). sandy_clay_loam, clay_loam and sandy_clay have NO row in FAO-56 Table 19, so their water-content ranges are null (never invented); site runs take AWC from the soil profile, so those ranges are not needed, and only demo_soil() would need them. Their hydrologic groups are read from the TR-55 Appendix A texture table (verified in the document text: A sand, loamy sand, sandy loam; B silt loam or loam; C sandy clay loam; D clay loam, silty clay loam, sandy clay, silty clay, clay). Silt is NOT added: TR-55 does not list it. A farm with a silt texture cannot be simulated; the run says so.",
   "_notes": "annex7_class follows the FAO-56 Chapter 6 text for Fig. 30b (medium = sandy loam, loam, silt loam, silt). tr55_hsg follows the TR-55 Appendix A texture table for disturbed profiles (A = sand, loamy sand, sandy loam; B = silt loam, loam); a real hydrologic soil group must come from the soil survey."
 }

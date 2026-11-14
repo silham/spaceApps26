@@ -71,6 +71,21 @@
           ],
           "default": null,
           "title": "Residue Management"
+        },
+        "usual_yield_t_ha": {
+          "anyOf": [
+            {
+              "maximum": 30,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The farmer's own usual yield for this crop; never a prediction",
+          "title": "Usual Yield T Ha"
         }
       },
       "required": [

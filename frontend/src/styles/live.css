@@ -69,3 +69,144 @@ dialog.farm-dialog::backdrop { background: rgb(15 42 29 / 0.35); }
 
 .live-map { height: 100%; min-height: 360px; }
 .live-map .footmap__canvas { height: 300px; }
+
+/* ---------- Accounts and My farms (D14) ----------
+   No Figma frames: built only from the frame's tokens and the existing card, button, badge, segmented and
+   sidebar patterns (docs/decisions.md, UI assumptions). */
+
+.form input:not([type='checkbox']):not([type='range']) {
+  font: inherit; font-weight: 400; padding: 10px 12px; border-radius: var(--radius-control);
+  border: 1px solid var(--color-control-border); min-width: 0; background: var(--color-surface); color: var(--color-text);
+}
+.account__username { color: var(--color-text); font-weight: 600; }
+.form input:focus-visible { outline: none; border-color: var(--color-info); box-shadow: var(--ring); }
+
+/* Sign in / create account */
+.auth { display: grid; grid-template-columns: minmax(380px, 5fr) 7fr; min-height: 100vh; }
+.auth__brand {
+  position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 40px; padding: 40px 48px;
+  background:
+    radial-gradient(640px 420px at 110% 110%, rgb(127 224 164 / 0.18), transparent 60%),
+    radial-gradient(520px 360px at -20% -10%, rgb(47 127 216 / 0.16), transparent 60%),
+    var(--color-forest);
+  color: #fff;
+}
+.auth__logo { display: flex; align-items: center; gap: 10px; }
+.auth__logo strong { display: block; font-size: 18px; font-weight: 700; letter-spacing: 0.36px; }
+.auth__logo span { display: block; font-size: 11px; font-weight: 500; color: var(--color-on-forest-muted); }
+.auth__pitch { display: flex; flex-direction: column; gap: 14px; margin-top: auto; max-width: 440px; }
+.auth__pitch h1 { font-size: 36px; font-weight: 650; line-height: 1.1; letter-spacing: -0.04em; }
+.auth__pitch p { font-size: 15px; line-height: 1.5; color: var(--color-on-forest-nav); }
+.auth__features { display: flex; flex-direction: column; gap: 18px; margin: 0; padding: 0; list-style: none; max-width: 440px; }
+.auth__features li { display: flex; align-items: flex-start; gap: 14px; }
+.auth__features strong { display: block; font-size: 14px; font-weight: 600; }
+.auth__features span:not(.tile):not(.icon) { display: block; margin-top: 3px; font-size: 13px; line-height: 1.45; color: var(--color-on-forest-muted); }
+.auth__feature-icon { width: 40px; height: 40px; background: rgb(255 255 255 / 0.92); }
+.auth__challenge { display: flex; align-items: center; gap: 10px; margin-top: auto; }
+.auth__challenge p { font-size: 12px; color: var(--color-on-forest-muted); }
+.auth__challenge strong { font-weight: 600; color: #fff; }
+.auth__challenge-icon { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 8px; background: rgb(127 224 164 / 0.16); }
+
+.auth__panel { display: flex; align-items: center; justify-content: center; padding: 40px 24px; }
+.auth__card { width: 100%; max-width: 440px; gap: 22px; padding: 32px; align-items: stretch; }
+.auth__tabs { align-self: stretch; }
+.auth__tabs button { flex: 1 1 0; padding: 9px 14px; font-size: 14px; }
+.auth__heading { display: flex; flex-direction: column; gap: 6px; }
+.auth__heading h2 { font-size: 24px; font-weight: 650; letter-spacing: -0.03em; }
+.auth__heading h2:focus, .auth__heading h2:focus-visible { outline: none; box-shadow: none; }
+.auth__heading p { font-size: 14px; line-height: 1.45; color: var(--color-secondary); }
+.auth__form { display: flex; flex-direction: column; gap: 16px; }
+.auth__field { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; }
+.auth__field input {
+  font: inherit; font-size: 14px; font-weight: 400; padding: 11px 12px; border-radius: var(--radius-control);
+  border: 1px solid var(--color-control-border); background: var(--color-surface); color: var(--color-text);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.auth__field input:hover { border-color: var(--color-dashed); }
+.auth__field input:focus-visible { outline: none; border-color: var(--color-info); box-shadow: var(--ring); }
+.auth__field input::placeholder { color: var(--color-placeholder); }
+.auth__field small { font-size: 12px; font-weight: 400; color: var(--color-muted); }
+.auth__label-row { display: flex; align-items: center; justify-content: space-between; }
+.auth__label-row .link { font-size: 12px; }
+.auth__submit { justify-content: center; margin-top: 4px; padding: 12px 17px; }
+.auth__switch { font-size: 13px; color: var(--color-secondary); text-align: center; }
+.auth__error, .auth__notice { padding: 10px 12px; border-radius: var(--radius-control); font-size: 13px; line-height: 1.4; }
+.auth__error { background: var(--color-warning-tint); border: 1px solid var(--color-warning-border); color: var(--color-warning-strong); }
+.auth__notice { background: var(--color-info-bg); color: var(--color-info-text); }
+.auth-splash { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; }
+.auth-splash .state { max-width: 440px; }
+.auth-splash .btn { align-self: flex-start; margin-top: 6px; }
+
+@media (max-width: 900px) {
+  .auth { grid-template-columns: 1fr; }
+  .auth__brand { gap: 24px; padding: 28px 24px; }
+  .auth__pitch { margin-top: 0; }
+  .auth__pitch h1 { font-size: 28px; }
+  .auth__features, .auth__challenge { display: none; }
+  .auth__panel { align-items: flex-start; padding: 24px 16px 40px; }
+  .auth__card { padding: 24px; }
+}
+
+/* Workspace chrome */
+.topbar__home { padding: 0; border: 0; background: none; font-size: 13px; font-weight: 500; color: var(--color-muted); cursor: pointer; }
+.topbar__home:hover { color: var(--color-text); }
+.sidebar__account { width: 100%; text-align: left; background: transparent; border: 0; border-radius: var(--radius-control); color: inherit; cursor: pointer; padding: 8px; }
+.sidebar__account:hover, .sidebar__account[aria-current='page'] { background: rgb(255 255 255 / 0.06); }
+.sidebar__account strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.page-head { display: flex; flex-direction: column; gap: 6px; }
+.page-head p { font-size: 14px; }
+.no-farm { display: flex; flex-direction: column; gap: 20px; max-width: 640px; }
+.no-farm .btn { align-self: flex-start; margin-top: 6px; }
+
+/* Account settings */
+.account-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: 24px; align-items: start; }
+.account-grid .form { align-self: stretch; }
+.account-signout { flex-direction: row; align-items: center; justify-content: space-between; }
+.account__ok { font-size: 13px; font-weight: 500; color: var(--color-success-text); }
+
+/* My farms */
+.farms-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.farms-empty {
+  display: flex; align-items: center; gap: 14px; padding: 16px 18px; border-radius: var(--radius-inner);
+  background: var(--color-success-tint); border: 1px solid var(--color-success-border);
+}
+.farms-empty__icon { width: 40px; height: 40px; background: var(--color-forest); }
+.farms-empty strong { display: block; font-size: 15px; }
+.farms-empty span:not(.tile):not(.icon) { display: block; margin-top: 2px; font-size: 13px; color: var(--color-secondary); }
+.farms-list-section { display: flex; flex-direction: column; gap: 14px; }
+.farms-list-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.farms-list-head h2 { font-size: 16px; font-weight: 650; }
+.check-inline { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--color-secondary); cursor: pointer; }
+.farm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 20px; align-items: start; }
+.farm-card { gap: 16px; padding: 20px; align-items: stretch; transition: box-shadow 0.2s var(--ease-out), transform 0.2s var(--ease-out); }
+.farm-card:hover { box-shadow: var(--shadow-3); }
+.farm-card--archived { background: var(--color-inset); border-style: dashed; border-color: var(--color-dashed); box-shadow: none; }
+.farm-card__head { display: flex; align-items: flex-start; gap: 12px; }
+.farm-card__icon { width: 40px; height: 40px; background: var(--color-leaf-bg); color: var(--color-primary); font-size: 16px; font-weight: 700; }
+.farm-card--archived .farm-card__icon { background: var(--color-subtle); color: var(--color-muted); }
+.farm-card__title { display: flex; flex-direction: column; gap: 3px; flex: 1 1 0; min-width: 0; }
+.farm-card__title h3 { font-size: 16px; font-weight: 650; overflow-wrap: anywhere; }
+.farm-card__title span { font-variant-numeric: tabular-nums; }
+.farm-card__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.farm-card__actions .btn { padding-top: 8px; padding-bottom: 8px; font-size: 13px; }
+.farm-card__rename .form__actions { justify-content: flex-start; }
+
+/* ---------- Rotation builder (D15) ---------- no Figma frame: tokens, .card, .segmented, .btn only */
+.rot-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 20px; align-items: start; }
+.rot-card { gap: 16px; align-items: stretch; }
+.rot-card__head { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+.rot-card__name { display: flex; flex-direction: column; gap: 4px; flex: 1 1 200px; min-width: 0; }
+.rot-card__name input, .rot-field input {
+  font: inherit; font-weight: 500; padding: 9px 12px; border-radius: var(--radius-control); min-width: 0;
+  border: 1px solid var(--color-control-border); background: var(--color-surface); color: var(--color-text);
+}
+.rot-field input { font-weight: 400; }
+.rot-card__name input:focus-visible, .rot-field input:focus-visible { outline: none; border-color: var(--color-info); box-shadow: var(--ring); }
+.rot-seasons { display: flex; flex-direction: column; gap: 14px; margin: 0; padding: 0; list-style: none; }
+.rot-season { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: var(--radius-inner); background: var(--color-inset); border: 1px solid var(--color-border); }
+.rot-season__row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.rot-season__fields { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
+.rot-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.rot-card__add { align-self: flex-start; }
+.rot-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.metrics-table .num { font-variant-numeric: tabular-nums; }

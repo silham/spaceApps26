@@ -15,7 +15,17 @@ from typing import Any, Literal
 from ftm.contracts.models import CropProfile, ParamValue, SoilProfile, Source, ValueKind
 
 CATALOG_DIR = Path(__file__).parent / "catalog"
-CROP_FILES = ("maize_grain.json", "sorghum_grain.json", "winter_wheat.json")
+CROP_FILES = (
+    "maize_grain.json",
+    "sorghum_grain.json",
+    "winter_wheat.json",
+    "soybean.json",
+    "dry_bean.json",
+    "groundnut.json",
+    "cotton.json",
+    "sunflower.json",
+    "spring_wheat.json",
+)
 LOCAL_CROP_FILES = ("winter_wheat_ks.json",)  # site-local season lengths (D4), see local_calendar
 EXPECTED_UNITS = {"kc_ini": "-", "kc_mid": "-", "kc_end": "-", "max_root_depth_m": "m", "depletion_fraction_p": "-"}
 
@@ -85,6 +95,8 @@ def validate_crop(entry: CropEntry) -> None:
     for stage, p in prof.stage_lengths_days.items():
         _check_param(f"{prof.id}.stage_lengths_days.{stage}", p, "days")
     _check_param(f"{prof.id}.max_height_m", entry.max_height_m, "m")
+    if prof.ky_season is not None:
+        _check_param(f"{prof.id}.ky_season", prof.ky_season, "-")
     if entry.tr55_cover not in load_curve_numbers()["covers"]:
         raise CatalogError(f"{prof.id}: unknown TR-55 cover class {entry.tr55_cover!r}")
 
@@ -166,6 +178,8 @@ def demo_soil(site_id: str, texture: str = "silt_loam", bound: Literal["low", "m
     of the printed range. The texture itself is an assumption, not an observation.
     """
     tex = load_soil_textures()["textures"][texture]
+    if tex["awc_m3_m3"] is None:
+        raise CatalogError(f"FAO-56 Table 19 has no water-content row for {texture!r}; it cannot be a DEMO soil")
     lo, hi = (1000.0 * v for v in tex["awc_m3_m3"])
     value = {"low": lo, "mid": (lo + hi) / 2.0, "high": hi}[bound]
     profile = SoilProfile(
@@ -198,7 +212,10 @@ def demo_soil(site_id: str, texture: str = "silt_loam", bound: Literal["low", "m
 
 
 def _texture_key(texture: str | None) -> str | None:
-    return None if texture is None else texture.strip().lower().replace(" ", "_")
+    """Catalog key of a texture; text after '(' is detail (e.g. SoilGrids percentages), not part of the class."""
+    if texture is None:
+        return None
+    return texture.split("(")[0].strip().lower().replace(" ", "_")
 
 
 def soil_spec_from_profile(
@@ -214,8 +231,9 @@ def soil_spec_from_profile(
     textures = load_soil_textures()["textures"]
     if key not in textures:
         raise CatalogError(
-            f"soil texture {profile.texture!r} is not in the FAO-56 Table 19 catalog; "
-            "the bare-soil class and hydrologic group are unknown"
+            f"soil texture {profile.texture!r} is not in the FAO-56 Table 19 / TR-55 catalog "
+            f"({', '.join(sorted(textures))}); the bare-soil class and hydrologic group are unknown, so this "
+            "farm's soil cannot be simulated yet"
         )
     tex = textures[key]
     notes = list(extra_notes)

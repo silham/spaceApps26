@@ -41,6 +41,18 @@
         "depletion_fraction_p": {
           "$ref": "#/$defs/ParamValue"
         },
+        "ky_season": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ParamValue"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "FAO-33 seasonal yield response factor Ky (unit '-'); null blocks the yield claim for this crop"
+        },
         "planting_window": {
           "anyOf": [
             {
@@ -539,6 +551,27 @@
       "title": "EnvironmentalTimeline",
       "type": "object"
     },
+    "FarmUpdate": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "archived": {
+          "default": false,
+          "title": "Archived",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "FarmUpdate",
+      "type": "object"
+    },
     "FarmerContext": {
       "additionalProperties": false,
       "description": "Farmer-confirmed inputs (value kind farmer_input). Unconfirmed fields stay null, never guessed.",
@@ -772,6 +805,30 @@
       ],
       "title": "JourneyStageName",
       "type": "string"
+    },
+    "LoginRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "username": {
+          "maxLength": 64,
+          "minLength": 3,
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "title": "Username",
+          "type": "string"
+        },
+        "password": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Password",
+          "type": "string"
+        }
+      },
+      "required": [
+        "username",
+        "password"
+      ],
+      "title": "LoginRequest",
+      "type": "object"
     },
     "NewSiteRequest": {
       "additionalProperties": false,
@@ -1155,6 +1212,29 @@
       "title": "ParamValue",
       "type": "object"
     },
+    "PasswordChange": {
+      "additionalProperties": false,
+      "properties": {
+        "current_password": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Current Password",
+          "type": "string"
+        },
+        "new_password": {
+          "maxLength": 128,
+          "minLength": 15,
+          "title": "New Password",
+          "type": "string"
+        }
+      },
+      "required": [
+        "current_password",
+        "new_password"
+      ],
+      "title": "PasswordChange",
+      "type": "object"
+    },
     "Priorities": {
       "additionalProperties": false,
       "description": "Farmer priorities rank feasible options; they never override hard constraints.",
@@ -1257,6 +1337,22 @@
       "title": "ProcessingStep",
       "type": "object"
     },
+    "ProfileUpdate": {
+      "additionalProperties": false,
+      "properties": {
+        "display_name": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Display Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "display_name"
+      ],
+      "title": "ProfileUpdate",
+      "type": "object"
+    },
     "QualityFlag": {
       "enum": [
         "ok",
@@ -1268,6 +1364,37 @@
       ],
       "title": "QualityFlag",
       "type": "string"
+    },
+    "RegisterRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "display_name": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Display Name",
+          "type": "string"
+        },
+        "username": {
+          "maxLength": 64,
+          "minLength": 3,
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "title": "Username",
+          "type": "string"
+        },
+        "password": {
+          "maxLength": 128,
+          "minLength": 15,
+          "title": "Password",
+          "type": "string"
+        }
+      },
+      "required": [
+        "display_name",
+        "username",
+        "password"
+      ],
+      "title": "RegisterRequest",
+      "type": "object"
     },
     "ReplaySeries": {
       "additionalProperties": false,
@@ -1627,6 +1754,32 @@
           "title": "Sample Count",
           "type": "integer"
         },
+        "season_index": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Per-season metrics: index in the plant-date order",
+          "title": "Season Index"
+        },
+        "crop_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Per-season metrics: the crop of that season",
+          "title": "Crop Id"
+        },
         "trace_path": {
           "anyOf": [
             {
@@ -1673,6 +1826,93 @@
         "source_ids"
       ],
       "title": "Result",
+      "type": "object"
+    },
+    "RotationInput": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "seasons": {
+          "items": {
+            "$ref": "#/$defs/RotationSeasonInput"
+          },
+          "maxItems": 4,
+          "minItems": 1,
+          "title": "Seasons",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name",
+        "seasons"
+      ],
+      "title": "RotationInput",
+      "type": "object"
+    },
+    "RotationSeasonInput": {
+      "additionalProperties": false,
+      "properties": {
+        "crop_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Crop Id",
+          "type": "string"
+        },
+        "plant_date": {
+          "format": "date",
+          "title": "Plant Date",
+          "type": "string"
+        },
+        "irrigated": {
+          "default": false,
+          "title": "Irrigated",
+          "type": "boolean"
+        },
+        "usual_yield_t_ha": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "maximum": 30,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Usual Yield T Ha"
+        }
+      },
+      "required": [
+        "crop_id",
+        "plant_date"
+      ],
+      "title": "RotationSeasonInput",
+      "type": "object"
+    },
+    "RotationsUpdate": {
+      "additionalProperties": false,
+      "properties": {
+        "rotations": {
+          "description": "The first rotation is current practice (the baseline)",
+          "items": {
+            "$ref": "#/$defs/RotationInput"
+          },
+          "maxItems": 3,
+          "minItems": 1,
+          "title": "Rotations",
+          "type": "array"
+        }
+      },
+      "required": [
+        "rotations"
+      ],
+      "title": "RotationsUpdate",
       "type": "object"
     },
     "RunDetail": {
@@ -1857,6 +2097,21 @@
           ],
           "default": null,
           "title": "Residue Management"
+        },
+        "usual_yield_t_ha": {
+          "anyOf": [
+            {
+              "maximum": 30,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The farmer's own usual yield for this crop; never a prediction",
+          "title": "Usual Yield T Ha"
         }
       },
       "required": [
@@ -1988,6 +2243,23 @@
     "Site": {
       "additionalProperties": false,
       "properties": {
+        "owner_user_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Owner User Id"
+        },
+        "archived": {
+          "default": false,
+          "title": "Archived",
+          "type": "boolean"
+        },
         "id": {
           "title": "Id",
           "type": "string"
@@ -2527,6 +2799,36 @@
       "title": "Strategy",
       "type": "object"
     },
+    "User": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "username": {
+          "title": "Username",
+          "type": "string"
+        },
+        "display_name": {
+          "title": "Display Name",
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "username",
+        "display_name",
+        "created_at"
+      ],
+      "title": "User",
+      "type": "object"
+    },
     "Validation": {
       "additionalProperties": false,
       "properties": {
@@ -2678,9 +2980,36 @@
     }
   },
   "title": "FarmTimeMachineContracts",
-  "description": "Schema version 1.3.0. Generated - do not edit.",
+  "description": "Schema version 1.5.0. Generated - do not edit.",
   "type": "object",
   "properties": {
+    "User": {
+      "$ref": "#/$defs/User"
+    },
+    "ProfileUpdate": {
+      "$ref": "#/$defs/ProfileUpdate"
+    },
+    "LoginRequest": {
+      "$ref": "#/$defs/LoginRequest"
+    },
+    "RegisterRequest": {
+      "$ref": "#/$defs/RegisterRequest"
+    },
+    "PasswordChange": {
+      "$ref": "#/$defs/PasswordChange"
+    },
+    "FarmUpdate": {
+      "$ref": "#/$defs/FarmUpdate"
+    },
+    "RotationSeasonInput": {
+      "$ref": "#/$defs/RotationSeasonInput"
+    },
+    "RotationInput": {
+      "$ref": "#/$defs/RotationInput"
+    },
+    "RotationsUpdate": {
+      "$ref": "#/$defs/RotationsUpdate"
+    },
     "Site": {
       "$ref": "#/$defs/Site"
     },

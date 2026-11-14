@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { mockSignedIn } from './auth'
 
 // SYNTHETIC payload used only to exercise rendering (shapes copied from backend/src/ftm/data/journey.py,
 // data/pipeline/run.py, validation/phenology.py and validation/report.py). None of these numbers is real data.
@@ -27,8 +28,9 @@ const journey = [
 ]
 
 test('Data Journey renders nine cards from the API payload, with sources, failures and the map', async ({ page }) => {
-  await page.route('**/api/sites', (r) => r.fulfill({ json: [{ id: 'ks-field-2', name: 'ks-field-2', latitude: 38, longitude: -100.9, timezone: 'America/Chicago' }] }))
-  await page.route('**/api/journey/ks-field-2', (r) => r.fulfill({ json: journey }))
+  await mockSignedIn(page)
+  await page.route(/\/api\/sites(\?.*)?$/, (r) => r.fulfill({ json: [{ id: 'f1', owner_user_id: 'usr_test', name: 'Test field', latitude: 38, longitude: -100.9, timezone: 'America/Chicago' }] }))
+  await page.route(/\/api\/journey\/f1$/, (r) => r.fulfill({ json: journey }))
   page.on('pageerror', (e) => console.log('PAGEERR', e.message))
   await page.goto('/')
   await page.getByRole('navigation', { name: 'Main' }).getByRole('button', { name: 'Data Journey' }).click()

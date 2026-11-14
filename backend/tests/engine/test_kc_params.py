@@ -50,12 +50,23 @@ def test_rhmin_from_ea_and_tmax() -> None:
 
 def test_catalog_crops_are_fully_cited() -> None:
     crops = load_crops()
-    assert set(crops) == {"maize-grain", "sorghum-grain", "winter-wheat"}
+    assert set(crops) == {
+        "maize-grain",
+        "sorghum-grain",
+        "winter-wheat",
+        "soybean",
+        "dry-bean",
+        "groundnut",
+        "cotton",
+        "sunflower",
+        "spring-wheat",
+    }
     for entry in crops.values():
         p = entry.profile
         for param in (p.kc_ini, p.kc_mid, p.kc_end, p.max_root_depth_m, p.depletion_fraction_p, entry.max_height_m):
             assert param.value is not None and param.reference and "FAO-56" in param.reference
         assert all(v.reference for v in p.stage_lengths_days.values())
+        assert p.ky_season is not None and p.ky_season.value and "Table 24" in str(p.ky_season.reference)
 
 
 def _write_crop(tmp_path: Path, mutate: dict[str, object]) -> Path:

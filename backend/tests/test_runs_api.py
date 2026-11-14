@@ -55,9 +55,15 @@ def test_run_request_accepts_only_d6_edits() -> None:
 
 
 def test_unsupported_edit_is_422_before_any_engine_call() -> None:
+    from ftm.api.auth import require_user
+    from ftm.db.models import UserRow
+
+    app.dependency_overrides[require_user] = lambda: UserRow(id="test")
     app.dependency_overrides[get_session] = lambda: None
     try:
-        r = client.post("/runs", json={"site_id": "s", "planting_shift_days": {"x": 20}})
+        r = client.post(
+            "/runs", json={"site_id": "s", "planting_shift_days": {"x": 20}}, headers={"X-FTM-Request": "1"}
+        )
     finally:
         app.dependency_overrides.clear()
     assert r.status_code == 422
@@ -65,6 +71,10 @@ def test_unsupported_edit_is_422_before_any_engine_call() -> None:
 
 
 def test_replay_years_must_be_a_window() -> None:
+    from ftm.api.auth import require_user
+    from ftm.db.models import UserRow
+
+    app.dependency_overrides[require_user] = lambda: UserRow(id="test")
     app.dependency_overrides[get_session] = lambda: None
     try:
         assert client.get("/runs/x/replay", params={"years": "dry"}).status_code == 422
