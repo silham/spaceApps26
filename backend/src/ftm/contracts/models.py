@@ -10,9 +10,9 @@ from datetime import date, datetime
 from enum import StrEnum
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-SCHEMA_VERSION = "1.0.0"
+SCHEMA_VERSION = "1.1.0"  # 1.1.0: additive (MODELED kind, ParamValue bounds, Validation periods/sources)
 
 # Wording agreed in DEVELOPMENT_GUIDE.md section 7: p10-p90 is NOT a calibrated prediction interval.
 RANGE_LABEL = "central 80% simulation range (p10–p90)"
@@ -30,6 +30,7 @@ class ValueKind(StrEnum):
 
     OBSERVED = "observed"
     REANALYSIS = "reanalysis"  # e.g. NASA POWER, GWETROOT, SMAP L4 (model-assisted)
+    MODELED = "modeled"  # statistical/ML prediction maps, e.g. SoilGrids (not observations, not reanalysis)
     ESTIMATED = "estimated"  # gap-filled by a declared method
     FARMER_INPUT = "farmer_input"
     LITERATURE = "literature"
@@ -154,6 +155,24 @@ class ParamValue(Contract):
     reference: str | None = Field(description="Citation (DOI/URL/table). Required when value is set.")
     region_relevance: str | None = None
     uncertainty: str | None = None
+    low: float | None = Field(default=None, description="Lower bound in ``unit`` if the source documents one")
+    high: float | None = Field(default=None, description="Upper bound in ``unit`` if the source documents one")
+    bounds_kind: str | None = Field(
+        default=None,
+        description="What low/high are, e.g. 'documented range (SSURGO awc_l/awc_h)' or 'declared assumption ±20%'. "
+        "Never a statistical interval unless one was actually computed.",
+    )
+
+    @model_validator(mode="after")
+    def _bounds_consistent(self) -> "ParamValue":
+        if (self.low is None) != (self.high is None):
+            raise ValueError("set both low and high, or neither")
+        if self.low is not None and self.high is not None:
+            if self.low > self.high:
+                raise ValueError("low must be <= high")
+            if self.bounds_kind is None:
+                raise ValueError("bounds_kind is required when low/high are set")
+        return self
 
 
 class CropProfile(Contract):
@@ -243,6 +262,12 @@ class Validation(Contract):
     id: str
     target: str
     reference: str
+    source_ids: list[str] = Field(
+        default_factory=list, description="Sources actually used: the evaluated data and the reference (rule 2)"
+    )
+    train_period: tuple[date, date] | None = Field(
+        default=None, description="Training/tuning period (DEVELOPMENT_GUIDE.md section 8.3)"
+    )
     calibration_period: tuple[date, date] | None = None
     test_period: tuple[date, date] | None = None
     sample_count: int

@@ -35,3 +35,32 @@ def test_generated_schemas_are_up_to_date() -> None:
         assert json.loads(path.read_text(encoding="utf-8")) == model.model_json_schema(mode="serialization"), (
             f"{path.name} is stale; run `make contracts`"
         )
+
+
+def test_param_value_bounds_rules() -> None:
+    import pytest
+    from pydantic import ValidationError
+
+    from ftm.contracts.models import ParamValue
+
+    ok = ParamValue(value=214.0, unit="mm/m", reference="SSURGO", low=194.0, high=239.0,
+                    bounds_kind="documented range (SSURGO awc_l/awc_h)")  # fmt: skip
+    assert ok.low == 194.0
+    assert ParamValue(value=None, unit="m", reference=None).low is None  # bounds stay optional
+    with pytest.raises(ValidationError):
+        ParamValue(value=1.0, unit="m", reference="x", low=1.0)  # one-sided
+    with pytest.raises(ValidationError):
+        ParamValue(value=1.0, unit="m", reference="x", low=2.0, high=1.0, bounds_kind="range")
+    with pytest.raises(ValidationError):
+        ParamValue(value=1.0, unit="m", reference="x", low=0.5, high=1.5)  # bounds must say what they are
+
+
+def test_validation_carries_train_period_and_sources() -> None:
+    from datetime import date
+
+    from ftm.contracts.models import Validation
+
+    v = Validation(id="v", target="t", reference="r", sample_count=5, independence_notes="n",
+                   source_ids=["modis_x", "nass_y"], train_period=(date(2006, 1, 1), date(2014, 12, 31)))  # fmt: skip
+    assert v.source_ids == ["modis_x", "nass_y"] and v.train_period is not None
+    assert Validation(id="v", target="t", reference="r", sample_count=0, independence_notes="n").source_ids == []
