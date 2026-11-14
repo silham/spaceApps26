@@ -23,7 +23,7 @@ from ftm.config import get_settings
 from ftm.contracts.models import Validation
 from ftm.data.adapters import nass_quickstats as nass
 from ftm.data.vegetation import get_vi_composites
-from ftm.db.models import SiteRow
+from ftm.db.models import SiteRow, ValidationRow
 from ftm.db.session import get_engine
 from ftm.validation.phenology import detect_seasons, evaluate_starts, tune
 
@@ -166,6 +166,11 @@ def main() -> None:
         "param_polyorder": best.polyorder,
         "param_fraction": best.fraction,
     }
+    # per-year points for the Validate card (metrics must be numbers, so encoded as day-of-year keys)
+    for r in per_year:
+        if r["reference"] is not None and r["detected_start"] is not None:
+            metrics[f"ref_doy_{r['year']}"] = pd.Timestamp(r["reference"]).dayofyear
+            metrics[f"det_doy_{r['year']}"] = pd.Timestamp(r["detected_start"]).dayofyear
     record = Validation(
         id=f"val_phenology_{args.site_id}_{datetime.now(UTC):%Y%m%dT%H%M%SZ}",
         target="Season start (amplitude-threshold green-up) of spring-planted summer crops at the field",
@@ -193,6 +198,16 @@ def main() -> None:
         encoding="utf-8",
     )
     _chart(py, out / f"phenology_{args.site_id}.png")
+    with Session(get_engine()) as s, s.begin():
+        s.add(
+            ValidationRow(
+                id=record.id,
+                target=record.target[:200],
+                reference=record.reference,
+                payload=json.loads(record.model_dump_json()),
+            )
+        )
+    print(f"stored validation record {record.id}")
     print(f"\nwrote {out / f'phenology_{args.site_id}.json'}")
 
 
