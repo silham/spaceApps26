@@ -13,6 +13,39 @@
       "title": "Reference",
       "type": "string"
     },
+    "source_ids": {
+      "description": "Sources actually used: the evaluated data and the reference (rule 2)",
+      "items": {
+        "type": "string"
+      },
+      "title": "Source Ids",
+      "type": "array"
+    },
+    "train_period": {
+      "anyOf": [
+        {
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "format": "date",
+              "type": "string"
+            }
+          ],
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Training/tuning period (DEVELOPMENT_GUIDE.md section 8.3)",
+      "title": "Train Period"
+    },
     "calibration_period": {
       "anyOf": [
         {

@@ -54,6 +54,45 @@
           ],
           "default": null,
           "title": "Uncertainty"
+        },
+        "low": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Lower bound in ``unit`` if the source documents one",
+          "title": "Low"
+        },
+        "high": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Upper bound in ``unit`` if the source documents one",
+          "title": "High"
+        },
+        "bounds_kind": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "What low/high are, e.g. 'documented range (SSURGO awc_l/awc_h)' or 'declared assumption ±20%'. Never a statistical interval unless one was actually computed.",
+          "title": "Bounds Kind"
         }
       },
       "required": [
