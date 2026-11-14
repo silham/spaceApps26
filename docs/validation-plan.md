@@ -31,7 +31,7 @@ POWER daily coverage starts 1981. MODIS MOD13Q1 v061 starts February 2000. Today
 
 | Period | Years | Used for |
 |---|---|---|
-| Sample pool / tuning | 1981–2014 (weather) · 2001–2014 (MODIS) | Ensemble blocks are drawn from here; phenology parameters are tuned here |
+| Sample pool / tuning | 1981–2014 for rainfall, **1984–2014 for anything using ET₀** (weather) · 2001–2014 (MODIS) | Ensemble blocks are drawn from here; phenology parameters are tuned here |
 | Development | 2015–2019 | Rolling-origin checks, choosing between methods, optional conformal calibration |
 | **Final test, untouched** | **2020–2025** | Evaluated **once**, after feature freeze |
 
@@ -42,6 +42,12 @@ Rules:
 - Unlock happens once, at H34–H36, after the methods are frozen. The commit hash at unlock is recorded
   in the Validation record. Results are reported whatever they show, including failures.
 - MODIS year 2000 is excluded because it is incomplete (the record starts mid-February).
+- POWER has no solar radiation before 1984 (found 2026-11-14, see change log), so ET₀ and the
+  water balance cannot be computed for 1981–1983. Targets that use ET₀ start their pool in 1984.
+- **Suspect source years [site]:** if a year is flagged by the explorer's screening rule (rain below
+  50% of the site median *and* wettest day in the lowest 10% of yearly maxima), the team decides
+  before any evaluation whether to (a) exclude it from the sample pool or (b) keep it with a visible
+  label. Either way it is disclosed. Currently flagged: Sri Lanka candidate 1995 and 1996; Kansas none.
 
 ## 2. Phenology: season detection (B)
 
@@ -90,9 +96,9 @@ These are properties of the weather, not of our crop model. A good score here sa
 weather is a plausible spread. It says **nothing** about whether irrigation or stress outputs are right.
 
 **Procedure:**
-- Development: rolling origin. For each year *t* in 2005–2019, build the ensemble from 1981…*t*−1 and
+- Development: rolling origin. For each year *t* in 2005–2019, build the ensemble from 1981…*t*−1 (1984…*t*−1 for ET₀ targets) and
   check year *t*. This gives about 15 seasons per target to debug with.
-- Final test: ensemble from 1981–2019, evaluated on 2020–2025 (6 years × seasons per year).
+- Final test: ensemble from 1981–2019 (1984–2019 for ET₀ targets), evaluated on 2020–2025 (6 years × seasons per year).
 - The resampling method (season-aligned block bootstrap + consecutive-year replay) and seed come from
   M4's ensemble config, and are recorded in the Validation record.
 
@@ -168,3 +174,4 @@ If SMAP is unavailable, the Validate stage says "independent soil-moisture compa
 | Date | Change | Reason | Results seen before change? |
 |---|---|---|---|
 | 2026-11-14 | v1 written | — | No |
+| 2026-11-14 | ET₀-based pools start 1984 instead of 1981; added a pre-declared rule for suspect source years | Data availability: POWER solar radiation starts 1984; explorer (PR #5) flagged Sri Lanka 1995–1996 rainfall as suspect | No: only data availability and quality were looked at, no evaluation was run |
