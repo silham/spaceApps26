@@ -1,47 +1,59 @@
 import { useState } from 'react'
 import { api } from './api/client'
 import { useAsync } from './api/useAsync'
+import chevronRight from './assets/v2/chevron-right.svg'
+import { Badge, Icon, type Tone } from './components/ui'
+import { figmaDemo } from './demo/figmaDemo'
+import { Sidebar, type View } from './layout/Sidebar'
 import { DataJourneyScreen } from './screens/DataJourneyScreen'
-import { DecideScreen } from './screens/DecideScreen'
-import { ExperimentScreen } from './screens/ExperimentScreen'
-import { ObserveScreen } from './screens/ObserveScreen'
+import { EvidenceScreen } from './screens/EvidenceScreen'
+import { OverviewScreen } from './screens/overview/OverviewScreen'
+import { RotationPlannerScreen } from './screens/RotationPlannerScreen'
 
-const TABS = ['Observe', 'Experiment', 'Decide', 'Data Journey'] as const
-type Tab = (typeof TABS)[number]
-
-// DEMO IDs from data/fixtures/demo.json until site selection exists (M2/M1).
-const DEMO_SITE_ID = 'demo-site'
+// DEMO run ID from data/fixtures/demo.json until run selection exists (M2/M1).
 const DEMO_RUN_ID = 'demo-run'
 
 export default function App() {
-  const [tab, setTab] = useState<Tab>('Observe')
+  const [view, setView] = useState<View>('overview')
+  const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null)
   const health = useAsync(api.health, [])
+  const sites = useAsync(api.sites, [])
+
+  const siteList = sites.status === 'ready' ? sites.data : []
+  const site = siteList.find((s) => s.id === selectedSiteId) ?? siteList[0]
+
+  // The frame shows "Saved just now" here, but nothing is saved yet, so this badge reports the API
+  // connection instead (docs/decisions.md, UI assumptions).
+  const apiStatus: { tone: Tone; label: string } =
+    health.status === 'ready'
+      ? { tone: 'success', label: 'API connected' }
+      : health.status === 'error'
+        ? { tone: 'warning', label: 'API unreachable' }
+        : { tone: 'neutral', label: 'Connecting…' }
 
   return (
-    <div style={{ maxWidth: 1200, margin: '0 auto', padding: 'var(--space-6)' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-        <h1 style={{ color: 'var(--color-primary)' }}>Farm Time Machine</h1>
-        <small>
-          {health.status === 'ready'
-            ? `API ${health.data.api_version} · model ${health.data.model_version}`
-            : health.status === 'error'
-              ? 'API unreachable. Run `make api`.'
-              : 'Connecting…'}
-        </small>
-      </header>
-      <nav aria-label="Steps" role="tablist" style={{ display: 'flex', gap: 'var(--space-2)' }}>
-        {TABS.map((t) => (
-          <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)}>
-            {t}
-          </button>
-        ))}
-      </nav>
-      <main>
-        {tab === 'Observe' && <ObserveScreen />}
-        {tab === 'Experiment' && <ExperimentScreen siteId={DEMO_SITE_ID} />}
-        {tab === 'Decide' && <DecideScreen runId={DEMO_RUN_ID} />}
-        {tab === 'Data Journey' && <DataJourneyScreen />}
-      </main>
+    <div className="shell">
+      <Sidebar view={view} onNavigate={setView} />
+      <div className="content">
+        <div className="topbar">
+          <div className="topbar__crumbs">
+            <span>My farms</span>
+            <Icon src={chevronRight} size={14} />
+            <strong>{site?.name ?? figmaDemo.farmLabel}</strong>
+          </div>
+          <span role="status">
+            <Badge tone={apiStatus.tone}>{apiStatus.label}</Badge>
+          </span>
+        </div>
+        <main className="main">
+          {view === 'overview' && (
+            <OverviewScreen sites={siteList} site={site} onSiteChange={setSelectedSiteId} onNavigate={setView} />
+          )}
+          {view === 'rotation' && <RotationPlannerScreen siteId={site?.id} />}
+          {view === 'journey' && <DataJourneyScreen siteId={site?.id} />}
+          {view === 'evidence' && <EvidenceScreen runId={DEMO_RUN_ID} />}
+        </main>
+      </div>
     </div>
   )
 }

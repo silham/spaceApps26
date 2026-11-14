@@ -1,19 +1,10 @@
-/** Visible label for demo data (AGENTS.md rule 2). Render wherever is_demo is true. */
-export function DemoBadge() {
+import { Badge } from './ui'
+
+/** Visible label for demo data (AGENTS.md rule 2). Uses the Figma warning badge. */
+export function DemoBadge({ label = 'DEMO DATA' }: { label?: string }) {
   return (
-    <span
-      role="note"
-      style={{
-        background: 'var(--color-demo-bg)',
-        color: 'var(--color-demo)',
-        border: '1px solid currentColor',
-        borderRadius: 'var(--radius)',
-        padding: '0 var(--space-2)',
-        fontSize: 12,
-        fontWeight: 700,
-      }}
-    >
-      DEMO data
+    <span role="note">
+      <Badge tone="warning">{label}</Badge>
     </span>
   )
 }
