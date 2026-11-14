@@ -12,11 +12,12 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ftm.contracts.models import JourneyStage, JourneyStageName, StageStatus, Validation
-from ftm.data.vegetation import VegetationNotAvailableError, get_vi_composites
-from ftm.db.models import ProcessingRunRow, SiteRow, SoilProfileRow, SourceRow, ValidationRow
-from ftm.validation.phenology import PhenologyParams, detect_seasons, extract_stage
+from ftm.contracts.models import JourneyStage, JourneyStageName, StageStatus
+from ftm.data.vegetation import VegetationNotAvailableError
+from ftm.db.models import ProcessingRunRow, SiteRow, SoilProfileRow, SourceRow
+from ftm.validation.phenology import extract_stage
 from ftm.validation.report import validate_stage
+from ftm.validation.site_seasons import get_site_seasons, phenology_validations
 
 ORDER = [
     JourneyStageName.COLLECT,
@@ -72,14 +73,11 @@ def build_journey(site_id: str, session: Session) -> list[JourneyStage]:
             chk.details = {**chk.details, "satellite_vegetation_qa": qa["params"]}
             chk.source_ids = sorted(set(chk.source_ids) | set(modis_run.input_source_ids))
 
-    validations = _validations(session, site_id)
-    params = _tuned_params(validations)
+    validations = phenology_validations(site_id, session)
     try:
-        comps = get_vi_composites(site_id, session=session)
-        stages[JourneyStageName.EXTRACT] = extract_stage(detect_seasons(comps, params), is_demo=is_demo)
-        stages[JourneyStageName.EXTRACT].details["params_source"] = (
-            f"tuned ({validations[0].id})" if validations else "default (not tuned yet)"
-        )
+        ss = get_site_seasons(site_id, session)
+        stages[JourneyStageName.EXTRACT] = extract_stage(ss.result, is_demo=is_demo)
+        stages[JourneyStageName.EXTRACT].details["params_source"] = ss.params_source
     except VegetationNotAvailableError:
         stages[JourneyStageName.EXTRACT] = _missing(
             JourneyStageName.EXTRACT, "No satellite vegetation data for this site: a local crop calendar is needed."
@@ -156,22 +154,6 @@ def _latest_run(session: Session, site_id: str, prefix: str) -> ProcessingRunRow
         if any(s.startswith(prefix) for s in run.input_source_ids or []):
             return run
     return None
-
-
-def _validations(session: Session, site_id: str) -> list[Validation]:
-    rows = session.execute(
-        select(ValidationRow)
-        .where(ValidationRow.id.like(f"val_phenology_{site_id}_%"))
-        .order_by(ValidationRow.created_at.desc())
-    ).scalars()
-    return [Validation.model_validate(r.payload) for r in rows]
-
-
-def _tuned_params(validations: list[Validation]) -> PhenologyParams:
-    if not validations:
-        return PhenologyParams()
-    m = validations[0].metrics
-    return PhenologyParams(int(m["param_window"]), int(m["param_polyorder"]), float(m["param_fraction"]))
 
 
 def _missing(name: JourneyStageName, why: str) -> JourneyStage:
