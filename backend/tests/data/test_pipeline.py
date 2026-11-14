@@ -10,7 +10,9 @@ from ftm.contracts.models import JourneyStageName, QualityFlag, ValueKind
 from ftm.data.pipeline.clean import UnitMismatchError, clean
 from ftm.data.pipeline.gaps import handle_gaps
 from ftm.data.pipeline.qa import check
-from ftm.data.pipeline.run import run_daily_pipeline
+from ftm.data.pipeline.run import AlignContext, run_daily_pipeline
+
+UTC_ALIGN = AlignContext(timezone="UTC", source_time_standard=None, native_resolution=None, grid_point=None)
 
 FILL = -999.0
 START = date(2024, 1, 1)
@@ -45,6 +47,7 @@ def _run(obs: pd.DataFrame, n: int):  # type: ignore[no-untyped-def]
         start=START,
         end=_end(n),
         value_kind=ValueKind.REANALYSIS,
+        align=UTC_ALIGN,
     )
 
 
@@ -149,9 +152,14 @@ def test_zero_max_gap_fills_nothing() -> None:
 def test_journey_payloads_and_provenance() -> None:
     res = _run(_obs({"PRECTOTCORR": [0.0, FILL, 1.0], "T2M_MAX": [5.0, FILL, 7.0]}), 3)
     stages = {s.stage: s for s in res.journey}
-    assert set(stages) == {JourneyStageName.CHECK, JourneyStageName.CLEAN, JourneyStageName.HANDLE_GAPS}
+    assert set(stages) == {
+        JourneyStageName.CHECK,
+        JourneyStageName.CLEAN,
+        JourneyStageName.HANDLE_GAPS,
+        JourneyStageName.ALIGN,
+    }
     assert all(s.processing_run_id == res.run.id and s.source_ids == ["src_test"] for s in res.journey)
-    assert [s.name for s in res.run.steps] == ["qa", "clean", "handle_gaps"]
+    assert [s.name for s in res.run.steps] == ["qa", "clean", "handle_gaps", "align"]
     assert (res.observations.processing_run_id == res.run.id).all()
     assert stages[JourneyStageName.HANDLE_GAPS].status.value == "warning"  # rain gap unresolved
 
@@ -177,6 +185,7 @@ def test_journey_counts_survive_later_steps() -> None:
         start=start,
         end=start + timedelta(days=4),
         value_kind=ValueKind.REANALYSIS,
+        align=UTC_ALIGN,
     )
     stages = {s.stage: s for s in res.journey}
     assert stages[JourneyStageName.CHECK].summary.endswith("0 missing, 0 duplicate.")

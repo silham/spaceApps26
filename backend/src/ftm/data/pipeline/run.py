@@ -1,4 +1,4 @@
-"""Run QA -> clean -> gaps on one source's daily series and emit Data Journey payloads. Owner: M3."""
+"""Run QA -> clean -> gaps -> align on one source's daily series and emit Data Journey payloads. Owner: M3."""
 
 from __future__ import annotations
 
@@ -15,13 +15,24 @@ from ftm.contracts.models import (
     StageStatus,
     ValueKind,
 )
+from ftm.data.pipeline.align import align_daily
 from ftm.data.pipeline.clean import clean
 from ftm.data.pipeline.gaps import DEFAULT_MAX_GAP_DAYS, handle_gaps
 from ftm.data.pipeline.qa import check
 from ftm.provenance import new_id
 
-PIPELINE_VERSION = "0.1.0"
+PIPELINE_VERSION = "0.2.0"  # 0.2.0: align step added
 SAMPLE_DAYS = 60  # raw-vs-clean chart sample, keeps payloads small
+
+
+@dataclass(frozen=True)
+class AlignContext:
+    """What the align step needs to know about the site and the source's own day and grid."""
+
+    timezone: str  # site IANA timezone, e.g. "America/Chicago"
+    source_time_standard: str | None  # e.g. POWER header "LST"
+    native_resolution: str | None
+    grid_point: tuple[float, float] | None  # (lon, lat) the source reports
 
 
 @dataclass
@@ -41,6 +52,7 @@ def run_daily_pipeline(
     start: date,
     end: date,
     value_kind: ValueKind,
+    align: AlignContext,
     max_gap_days: int = DEFAULT_MAX_GAP_DAYS,
     is_demo: bool = False,
 ) -> PipelineResult:
@@ -48,6 +60,13 @@ def run_daily_pipeline(
     df, qa_step = check(obs, fill_value=fill_value, start=start, end=end, value_kind=value_kind)
     df, clean_step = clean(df)
     df, gap_step, gaps = handle_gaps(df, max_gap_days=max_gap_days)
+    df, align_step = align_daily(
+        df,
+        timezone=align.timezone,
+        source_time_standard=align.source_time_standard,
+        native_resolution=align.native_resolution,
+        grid_point=align.grid_point,
+    )
 
     # Guard the core rule: raw values delivered by the source are never modified.
     delivered = df[df["flag_reason"] != "not delivered by source"]["raw_value"]
@@ -64,7 +83,7 @@ def run_daily_pipeline(
         version=PIPELINE_VERSION,
         site_id=site_id,
         input_source_ids=[source_id],
-        steps=[qa_step, clean_step, gap_step],
+        steps=[qa_step, clean_step, gap_step, align_step],
         created_at=datetime.now(UTC),
         summary={"rows": len(df), "flag_counts": {str(k): int(v) for k, v in flags.items()}},
     )
@@ -75,7 +94,7 @@ def run_daily_pipeline(
 
 def _journey(res: PipelineResult, source_id: str, is_demo: bool) -> list[JourneyStage]:
     df, run = res.observations, res.run
-    qa_step, clean_step, gap_step = run.steps
+    qa_step, clean_step, gap_step, align_step = run.steps
     per_var = qa_step.params["per_variable"]
     counts = {f.value: int((df["quality_flag"] == f.value).sum()) for f in QualityFlag}
     common = {"source_ids": [source_id], "processing_run_id": run.id, "is_demo": is_demo}
@@ -121,7 +140,19 @@ def _journey(res: PipelineResult, source_id: str, is_demo: bool) -> list[Journey
         details=gap_step.params,
         **common,
     )
-    return [check_stage, clean_stage, gaps_stage]
+    ap = align_step.params
+    align_stage = JourneyStage(
+        stage=JourneyStageName.ALIGN,
+        status=StageStatus.OK,
+        summary=(
+            f"Daily values stamped in {ap['timezone']}; source day = {ap['source_day_definition']}; "
+            f"native resolution kept ({ap['native_resolution'] or 'not stated'}), nothing resampled."
+        ),
+        chart={"type": "footprint", "grid_point_lon_lat": ap["grid_point_lon_lat"]},
+        details=ap,
+        **common,
+    )
+    return [check_stage, clean_stage, gaps_stage, align_stage]
 
 
 def _missing_timeline(df: pd.DataFrame) -> dict[str, list[str]]:
