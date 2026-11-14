@@ -36,7 +36,6 @@ from ftm.contracts.models import (
 )
 from ftm.engine.ensemble import (
     BOOTSTRAP_METHOD,
-    METRIC_UNITS,
     MIN_PATHS_FOR_RANGE,
     MODEL_VERSION,
     REPLAY_METHOD,
@@ -45,6 +44,7 @@ from ftm.engine.ensemble import (
     PathOutcome,
     SoilRunConfig,
     horizon_blocks,
+    metric_unit,
     replay_windows,
     run_ensemble,
     run_replay,
@@ -56,6 +56,7 @@ from ftm.engine.forcing import ForcingContractError, ForcingInfo, assert_forcing
 from ftm.engine.params import LITERATURE_SOURCES, CropEntry, SoilSpec
 from ftm.engine.rotation import FALLOW_CHUNK_DAYS, SUPPORTED_IRRIGATION_RULE, ZE_BARE_SOIL_M, check_feasibility
 from ftm.engine.water_balance import IRRIGATION_RULE
+from ftm.engine.yield_response import ordered_seasons, parse_yield_metric
 from ftm.provenance import inputs_hash, new_id
 
 SUPPORTED_METRICS = (
@@ -71,13 +72,21 @@ SUPPORTED_METRICS = (
 )
 # Claims this engine cannot support: never emitted, and shown as unavailable rather than estimated.
 UNSUPPORTED_CLAIMS = (
-    "yield",
+    "absolute yield (t/ha) without the farmer's own usual yield",
     "profit",
     "soil carbon change",
     "nitrogen balance",
     "salinity",
     "erosion (t/ha)",
     "residue cover",
+)
+
+
+YIELD_LIMITATIONS = (
+    "Relative yield is the share of the water-unlimited yield lost to water stress (FAO-33 eq. 1, seasonal Ky "
+    "from FAO-56 Table 24). Nutrients, pests, heat or frost, variety and management are not modelled.",
+    "Tonnes per hectare appear only where the farmer entered a usual yield; they scale that figure and are not "
+    "a prediction of absolute yield.",
 )
 
 
@@ -177,6 +186,7 @@ def _common_limitations(
         f"Elevation: {req.elevation_note}.",
         *req.soil.notes,
         "Water stress days count days with Ks < 1 in the model; they are not a yield estimate.",
+        "Relative yield is water-limited only (FAO-33 seasonal Ky); see the yield metric's own limitations.",
     ]
     if req.mode is not SimulationMode.IRRIGATION_NEEDED or any(
         s.irrigation_rule for st in req.strategies for s in st.seasons
@@ -315,9 +325,16 @@ def run_engine(req: EngineRequest) -> EngineOutput:
     metrics = [m for m in SUPPORTED_METRICS if fixed or m != "allocation_shortfall_days"]
     source_ids = _source_ids(req)
     results: list[Result] = []
+    crop_of = {s.id: {i: x.crop_id for i, x in enumerate(ordered_seasons(s))} for s in req.strategies}
     for s in req.strategies:
         notes = sorted({n for o in outcomes for n in o.notes.get(s.id, ())})
-        for m in metrics:
+        # Per-season yield metrics exist only for simulated strategies whose crops have a Ky.
+        per_season = sorted(m for m in summary.get(s.id, {}) if parse_yield_metric(m) is not None)
+        for m in [*metrics, *per_season]:
+            parsed = parse_yield_metric(m)
+            season_index = parsed[1] if parsed else None
+            crop_id = crop_of[s.id].get(season_index) if season_index is not None else None
+            metric_name = parsed[0] if parsed else m
             row = summary.get(s.id, {}).get(m)
             if row is None:
                 results.append(
@@ -325,8 +342,8 @@ def run_engine(req: EngineRequest) -> EngineOutput:
                         id=new_id("res"),
                         run_id=run_id,
                         strategy_id=s.id,
-                        metric=m,
-                        unit=METRIC_UNITS[m],
+                        metric=metric_name,
+                        unit=metric_unit(m),
                         p10=None,
                         p50=None,
                         p90=None,
@@ -342,15 +359,17 @@ def run_engine(req: EngineRequest) -> EngineOutput:
                     id=new_id("res"),
                     run_id=run_id,
                     strategy_id=s.id,
-                    metric=m,
-                    unit=METRIC_UNITS[m],
+                    metric=metric_name,
+                    unit=metric_unit(m),
+                    season_index=season_index,
+                    crop_id=crop_id,
                     p10=_opt(row["p10"]),
                     p50=_opt(row["p50"]),
                     p90=_opt(row["p90"]),
                     sample_count=len(outcomes),
                     trace_path=trace_paths.get(s.id),
                     source_ids=source_ids,
-                    limitations=[*common, *notes],
+                    limitations=[*common, *notes, *(YIELD_LIMITATIONS if parsed else ())],
                     is_demo=is_demo,
                 )
             )

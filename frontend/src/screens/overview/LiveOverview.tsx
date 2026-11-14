@@ -38,6 +38,7 @@ import { LivePrioritiesPanel } from './PrioritiesPanel'
 import { LiveRotation } from './LiveRotation'
 import { RunComparison } from './RunComparison'
 import { TimelineCard } from './TimelineCard'
+import { HarvestTable } from './HarvestTable'
 import { TradeOffs } from './TradeOffs'
 
 type RunState = { status: 'idle' } | { status: 'running' } | { status: 'failed'; message: string }
@@ -47,8 +48,7 @@ const joinList = (items: string[]) =>
 const capitalise = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 const fmt = (v: number | null | undefined) => (v == null ? '—' : Math.round(v).toLocaleString('en-GB'))
 const shortName = (name: string) => name.split(':')[0] ?? name
-const OBSERVE_ONLY =
-  'Observe only: this farm has no locally reviewed strategies or crop calendar yet, so rotations cannot be compared here.'
+const OBSERVE_ONLY = 'Observe only: this farm has no rotations yet. Choose crops in the Rotation planner to compare them here.'
 
 /**
  * Overview for a loaded farm: every number comes from the API (runs, results, paired deltas, replay,
@@ -71,6 +71,8 @@ export function LiveOverview({
   const runs = useAsync(() => api.runs(siteId), [siteId, reload])
   const journey = useAsync(() => api.journey(siteId), [siteId, reload])
   const crops = useAsync(api.crops, [])
+  const rotationCrops = useAsync(api.rotationCrops, [])
+  const storedRotations = useAsync(() => api.strategies(siteId), [siteId, reload])
   const sources = useAsync(api.sources, [reload])
   const timeline = useAsync(() => api.timeline(siteId), [siteId])
   const load = useAsync(() => api.siteLoad(siteId), [siteId])
@@ -123,7 +125,14 @@ export function LiveOverview({
 
   const names = Object.fromEntries((run?.strategies ?? []).map((s) => [s.id, shortName(s.name)]))
   const farmerChanged = Boolean(run && farmer?.updated_at && farmer.updated_at > run.run.created_at)
-  const changes = changesSince(run, draft, names, farmerChanged)
+  // Rotations saved after the shown run (a different set of strategies): its results describe the old ones.
+  const rotationsChanged = Boolean(
+    run &&
+      storedRotations.status === 'ready' &&
+      storedRotations.data.length > 0 &&
+      storedRotations.data.map((s) => s.id).sort().join() !== run.strategies.map((s) => s.id).sort().join(),
+  )
+  const changes = [...changesSince(run, draft, names, farmerChanged), ...(rotationsChanged ? ['rotations'] : [])]
   const outdated = changes.length > 0
   const problem = draftProblem(draft)
   const cropMap = useMemo(() => new Map((crops.status === 'ready' ? crops.data : []).map((c) => [c.id, c])), [crops])
@@ -167,7 +176,7 @@ export function LiveOverview({
 
   const farmOptions = sites.map((s) => ({ value: s.id, label: `${s.name}${s.is_demo ? ' (DEMO)' : ''}` }))
   const lockReason = observeOnly
-    ? 'Observe only: no strategies to choose from for this farm.'
+    ? 'No rotations yet: build them in the Rotation planner first.'
     : !run
       ? 'Run the comparison first.'
       : runState.status === 'running'
@@ -319,8 +328,10 @@ export function LiveOverview({
       {runs.status === 'error' && <StateView kind="failed" title="Runs could not be loaded">{runs.error.message}</StateView>}
       {observeOnly && (
         <StateView kind="unavailable" title="Observe only for this farm">
-          {OBSERVE_ONLY} The field history, map, data journey and evidence are real. Strategies and crop calendars are reviewed
-          per region before comparisons are offered (docs/decisions.md D13).
+          {OBSERVE_ONLY} The field history, map, data journey and evidence below are already real.
+          <button type="button" className="btn btn--primary" onClick={() => onNavigate('rotation')}>
+            Build rotations
+          </button>
         </StateView>
       )}
       {runs.status === 'ready' && !run && runState.status !== 'running' && !observeOnly && (
@@ -397,6 +408,7 @@ export function LiveOverview({
           />
 
           <TradeOffs strategies={strategies} results={results} ranking={ranking} outdated={outdated} />
+          <HarvestTable strategies={strategies} results={results} crops={cropMap} outdated={outdated} />
         </>
       )}
 
@@ -428,7 +440,7 @@ export function LiveOverview({
         siteId={siteId}
         open={farmOpen}
         initial={farmer}
-        crops={crops.status === 'ready' ? crops.data.filter((c) => c.id !== 'winter-wheat') : []}
+        crops={rotationCrops.status === 'ready' ? rotationCrops.data : []}
         soilSummary={soilSource ? `${soilSource.product} (${soilSource.id})` : 'none stored'}
         onClose={() => setFarmOpen(false)}
         onSaved={(ctx) => {

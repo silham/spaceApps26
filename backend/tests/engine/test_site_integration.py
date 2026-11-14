@@ -112,7 +112,7 @@ def test_soil_spec_from_ssurgo_profile() -> None:
     assert any("inferred from texture" in n for n in spec.notes)
     assert soil_spec_from_profile(_profile("Silt loam"), data_depth_m=1.0, hsg="C").notes == ()
     with pytest.raises(CatalogError, match="not in the FAO-56"):
-        soil_spec_from_profile(_profile("Clay"), data_depth_m=1.0)
+        soil_spec_from_profile(_profile("Silt"), data_depth_m=1.0)
     low = with_awc(spec, 194.3, "SSURGO awc_l")
     assert low.profile.available_water_capacity_mm_per_m.value == 194.3 and "194.3" in low.notes[-1]
 

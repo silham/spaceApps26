@@ -10,13 +10,16 @@ from datetime import date, datetime
 from enum import StrEnum
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-SCHEMA_VERSION = "1.3.0"
+SCHEMA_VERSION = "1.5.0"
 # 1.1.0: additive (MODELED kind, ParamValue bounds, Validation periods/sources)
 # 1.2.0: additive (RunRequest, RunDetail, PairedDelta, ReplayTrace, FarmerContext, EnvironmentalTimeline,
 #        DecisionCardRequest, DecisionCard; D6 supported edits)
 # 1.3.0: additive (NewSiteRequest, SiteLoadStep, SiteLoadStatus; user-selected locations, observe only, D13)
+# 1.4.0: additive (accounts, farm ownership, D14)
+# 1.5.0: additive (CropProfile.ky_season, SeasonPlan.usual_yield_t_ha, Result.season_index/crop_id, RotationInput
+#        and RotationsUpdate; user-built rotations and the water-limited relative-yield metric, D15)
 
 # Wording agreed in DEVELOPMENT_GUIDE.md section 7: p10-p90 is NOT a calibrated prediction interval.
 RANGE_LABEL = "central 80% simulation range (p10–p90)"
@@ -88,6 +91,8 @@ class StageStatus(StrEnum):
 
 
 class Site(Contract):
+    owner_user_id: str | None = None
+    archived: bool = False
     id: str
     name: str
     latitude: float = Field(ge=-90, le=90)
@@ -198,6 +203,10 @@ class CropProfile(Contract):
     stage_lengths_days: dict[Literal["ini", "dev", "mid", "late"], ParamValue]
     max_root_depth_m: ParamValue
     depletion_fraction_p: ParamValue
+    ky_season: ParamValue | None = Field(
+        default=None,
+        description="FAO-33 seasonal yield response factor Ky (unit '-'); null blocks the yield claim for this crop",
+    )
     planting_window: tuple[str, str] | None = Field(default=None, description="MM-DD start/end")
     is_cover_crop: bool = False
     notes: str | None = None
@@ -220,6 +229,9 @@ class SeasonPlan(Contract):
     end_date: date = Field(description="Harvest or termination date")
     irrigation_rule: str | None = None
     residue_management: str | None = None
+    usual_yield_t_ha: float | None = Field(
+        default=None, ge=0, le=30, description="The farmer's own usual yield for this crop; never a prediction"
+    )
 
 
 class Feasibility(Contract):
@@ -266,6 +278,8 @@ class Result(Contract):
     p90: float | None
     range_label: str = RANGE_LABEL
     sample_count: int
+    season_index: int | None = Field(default=None, description="Per-season metrics: index in the plant-date order")
+    crop_id: str | None = Field(default=None, description="Per-season metrics: the crop of that season")
     trace_path: str | None = Field(default=None, description="Parquet traces under results/")
     source_ids: list[str]
     limitations: list[str] = Field(default_factory=list)
@@ -535,7 +549,97 @@ class SiteLoadStatus(Contract):
     has_strategies: bool = Field(description="False: observe only, no locally reviewed strategies (D13)")
 
 
+# --------------------------------------------------------------------------- accounts and farm management (1.4.0)
+
+
+class User(Contract):
+    id: str
+    username: str
+    display_name: str
+    created_at: datetime
+
+
+class ProfileUpdate(Contract):
+    display_name: str = Field(min_length=1, max_length=100)
+
+    @field_validator("display_name")
+    @classmethod
+    def clean_name(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("name cannot be blank")
+        return value
+
+
+class LoginRequest(Contract):
+    username: str = Field(min_length=3, max_length=64, pattern=r"^[a-zA-Z0-9_.-]+$")
+    password: str = Field(min_length=1, max_length=128, repr=False)
+
+    @field_validator("username", mode="before")
+    @classmethod
+    def normalize_username(cls, value: str) -> str:
+        return value.strip().lower() if isinstance(value, str) else value
+
+
+class RegisterRequest(LoginRequest, ProfileUpdate):
+    password: str = Field(min_length=15, max_length=128, repr=False)
+
+
+class PasswordChange(Contract):
+    current_password: str = Field(min_length=1, max_length=128, repr=False)
+    new_password: str = Field(min_length=15, max_length=128, repr=False)
+
+
+MAX_ROTATIONS = 3
+MAX_SEASONS_PER_ROTATION = 4
+
+
+class RotationSeasonInput(Contract):
+    crop_id: str = Field(min_length=1, max_length=64)
+    plant_date: date
+    irrigated: bool = False
+    usual_yield_t_ha: float | None = Field(default=None, gt=0, le=30)
+
+
+class RotationInput(Contract):
+    name: str = Field(min_length=1, max_length=120)
+    seasons: list[RotationSeasonInput] = Field(min_length=1, max_length=MAX_SEASONS_PER_ROTATION)
+
+    @field_validator("name")
+    @classmethod
+    def clean_name(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("name cannot be blank")
+        return value
+
+
+class RotationsUpdate(Contract):
+    rotations: list[RotationInput] = Field(
+        min_length=1, max_length=MAX_ROTATIONS, description="The first rotation is current practice (the baseline)"
+    )
+
+
+class FarmUpdate(Contract):
+    name: str = Field(min_length=1, max_length=120)
+    archived: bool = False
+
+    @field_validator("name")
+    @classmethod
+    def clean_name(cls, value: str) -> str:
+        return ProfileUpdate.clean_name(value)
+
+
 ALL_CONTRACTS: list[type[Contract]] = [
+    User,
+    ProfileUpdate,
+    LoginRequest,
+    RegisterRequest,
+    PasswordChange,
+    FarmUpdate,
+    RotationSeasonInput,
+    RotationInput,
+    RotationsUpdate,
     Site,
     Source,
     Observation,

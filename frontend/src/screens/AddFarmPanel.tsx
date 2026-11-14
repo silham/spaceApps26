@@ -5,45 +5,31 @@ import { api } from '../api/client'
 import { ErrorBoundary } from '../components/ErrorBoundary'
 import { StateView } from '../components/StateView'
 import { Badge } from '../components/ui'
+import { OSM_ATTRIBUTION, OSM_STYLE, trackContainerSize } from '../journey/basemap'
 import type { SiteLoadStatus } from '../types/contracts'
 
 type Pos = [number, number] // [lon, lat]
 
-const OSM_ATTRIBUTION = '© OpenStreetMap contributors (ODbL)'
-// Basemap for orientation only: it is never used in a calculation (rule 2; docs/decisions.md D13).
-const STYLE = {
-  version: 8,
-  sources: {
-    osm: {
-      type: 'raster',
-      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-      tileSize: 256,
-      maxzoom: 19,
-      attribution: OSM_ATTRIBUTION,
-    },
-  },
-  layers: [{ id: 'osm', type: 'raster', source: 'osm' }],
-} as const
-
 function PickerMap({
   point,
   outline,
-  drawing,
   onClick,
 }: {
   point: Pos | null
   outline: Pos[]
-  drawing: boolean
   onClick: (p: Pos) => void
 }) {
   const el = useRef<HTMLDivElement>(null)
   const map = useRef<maplibregl.Map | null>(null)
+  // isStyleLoaded() is false whenever basemap tiles are still fetching, so readiness is tracked from 'load'.
+  const [ready, setReady] = useState(false)
   const click = useRef(onClick)
   click.current = onClick
 
   useEffect(() => {
     if (!el.current) return
-    const m = new maplibregl.Map({ container: el.current, style: STYLE as never, center: [0, 20], zoom: 1.5 })
+    const m = new maplibregl.Map({ container: el.current, style: OSM_STYLE, center: [0, 20], zoom: 1.5 })
+    const stopResize = trackContainerSize(m, el.current)
     m.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right')
     m.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-left')
     m.on('click', (e) => click.current([e.lngLat.lng, e.lngLat.lat]))
@@ -52,30 +38,29 @@ function PickerMap({
       m.addLayer({ id: 'fill', type: 'fill', source: 'draw', filter: ['==', ['geometry-type'], 'Polygon'], paint: { 'fill-color': '#1e6b45', 'fill-opacity': 0.2 } })
       m.addLayer({ id: 'line', type: 'line', source: 'draw', filter: ['!=', ['geometry-type'], 'Point'], paint: { 'line-color': '#1e6b45', 'line-width': 2 } })
       m.addLayer({ id: 'pt', type: 'circle', source: 'draw', filter: ['==', ['geometry-type'], 'Point'], paint: { 'circle-radius': 6, 'circle-color': '#e59a0b', 'circle-stroke-color': '#fff', 'circle-stroke-width': 2 } })
+      setReady(true)
     })
     map.current = m
     return () => {
+      stopResize()
       m.remove()
       map.current = null
+      setReady(false)
     }
   }, [])
 
   useEffect(() => {
     const m = map.current
-    if (!m) return
-    const draw = () => {
-      const feats: unknown[] = []
-      if (outline.length >= 3 && !drawing)
-        feats.push({ type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [[...outline, outline[0]]] } })
-      else if (outline.length >= 2) feats.push({ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: outline } })
-      for (const v of outline) feats.push({ type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: v } })
-      if (point) feats.push({ type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: point } })
-      const src = m.getSource('draw') as maplibregl.GeoJSONSource | undefined
-      src?.setData({ type: 'FeatureCollection', features: feats } as never)
-    }
-    if (m.isStyleLoaded()) draw()
-    else m.once('load', draw)
-  }, [point, outline, drawing])
+    if (!m || !ready) return
+    const feats: unknown[] = []
+    // While drawing, show the closed shape as soon as there are 3 corners so the field is visible before Finish.
+    if (outline.length >= 3) feats.push({ type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [[...outline, outline[0]]] } })
+    else if (outline.length === 2) feats.push({ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: outline } })
+    for (const v of outline) feats.push({ type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: v } })
+    if (point) feats.push({ type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: point } })
+    const src = m.getSource('draw') as maplibregl.GeoJSONSource | undefined
+    src?.setData({ type: 'FeatureCollection', features: feats } as never)
+  }, [point, outline, ready])
 
   return (
     <div
@@ -89,10 +74,20 @@ function PickerMap({
 }
 
 /**
- * Add a farm anywhere in the world (D13: observe only). Click the map to place the farm, optionally draw
- * the field outline, then load its data. No Figma frame: card, button and badge patterns of frame 25:49.
+ * Add a farm anywhere in the world (D13: observe only), shown inside My farms. Click the map to place the farm,
+ * optionally draw the field outline, then load its data. No Figma frame: card, button and badge patterns of 25:49.
  */
-export function AddFarmScreen({ onOpen }: { onOpen: (siteId: string) => void }) {
+export function AddFarmPanel({
+  onOpen,
+  onCreated,
+  onClose,
+}: {
+  onOpen: (siteId: string) => void
+  /** The farm row exists as soon as loading starts, and again when it finishes: refresh the list. */
+  onCreated: () => void
+  /** Absent when the user has no farms yet, so the panel cannot be dismissed. */
+  onClose?: () => void
+}) {
   const [name, setName] = useState('')
   const [point, setPoint] = useState<Pos | null>(null)
   const [outline, setOutline] = useState<Pos[]>([])
@@ -100,6 +95,13 @@ export function AddFarmScreen({ onOpen }: { onOpen: (siteId: string) => void }) 
   const [job, setJob] = useState<SiteLoadStatus | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+
+  const created = useRef(onCreated)
+  created.current = onCreated
+  const finished = job?.status === 'done' || job?.status === 'failed'
+  useEffect(() => {
+    if (finished) created.current()
+  }, [finished])
 
   useEffect(() => {
     if (!job || job.status === 'done' || job.status === 'failed') return
@@ -125,7 +127,10 @@ export function AddFarmScreen({ onOpen }: { onOpen: (siteId: string) => void }) 
         longitude: point[0],
         boundary_geojson: outline.length >= 3 ? { type: 'Polygon', coordinates: [[...outline, outline[0]]] } : null,
       })
-      .then(setJob, (e: Error) => setError(e.message))
+      .then((j) => {
+        setJob(j)
+        onCreated()
+      }, (e: Error) => setError(e.message))
       .finally(() => setBusy(false))
   }
 
@@ -134,20 +139,24 @@ export function AddFarmScreen({ onOpen }: { onOpen: (siteId: string) => void }) 
 
   return (
     <>
-      <h1 className="page-title" tabIndex={-1}>
-        Add a farm
-      </h1>
       <section className="card page-card" aria-labelledby="add-h">
-        <div className="card-title">
-          <h2 id="add-h">Where is your field?</h2>
+        <div className="card-head">
+          <div className="card-title">
+            <h2 id="add-h">Add a farm: where is your field?</h2>
           <p>
             Click the map to place your farm, then draw the field outline if you can. We load 45 years of NASA POWER weather, soil
             information and satellite greenness for that spot. This takes a minute or two.
           </p>
+          </div>
+          {onClose && (
+            <button type="button" className="btn btn--secondary" onClick={onClose}>
+              Close
+            </button>
+          )}
         </div>
-        <StateView kind="unavailable" title="Observe only for new farms">
-          You will see the field history, data quality and evidence for any location. Comparing rotations needs locally reviewed
-          strategies and crop calendars, which exist only for the preset Kansas field so far.
+        <StateView kind="unavailable" title="What happens next">
+          Once the data has loaded you will see the field history, data quality and evidence for this location. To compare
+          crops, open the Rotation planner, choose up to three rotations and run them on this farm's own weather and soil.
         </StateView>
 
         <div className="row">
@@ -180,7 +189,7 @@ export function AddFarmScreen({ onOpen }: { onOpen: (siteId: string) => void }) 
         </div>
 
         <ErrorBoundary what="The map">
-          <PickerMap point={point} outline={outline} drawing={drawing} onClick={onMapClick} />
+          <PickerMap point={point} outline={outline} onClick={onMapClick} />
         </ErrorBoundary>
         <p className="small muted">Basemap {OSM_ATTRIBUTION}, for orientation only; it is not used in any calculation.</p>
 

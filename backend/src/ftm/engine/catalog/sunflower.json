@@ -1,0 +1,93 @@
+{
+  "_status": "ILLUSTRATIVE generic FAO values, not locally calibrated. Added for user-built rotations (D15). Values transcribed from the FAO-56 online tables; midpoints are used where a table prints a range.",
+  "profile": {
+    "id": "sunflower",
+    "name": "Sunflower",
+    "kc_ini": {
+      "value": 0.35,
+      "unit": "-",
+      "reference": "FAO-56 (Allen et al. 1998) Table 12, Oil crops group Kc ini 0.35 (row blank)",
+      "region_relevance": "Generic; Table 12 footnote 1: depends on wetting interval (FAO-56 Fig. 29/30, Annex 7)",
+      "uncertainty": "0.1-1.15 with wetting frequency (FAO-56 ch. 6)"
+    },
+    "kc_mid": {
+      "value": 1.075,
+      "unit": "-",
+      "reference": "FAO-56 (Allen et al. 1998) Table 12, Sunflower Kc mid 1.0-1.15 (midpoint used; footnote 9: the lower value suits rainfed, less dense stands)",
+      "region_relevance": "Sub-humid reference climate (RHmin 45%, u2 2 m/s); adjusted with FAO-56 eq. 62 at run time",
+      "uncertainty": "1.0-1.15"
+    },
+    "kc_end": {
+      "value": 0.35,
+      "unit": "-",
+      "reference": "FAO-56 (Allen et al. 1998) Table 12, Sunflower Kc end 0.35",
+      "region_relevance": "Sub-humid reference climate; adjusted with FAO-56 eq. 65 when Kc end > 0.45",
+      "uncertainty": "Generic value"
+    },
+    "stage_lengths_days": {
+      "ini": {
+        "value": 25,
+        "unit": "days",
+        "reference": "FAO-56 (Allen et al. 1998) Table 11, Sunflower, April/May planting, 'Medit.; California' row (25/35/45/25, total 130) (ini)",
+        "region_relevance": "Mediterranean/California row; not site-specific",
+        "uncertainty": "Table 11 footnote: indicative only; varies with region, climate and variety"
+      },
+      "dev": {
+        "value": 35,
+        "unit": "days",
+        "reference": "FAO-56 (Allen et al. 1998) Table 11, Sunflower, April/May planting, 'Medit.; California' row (25/35/45/25, total 130) (dev)",
+        "region_relevance": "Mediterranean/California row; not site-specific",
+        "uncertainty": "Table 11 footnote: indicative only; varies with region, climate and variety"
+      },
+      "mid": {
+        "value": 45,
+        "unit": "days",
+        "reference": "FAO-56 (Allen et al. 1998) Table 11, Sunflower, April/May planting, 'Medit.; California' row (25/35/45/25, total 130) (mid)",
+        "region_relevance": "Mediterranean/California row; not site-specific",
+        "uncertainty": "Table 11 footnote: indicative only; varies with region, climate and variety"
+      },
+      "late": {
+        "value": 25,
+        "unit": "days",
+        "reference": "FAO-56 (Allen et al. 1998) Table 11, Sunflower, April/May planting, 'Medit.; California' row (25/35/45/25, total 130) (late)",
+        "region_relevance": "Mediterranean/California row; not site-specific",
+        "uncertainty": "Table 11 footnote: indicative only; varies with region, climate and variety"
+      }
+    },
+    "max_root_depth_m": {
+      "value": 1.5,
+      "unit": "m",
+      "reference": "FAO-56 (Allen et al. 1998) Table 22, Sunflower: Zr 0.8-1.5 m",
+      "region_relevance": "Larger value for modelling soil water stress (Table 22 footnote 1)",
+      "uncertainty": "0.8-1.5 m"
+    },
+    "depletion_fraction_p": {
+      "value": 0.45,
+      "unit": "-",
+      "reference": "FAO-56 (Allen et al. 1998) Table 22, Sunflower: p 0.45",
+      "region_relevance": "Generic; p = p_table + 0.04(5 - ETc) at run time (Table 22 footnote 2)",
+      "uncertainty": "Soil-texture adjustment of 5-10% possible"
+    },
+    "ky_season": {
+      "value": 0.95,
+      "unit": "-",
+      "reference": "FAO-56 Chapter 8 Table 24 'Seasonal yield response functions from FAO Irrigation and Drainage Paper No. 33' (Doorenbos & Kassam 1979), value 0.95",
+      "region_relevance": "Generic; applied to the whole growing period, water-limited yield only",
+      "uncertainty": "Seasonal Ky only (stage-specific values are not in Table 24); varies with variety and climate"
+    },
+    "planting_window": null,
+    "is_cover_crop": false,
+    "notes": "",
+    "is_demo": false
+  },
+  "engine_extras": {
+    "max_height_m": {
+      "value": 2.0,
+      "unit": "m",
+      "reference": "FAO-56 (Allen et al. 1998) Table 12, Sunflower h 2.0 m",
+      "region_relevance": "Generic",
+      "uncertainty": "Generic"
+    },
+    "tr55_cover": "row_crops_straight_row_good"
+  }
+}

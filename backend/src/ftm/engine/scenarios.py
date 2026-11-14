@@ -19,6 +19,7 @@ lengths (Kansas wheat until the NASS season length is entered, D4) makes its str
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import Literal
@@ -43,6 +44,27 @@ class Scenario:
     strategies: list[Strategy]
     planting: dict[str, PlantingDate]
     notes: tuple[str, ...]
+
+
+USER_ROTATION_NOTES = (
+    "User-built rotations (D15): the farmer chose the crops, planting dates and irrigation.",
+    "Crop parameters are generic FAO-56 / FAO-33 table values, not locally calibrated.",
+    "Planting dates are the farmer's; they are not checked against a local planting calendar.",
+)
+
+
+def build_user_scenario(strategies: list[Strategy], catalog: Mapping[str, CropEntry]) -> Scenario:
+    """The scenario for a farm's saved rotations: only the catalog crops they use, no temperature-rule dates."""
+    used = {s.crop_id for st in strategies for s in st.seasons if s.crop_id is not None}
+    missing = sorted(used - set(catalog))
+    if missing:
+        raise KeyError(f"crop(s) {missing} are not in the crop catalog")
+    return Scenario(
+        crops={cid: catalog[cid] for cid in sorted(used)},
+        strategies=list(strategies),
+        planting={},
+        notes=USER_ROTATION_NOTES,
+    )
 
 
 def _end(entry: CropEntry, plant: date) -> date | None:

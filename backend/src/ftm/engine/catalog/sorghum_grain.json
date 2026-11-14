@@ -14,6 +14,7 @@
     },
     "max_root_depth_m": {"value": 2.0, "unit": "m", "reference": "FAO-56 Table 22, Sorghum - grain: 1.0-2.0 m", "region_relevance": "Larger value for modelling soil water stress (Table 22 footnote 1)", "uncertainty": "1.0-2.0 m"},
     "depletion_fraction_p": {"value": 0.55, "unit": "-", "reference": "FAO-56 Table 22; daily ETc adjustment p = p_table + 0.04(5 - ETc), limited to 0.1-0.8", "region_relevance": "Generic", "uncertainty": "Soil-texture adjustment of 5-10% possible"},
+    "ky_season": {"value": 0.9, "unit": "-", "reference": "FAO-56 Chapter 8 Table 24 'Seasonal yield response functions from FAO Irrigation and Drainage Paper No. 33' (Doorenbos & Kassam 1979), value 0.9", "region_relevance": "Generic; applied to the whole growing period, water-limited yield only", "uncertainty": "Seasonal Ky only (stage-specific values are not in Table 24); varies with variety and climate"},
     "planting_window": null,
     "is_cover_crop": false,
     "notes": "Table 11 row lists May/June planting.",

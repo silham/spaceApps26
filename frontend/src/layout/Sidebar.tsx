@@ -1,3 +1,4 @@
+import type { User } from '../types/contracts'
 import dotActive from '../assets/v2/dot-active.svg'
 import gear from '../assets/v2/icon-gear.svg'
 import trophy from '../assets/v2/icon-trophy.svg'
@@ -9,19 +10,19 @@ import navShield from '../assets/v2/nav-shield.svg'
 import pinIcon from '../assets/v2/icon-pin.svg'
 import { Icon } from '../components/ui'
 
-export type View = 'overview' | 'rotation' | 'journey' | 'evidence' | 'add-farm'
+export type View = 'farms' | 'overview' | 'rotation' | 'journey' | 'evidence' | 'account'
 
 const NAV: { view: View; label: string; icon: string }[] = [
+  // Not in frame 25:49: list, add and manage the account's farms (D14), styled as the other items.
+  { view: 'farms', label: 'My farms', icon: pinIcon },
   { view: 'overview', label: 'Overview', icon: navHome },
   { view: 'rotation', label: 'Rotation planner', icon: navLeaf },
   { view: 'journey', label: 'Data Journey', icon: navGrid },
   { view: 'evidence', label: 'Evidence & validation', icon: navShield },
-  // Not in frame 25:49: entry point for user-selected farms (D13), styled as the other items.
-  { view: 'add-farm', label: 'Add a farm', icon: pinIcon },
 ]
 
 /** Sidebar (Figma node 25:50). */
-export function Sidebar({ view, onNavigate }: { view: View; onNavigate: (view: View) => void }) {
+export function Sidebar({ view, onNavigate, user }: { view: View; onNavigate: (view: View) => void; user: User }) {
   return (
     <aside className="sidebar">
       <div className="sidebar__brand">
@@ -58,16 +59,22 @@ export function Sidebar({ view, onNavigate }: { view: View; onNavigate: (view: V
         </div>
       </div>
       <div className="sidebar__divider" />
-      <div className="sidebar__user">
+      <button
+        type="button"
+        className="sidebar__user sidebar__account"
+        onClick={() => onNavigate('account')}
+        aria-label="Your account"
+        aria-current={view === 'account' ? 'page' : undefined}
+      >
         <span className="tile sidebar__avatar" aria-hidden="true">
-          S
+          {user.display_name.charAt(0).toUpperCase()}
         </span>
         <div>
-          <strong>Shakil</strong>
-          <span>Farm planner</span>
+          <strong>{user.display_name}</strong>
+          <span>Account settings</span>
         </div>
         <Icon src={gear} size={18} />
-      </div>
+      </button>
     </aside>
   )
 }

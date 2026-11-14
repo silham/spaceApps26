@@ -37,7 +37,7 @@ class SiteNotFoundError(LookupError):
     pass
 
 
-def build_journey(site_id: str, session: Session) -> list[JourneyStage]:
+def build_journey(site_id: str, session: Session, *, owner_user_id: str | None = None) -> list[JourneyStage]:
     site = session.get(SiteRow, site_id)
     if site is None:
         raise SiteNotFoundError(site_id)
@@ -89,18 +89,29 @@ def build_journey(site_id: str, session: Session) -> list[JourneyStage]:
     stages[JourneyStageName.VALIDATE] = validate_stage(
         validations, source_ids=modis_run.input_source_ids if modis_run else [], is_demo=is_demo
     )
-    stages[JourneyStageName.SIMULATE], stages[JourneyStageName.COMPARE] = run_stages(session, site_id, is_demo=is_demo)
+    stages[JourneyStageName.SIMULATE], stages[JourneyStageName.COMPARE] = run_stages(
+        session, site_id, is_demo=is_demo, owner_user_id=owner_user_id
+    )
     return [stages[n] for n in ORDER]
 
 
 COMPARE_METRICS = ("irrigation_mm", "water_stress_days", "possible_low_cover_days")
 
 
-def run_stages(session: Session, site_id: str, *, is_demo: bool) -> tuple[JourneyStage, JourneyStage]:
-    """Simulate and Compare from the newest stored comparison run (the engine's own Simulate stage)."""
+def run_stages(
+    session: Session, site_id: str, *, is_demo: bool, owner_user_id: str | None = None
+) -> tuple[JourneyStage, JourneyStage]:
+    """Simulate and Compare from the newest stored comparison run (the engine's own Simulate stage).
+
+    Only runs owned by ``owner_user_id`` count (D14); ``None`` (scripts and tests) means unowned runs.
+    """
     run = session.scalars(
         select(SimulationRunRow)
-        .where(SimulationRunRow.site_id == site_id, SimulationRunRow.detail.is_not(None))
+        .where(
+            SimulationRunRow.site_id == site_id,
+            SimulationRunRow.detail.is_not(None),
+            SimulationRunRow.owner_user_id == owner_user_id,
+        )
         .order_by(SimulationRunRow.created_at.desc())
     ).first()
     if run is None or not run.detail or "journey" not in run.detail:

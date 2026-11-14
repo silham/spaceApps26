@@ -1,6 +1,23 @@
 {
   "additionalProperties": false,
   "properties": {
+    "owner_user_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Owner User Id"
+    },
+    "archived": {
+      "default": false,
+      "title": "Archived",
+      "type": "boolean"
+    },
     "id": {
       "title": "Id",
       "type": "string"

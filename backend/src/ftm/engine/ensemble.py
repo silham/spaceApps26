@@ -35,6 +35,7 @@ from ftm.engine.kc import rhmin_pct
 from ftm.engine.params import CropEntry, SoilSpec
 from ftm.engine.rotation import PathWeather, cover_indicators, daily_schedule
 from ftm.engine.water_balance import BucketInputs, SoilState, end_state, simulate_bucket, state_at_fraction
+from ftm.engine.yield_response import parse_yield_metric, yield_metrics
 
 MODEL_VERSION = "0.3.0"
 BOOTSTRAP_METHOD = "season_aligned_block_bootstrap_iid_years"
@@ -263,6 +264,7 @@ def run_strategies_on_path(
         trace["crop_id"] = sch.crop_id
         trace["in_crop"] = sch.crop_day
         trace["in_initial_stage"] = sch.in_initial_stage
+        trace["season_id"] = sch.season_id
         traces[strat.id] = trace
         notes[strat.id] = sch.notes
     return traces, notes
@@ -294,6 +296,14 @@ METRIC_UNITS = {
 }
 
 
+def metric_unit(metric: str) -> str:
+    """Unit of a metric, including the per-season yield metrics (``relative_yield_pct__s0``)."""
+    parsed = parse_yield_metric(metric)
+    if parsed is None:
+        return METRIC_UNITS[metric]
+    return "% of water-unlimited yield" if parsed[0] == "relative_yield_pct" else "t/ha"
+
+
 def summarize(outcomes: list[PathOutcome]) -> dict[str, dict[str, dict[str, object]]]:
     """strategy -> metric -> {p10, p50, p90, unit, sample_count, range_label}.
 
@@ -312,7 +322,7 @@ def summarize(outcomes: list[PathOutcome]) -> dict[str, dict[str, dict[str, obje
                 "p10": p10 if enough else None,
                 "p50": p50,
                 "p90": p90 if enough else None,
-                "unit": METRIC_UNITS[metric],
+                "unit": metric_unit(metric),
                 "sample_count": len(vals),
                 "range_label": RANGE_LABEL,
             }
@@ -338,7 +348,8 @@ def _run_paths(
         traces, notes = run_strategies_on_path(
             pf, strategies, crops, config, mode=mode, allocation_mm_per_season=allocation_mm_per_season
         )
-        metrics = {sid: path_metrics(t) for sid, t in traces.items()}
+        by_id = {s.id: s for s in strategies}
+        metrics = {sid: {**path_metrics(t), **yield_metrics(t, by_id[sid], crops)} for sid, t in traces.items()}
         outcomes.append(PathOutcome(years, metrics, notes, traces if keep_traces else {}))
     return outcomes
 

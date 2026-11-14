@@ -68,6 +68,7 @@
       "region_relevance": "Generic",
       "uncertainty": "Soil-texture adjustment of 5-10% possible"
     },
+    "ky_season": {"value": 1.05, "unit": "-", "reference": "FAO-56 Chapter 8 Table 24 'Seasonal yield response functions from FAO Irrigation and Drainage Paper No. 33' (Doorenbos & Kassam 1979), value 1.05", "region_relevance": "Generic; applied to the whole growing period, water-limited yield only", "uncertainty": "Seasonal Ky only (stage-specific values are not in Table 24); varies with variety and climate"},
     "planting_window": null,
     "is_cover_crop": false,
     "notes": "Same FAO-56 Table 12 Kc, root depth, p and height as winter-wheat. Stage lengths are local (D4): NASS Kansas season length split in the FAO-56 Table 11 Idaho proportions 160:75:75:25. Until a cited season length is entered, every strategy using this crop is infeasible.",

@@ -24,7 +24,10 @@ INSERT_BATCH = 5000
 
 
 def upsert_site(session: Session, site: Site) -> None:
-    data = site.model_dump(exclude={"boundary_geojson"})
+    data = site.model_dump(exclude={"boundary_geojson", "owner_user_id", "archived"})
+    existing = session.get(SiteRow, site.id)
+    if existing is not None and existing.owner_user_id is not None:
+        return  # farm metadata belongs to the user; ingestion only adds versioned observations
     session.merge(SiteRow(**data, boundary=_geom(site.boundary_geojson)))
 
 

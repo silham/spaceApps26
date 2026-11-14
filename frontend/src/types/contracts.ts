@@ -1,7 +1,45 @@
 /* Generated from contracts/schemas/bundle.json by json-schema-to-typescript. Do not edit; run make contracts. */
 
 export type Id = string;
+export type Username = string;
+export type DisplayName = string;
+export type CreatedAt = string;
+export type DisplayName1 = string;
+export type Username1 = string;
+export type Password = string;
+export type DisplayName2 = string;
+export type Username2 = string;
+export type Password1 = string;
+export type CurrentPassword = string;
+export type NewPassword = string;
 export type Name = string;
+export type Archived = boolean;
+export type CropId = string;
+export type PlantDate = string;
+export type Irrigated = boolean;
+export type UsualYieldTHa = number | null;
+export type Name1 = string;
+/**
+ * @minItems 1
+ * @maxItems 4
+ */
+export type Seasons =
+  | [RotationSeasonInput]
+  | [RotationSeasonInput, RotationSeasonInput]
+  | [RotationSeasonInput, RotationSeasonInput, RotationSeasonInput]
+  | [RotationSeasonInput, RotationSeasonInput, RotationSeasonInput, RotationSeasonInput];
+/**
+ * The first rotation is current practice (the baseline)
+ *
+ * @minItems 1
+ * @maxItems 3
+ */
+export type Rotations =
+  [RotationInput] | [RotationInput, RotationInput] | [RotationInput, RotationInput, RotationInput];
+export type OwnerUserId = string | null;
+export type Archived1 = boolean;
+export type Id1 = string;
+export type Name2 = string;
 export type Latitude = number;
 export type Longitude = number;
 export type BoundaryGeojson = {
@@ -13,7 +51,7 @@ export type BoundaryGeojson = {
 export type Timezone = string;
 export type AreaHa = number | null;
 export type IsDemo = boolean;
-export type Id1 = string;
+export type Id2 = string;
 export type Provider = string;
 export type Product = string;
 export type Version = string | null;
@@ -62,17 +100,17 @@ export type ProcessedValue = number | null;
 export type QualityFlag = "ok" | "flagged" | "rejected" | "missing" | "duplicate" | "estimated";
 export type ImputationMethod = string | null;
 export type ProcessingRunId = string | null;
-export type Id2 = string;
+export type Id3 = string;
 export type Version1 = string;
 export type SiteId1 = string;
 export type InputSourceIds = string[];
-export type Name1 = string;
+export type Name3 = string;
 export type AffectedCount = number;
 export type Reason = string;
 export type Steps = ProcessingStep[];
-export type CreatedAt = string;
-export type Id3 = string;
-export type Name2 = string;
+export type CreatedAt1 = string;
+export type Id4 = string;
+export type Name4 = string;
 export type Value = number | null;
 export type Unit1 = string;
 /**
@@ -100,34 +138,38 @@ export type PlantingWindow = [unknown, unknown] | null;
 export type IsCoverCrop = boolean;
 export type Notes = string | null;
 export type IsDemo2 = boolean;
-export type Id4 = string;
+export type Id5 = string;
 export type SiteId2 = string;
 export type Texture = string | null;
 export type SourceIds = string[];
 export type IsDemo3 = boolean;
-export type Id5 = string;
+export type Id6 = string;
 export type SiteId3 = string;
-export type Name3 = string;
+export type Name5 = string;
 export type IsBaseline = boolean;
 /**
  * None = fallow
  */
-export type CropId = string | null;
-export type PlantDate = string;
+export type CropId1 = string | null;
+export type PlantDate1 = string;
 /**
  * Harvest or termination date
  */
 export type EndDate = string;
 export type IrrigationRule = string | null;
 export type ResidueManagement = string | null;
-export type Seasons = SeasonPlan[];
+/**
+ * The farmer's own usual yield for this crop; never a prediction
+ */
+export type UsualYieldTHa1 = number | null;
+export type Seasons1 = SeasonPlan[];
 export type Feasible = boolean;
 /**
  * Human-readable; required when infeasible
  */
 export type Reasons = string[];
 export type IsDemo4 = boolean;
-export type Id6 = string;
+export type Id7 = string;
 export type SiteId4 = string;
 export type StrategyIds = string[];
 export type SimulationMode = "irrigation_needed" | "fixed_allocation";
@@ -149,9 +191,9 @@ export type NPaths = number;
 export type HorizonYears = number;
 export type Seed = number;
 export type ModelVersion = string;
-export type CreatedAt1 = string;
+export type CreatedAt2 = string;
 export type IsDemo5 = boolean;
-export type Id7 = string;
+export type Id8 = string;
 export type RunId = string;
 export type StrategyId = string;
 export type Metric = string;
@@ -162,13 +204,21 @@ export type P90 = number | null;
 export type RangeLabel = string;
 export type SampleCount = number;
 /**
+ * Per-season metrics: index in the plant-date order
+ */
+export type SeasonIndex = number | null;
+/**
+ * Per-season metrics: the crop of that season
+ */
+export type CropId2 = string | null;
+/**
  * Parquet traces under results/
  */
 export type TracePath = string | null;
 export type SourceIds1 = string[];
 export type Limitations1 = string[];
 export type IsDemo6 = boolean;
-export type Id8 = string;
+export type Id9 = string;
 export type Target = string;
 export type Reference1 = string;
 /**
@@ -185,12 +235,12 @@ export type SampleCount1 = number;
 export type Failures = string[];
 export type IndependenceNotes = string;
 export type IsDemo7 = boolean;
-export type Id9 = string;
+export type Id10 = string;
 export type SiteId5 = string;
 export type ChosenStrategyId = string;
 export type RunId1 = string;
 export type Reason1 = string;
-export type CreatedAt2 = string;
+export type CreatedAt3 = string;
 export type JourneyStageName =
   "collect" | "check" | "clean" | "handle_gaps" | "align" | "extract" | "simulate" | "validate" | "compare";
 export type StageStatus = "not_started" | "ok" | "warning" | "failed" | "unavailable";
@@ -251,7 +301,7 @@ export type UnsupportedClaims = string[];
  * True: an identical earlier run was returned
  */
 export type Cached = boolean;
-export type Id10 = string;
+export type Id11 = string;
 export type RunId2 = string;
 export type StrategyId1 = string;
 export type BaselineStrategyId = string;
@@ -274,7 +324,7 @@ export type SampleCount2 = number;
 export type SourceIds5 = string[];
 export type IsDemo9 = boolean;
 export type StrategyId2 = string;
-export type CropId1 = (string | null)[];
+export type CropId3 = (string | null)[];
 export type InCrop = boolean[];
 /**
  * Root-zone soil water at the end of the day
@@ -347,10 +397,10 @@ export type SiteId8 = string;
 export type RunId4 = string;
 export type ChosenStrategyId1 = string;
 export type Reason3 = string;
-export type Id11 = string;
+export type Id12 = string;
 export type SiteId9 = string;
 export type SiteName = string;
-export type CreatedAt3 = string;
+export type CreatedAt4 = string;
 export type ChosenStrategyId2 = string;
 export type Reason4 = string;
 export type Strategies1 = Strategy[];
@@ -369,7 +419,7 @@ export type PdfUrl = string | null;
  */
 export type Sha256 = string | null;
 export type IsDemo12 = boolean;
-export type Name4 = string;
+export type Name6 = string;
 /**
  * Cropland latitudes; polar regions are refused
  */
@@ -381,7 +431,7 @@ export type Longitude1 = number;
 export type BoundaryGeojson1 = {
   [k: string]: unknown;
 } | null;
-export type Name5 = "weather" | "soil" | "vegetation";
+export type Name7 = "weather" | "soil" | "vegetation";
 /**
  * Product being loaded, e.g. 'NASA POWER daily'
  */
@@ -399,9 +449,18 @@ export type FinishedAt = string | null;
 export type HasStrategies = boolean;
 
 /**
- * Schema version 1.3.0. Generated - do not edit.
+ * Schema version 1.5.0. Generated - do not edit.
  */
 export interface FarmTimeMachineContracts {
+  User?: User;
+  ProfileUpdate?: ProfileUpdate;
+  LoginRequest?: LoginRequest;
+  RegisterRequest?: RegisterRequest;
+  PasswordChange?: PasswordChange;
+  FarmUpdate?: FarmUpdate;
+  RotationSeasonInput?: RotationSeasonInput;
+  RotationInput?: RotationInput;
+  RotationsUpdate?: RotationsUpdate;
   Site?: Site;
   Source?: Source;
   Observation?: Observation;
@@ -429,9 +488,50 @@ export interface FarmTimeMachineContracts {
   SiteLoadStep?: SiteLoadStep;
   SiteLoadStatus?: SiteLoadStatus;
 }
-export interface Site {
+export interface User {
   id: Id;
+  username: Username;
+  display_name: DisplayName;
+  created_at: CreatedAt;
+}
+export interface ProfileUpdate {
+  display_name: DisplayName1;
+}
+export interface LoginRequest {
+  username: Username1;
+  password: Password;
+}
+export interface RegisterRequest {
+  display_name: DisplayName2;
+  username: Username2;
+  password: Password1;
+}
+export interface PasswordChange {
+  current_password: CurrentPassword;
+  new_password: NewPassword;
+}
+export interface FarmUpdate {
   name: Name;
+  archived?: Archived;
+}
+export interface RotationSeasonInput {
+  crop_id: CropId;
+  plant_date: PlantDate;
+  irrigated?: Irrigated;
+  usual_yield_t_ha?: UsualYieldTHa;
+}
+export interface RotationInput {
+  name: Name1;
+  seasons: Seasons;
+}
+export interface RotationsUpdate {
+  rotations: Rotations;
+}
+export interface Site {
+  owner_user_id?: OwnerUserId;
+  archived?: Archived1;
+  id: Id1;
+  name: Name2;
   latitude: Latitude;
   longitude: Longitude;
   boundary_geojson?: BoundaryGeojson;
@@ -450,7 +550,7 @@ export interface SiteFarmerContext {
  * Source register entry. Only list sources actually used (AGENTS.md rule 2).
  */
 export interface Source {
-  id: Id1;
+  id: Id2;
   provider: Provider;
   product: Product;
   version?: Version;
@@ -493,16 +593,16 @@ export interface Observation {
   processing_run_id?: ProcessingRunId;
 }
 export interface ProcessingRun {
-  id: Id2;
+  id: Id3;
   version: Version1;
   site_id: SiteId1;
   input_source_ids: InputSourceIds;
   steps: Steps;
-  created_at: CreatedAt;
+  created_at: CreatedAt1;
   summary?: Summary;
 }
 export interface ProcessingStep {
-  name: Name1;
+  name: Name3;
   params?: Params;
   affected_count?: AffectedCount;
   reason: Reason;
@@ -514,14 +614,18 @@ export interface Summary {
   [k: string]: unknown;
 }
 export interface CropProfile {
-  id: Id3;
-  name: Name2;
+  id: Id4;
+  name: Name4;
   kc_ini: ParamValue;
   kc_mid: ParamValue;
   kc_end: ParamValue;
   stage_lengths_days: StageLengthsDays;
   max_root_depth_m: ParamValue;
   depletion_fraction_p: ParamValue;
+  /**
+   * FAO-33 seasonal yield response factor Ky (unit '-'); null blocks the yield claim for this crop
+   */
+  ky_season?: ParamValue | null;
   planting_window?: PlantingWindow;
   is_cover_crop?: IsCoverCrop;
   notes?: Notes;
@@ -544,7 +648,7 @@ export interface StageLengthsDays {
   [k: string]: ParamValue;
 }
 export interface SoilProfile {
-  id: Id4;
+  id: Id5;
   site_id: SiteId2;
   available_water_capacity_mm_per_m: ParamValue;
   root_zone_depth_m: ParamValue;
@@ -553,27 +657,28 @@ export interface SoilProfile {
   is_demo?: IsDemo3;
 }
 export interface Strategy {
-  id: Id5;
+  id: Id6;
   site_id: SiteId3;
-  name: Name3;
+  name: Name5;
   is_baseline?: IsBaseline;
-  seasons: Seasons;
+  seasons: Seasons1;
   feasibility?: Feasibility | null;
   is_demo?: IsDemo4;
 }
 export interface SeasonPlan {
-  crop_id: CropId;
-  plant_date: PlantDate;
+  crop_id: CropId1;
+  plant_date: PlantDate1;
   end_date: EndDate;
   irrigation_rule?: IrrigationRule;
   residue_management?: ResidueManagement;
+  usual_yield_t_ha?: UsualYieldTHa1;
 }
 export interface Feasibility {
   feasible: Feasible;
   reasons?: Reasons;
 }
 export interface SimulationRun {
-  id: Id6;
+  id: Id7;
   site_id: SiteId4;
   strategy_ids: StrategyIds;
   mode: SimulationMode;
@@ -586,14 +691,14 @@ export interface SimulationRun {
   seed: Seed;
   model_version: ModelVersion;
   input_versions?: InputVersions;
-  created_at: CreatedAt1;
+  created_at: CreatedAt2;
   is_demo?: IsDemo5;
 }
 export interface InputVersions {
   [k: string]: string;
 }
 export interface Result {
-  id: Id7;
+  id: Id8;
   run_id: RunId;
   strategy_id: StrategyId;
   metric: Metric;
@@ -603,13 +708,15 @@ export interface Result {
   p90: P90;
   range_label?: RangeLabel;
   sample_count: SampleCount;
+  season_index?: SeasonIndex;
+  crop_id?: CropId2;
   trace_path?: TracePath;
   source_ids: SourceIds1;
   limitations?: Limitations1;
   is_demo?: IsDemo6;
 }
 export interface Validation {
-  id: Id8;
+  id: Id9;
   target: Target;
   reference: Reference1;
   source_ids?: SourceIds2;
@@ -626,12 +733,12 @@ export interface Metrics {
   [k: string]: number;
 }
 export interface DecisionRecord {
-  id: Id9;
+  id: Id10;
   site_id: SiteId5;
   chosen_strategy_id: ChosenStrategyId;
   run_id: RunId1;
   reason: Reason1;
-  created_at: CreatedAt2;
+  created_at: CreatedAt3;
 }
 /**
  * Payload for one Data Journey card (AGENTS.md rule 4).
@@ -692,7 +799,7 @@ export interface RunDetail {
  * Strategy minus baseline on the same weather path, summarised across paths (paired comparison).
  */
 export interface PairedDelta {
-  id: Id10;
+  id: Id11;
   run_id: RunId2;
   strategy_id: StrategyId1;
   baseline_strategy_id: BaselineStrategyId;
@@ -711,7 +818,7 @@ export interface PairedDelta {
 }
 export interface ReplaySeries {
   strategy_id: StrategyId2;
-  crop_id: CropId1;
+  crop_id: CropId3;
   in_crop: InCrop;
   storage_mm: StorageMm;
   ks: Ks;
@@ -798,10 +905,10 @@ export interface DecisionCardRequest {
  * Everything needed to review a decision later: choice, reason, evidence, assumptions, open questions.
  */
 export interface DecisionCard {
-  id: Id11;
+  id: Id12;
   site_id: SiteId9;
   site_name: SiteName;
-  created_at: CreatedAt3;
+  created_at: CreatedAt4;
   chosen_strategy_id: ChosenStrategyId2;
   reason: Reason4;
   priorities: Priorities | null;
@@ -826,13 +933,13 @@ export interface DecisionCard {
  * A farm picked on the map anywhere in the world (D13: observe only unless strategies are reviewed).
  */
 export interface NewSiteRequest {
-  name: Name4;
+  name: Name6;
   latitude: Latitude1;
   longitude: Longitude1;
   boundary_geojson?: BoundaryGeojson1;
 }
 export interface SiteLoadStep {
-  name: Name5;
+  name: Name7;
   source: Source1;
   status: Status;
   message?: Message;

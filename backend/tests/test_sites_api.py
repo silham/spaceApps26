@@ -90,3 +90,48 @@ def test_unreviewed_farm_is_observe_only(session: Session) -> None:
 
 def test_credentials_are_never_echoed() -> None:
     assert "SECRET" not in svc._readable("GET https://x/api?key=SECRET&q=1 failed")
+
+
+def test_timeline_accepts_ndvi_composites_keyed_by_plain_dates(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The vegetation loader returns ``composite_start`` as ``date`` objects; filtering them must not 500."""
+    from datetime import date
+    from types import SimpleNamespace
+
+    import pandas as pd
+
+    from ftm.api.routes import sites as route
+
+    days = pd.date_range("2024-01-01", "2024-01-31", freq="D")
+    forcing = pd.DataFrame({route.RAIN: 1.0, route.TMAX: 30.0, route.TMIN: 20.0}, index=days)
+    vi = pd.DataFrame(
+        {
+            "composite_start": [date(2023, 12, 19), date(2024, 1, 1), date(2024, 1, 17)],
+            "ndvi": [0.5, 0.6, 0.7],
+            "qa_pass": [True, True, False],
+        }
+    )
+    vi.attrs["source_ids"] = ["modis-test"]
+    monkeypatch.setattr(route, "site_access", lambda s, i, u: SimpleNamespace(is_demo=False))
+    monkeypatch.setattr(route, "latest_weather_source_id", lambda s, i: "power-test")
+    monkeypatch.setattr(route, "get_daily_forcing", lambda *a, **k: forcing)
+    monkeypatch.setattr(route, "get_vi_composites", lambda *a, **k: vi)
+    session = SimpleNamespace(get=lambda model, key: SimpleNamespace(id=key, coverage_end=date(2024, 1, 31)))
+
+    tl = route.get_timeline("x", session, None, start=date(2024, 1, 1), end=date(2024, 1, 31))  # type: ignore[arg-type]
+
+    assert tl.vegetation_dates == [date(2024, 1, 1), date(2024, 1, 17)]
+    assert tl.ndvi == [0.6, None]  # a failed QA composite stays a gap
+    assert tl.source_ids == ["power-test", "modis-test"]
+
+
+def test_site_ids_stay_short_enough_for_the_ids_derived_from_them() -> None:
+    from ftm.contracts.models import NewSiteRequest
+
+    long_name = "A very long farm name that goes on and on " * 3
+    req = NewSiteRequest(name=long_name[:120], latitude=-33.0, longitude=148.0)
+    site_id = svc.site_id_for(req, "usr_20261114T191216Z_baad29eb")
+    assert len(site_id) <= svc.MAX_SITE_ID_LEN
+    assert len(f"soil_{site_id}_soilgrids_{'0' * 16}") <= 64  # the longest soil profile id
+    assert len(f"val_phenology_{site_id}_20261114T191216Z") <= 64
+    assert svc.site_id_for(req, "usr_other") != site_id  # another account never shares a farm id
+    assert svc.site_id_for(req, "usr_20261114T191216Z_baad29eb") == site_id  # stable

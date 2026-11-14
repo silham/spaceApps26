@@ -22,6 +22,7 @@ from ftm.config import get_settings
 from ftm.contracts.models import ParamValue, SoilProfile, Source, ValueKind
 from ftm.data.raw_cache import RawSnapshot, find_latest_raw, save_raw
 from ftm.data.soil import DEFAULT_DEPTH_M, Layer, SoilResult, water_mm_per_m
+from ftm.data.soil_texture import usda_texture_class
 from ftm.provenance import sha256_file
 
 QUERY_URL = "https://rest.isric.org/soilgrids/v2.0/properties/query"
@@ -114,10 +115,10 @@ def build(site_id: str, snapshot: RawSnapshot, depth_m: float = DEFAULT_DEPTH_M)
     if all(p in data for p in ("clay", "sand", "silt")):
         frac = {p: _depth_mean(data[p], top30) for p in ("clay", "sand", "silt")}
         if all(v is not None for v in frac.values()):
-            texture = (
-                f"clay {frac['clay']:.0f}%, sand {frac['sand']:.0f}%, silt {frac['silt']:.0f}% "
-                "(0-30 cm, SoilGrids mean)"
-            )
+            detail = f"clay {frac['clay']:.0f}%, sand {frac['sand']:.0f}%, silt {frac['silt']:.0f}%"
+            cls = usda_texture_class(float(frac["sand"] or 0), float(frac["silt"] or 0), float(frac["clay"] or 0))
+            # The USDA class comes first so the engine can look it up; the percentages stay visible after it.
+            texture = f"{cls} ({detail}; 0-30 cm, SoilGrids mean)" if cls else f"{detail} (0-30 cm, SoilGrids mean)"
 
     source_id = f"soilgrids_{snapshot.sha256[:16]}"
     source = Source(

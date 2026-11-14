@@ -144,6 +144,18 @@
     "depletion_fraction_p": {
       "$ref": "#/$defs/ParamValue"
     },
+    "ky_season": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ParamValue"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "FAO-33 seasonal yield response factor Ky (unit '-'); null blocks the yield claim for this crop"
+    },
     "planting_window": {
       "anyOf": [
         {
