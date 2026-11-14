@@ -41,3 +41,10 @@ def save_raw(source_key: str, filename: str, content: bytes, raw_dir: Path | Non
         sha256=sha256_bytes(content),
         retrieved_at=retrieved_at,
     )
+
+
+def find_latest_raw(source_key: str, filename: str, raw_dir: Path | None = None) -> Path | None:
+    """Most recent existing snapshot with this filename (dated folders sort chronologically)."""
+    root = raw_dir or get_settings().raw_dir
+    matches = sorted((root / source_key).glob(f"*/{filename}"))
+    return matches[-1] if matches else None
