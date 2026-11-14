@@ -41,7 +41,7 @@ from ftm.provenance import sha256_file
 def power_forcing(lat: float, lon: float, start: date, end: date) -> tuple[pd.DataFrame, Source, float | None]:
     """Real POWER weather through M3's adapter and pipeline, pivoted to the engine's wide shape."""
     from ftm.data.adapters import nasa_power
-    from ftm.data.pipeline.run import run_daily_pipeline
+    from ftm.data.pipeline.run import AlignContext, run_daily_pipeline
     from ftm.data.raw_cache import RawSnapshot, find_latest_raw
 
     params = (*nasa_power.DEFAULT_PARAMETERS, TDEW)  # T2MDEW requested on PR #2
@@ -63,6 +63,12 @@ def power_forcing(lat: float, lon: float, start: date, end: date) -> tuple[pd.Da
         start=start,
         end=end,
         value_kind=ValueKind.REANALYSIS,
+        align=AlignContext(
+            timezone="America/Chicago",  # demo-site timezone (data/fixtures/demo.json)
+            source_time_standard=parsed.time_standard,
+            native_resolution=nasa_power.NATIVE_RESOLUTION,
+            grid_point=parsed.grid_point,
+        ),
     )
     obs = res.observations
     obs = obs[(obs["quality_flag"] != QualityFlag.DUPLICATE.value) & (obs["date"] >= start) & (obs["date"] <= end)]
