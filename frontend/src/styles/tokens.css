@@ -1,6 +1,8 @@
-/* Design tokens extracted from Figma file CWGXpY5vu06StB7waehMt5, frame 3:2
-   "Farm Time Machine / Primary dashboard". The file defines no Figma variables, so these are the
-   raw fill/type values used in that frame. Change them only when the Figma changes. */
+/* Design tokens extracted from Figma file CWGXpY5vu06StB7waehMt5, frame 25:49
+   "Farm Time Machine / Dashboard — Redesign v2" and its component set 24:49. The file defines no
+   Figma variables, so these are the raw fill/type values used there. Change them only when the
+   Figma changes. */
+
 /* Inter is the frame's typeface. Bundled (latin subset, variable weight) so the app renders the
    same offline. Source: @fontsource-variable/inter 5.3.0; SIL OFL 1.1, see assets/fonts. */
 @font-face {
@@ -13,58 +15,71 @@
 
 :root {
   /* Surfaces */
-  --color-bg: #f6f8fa;
+  --color-bg: #f5f7f6;
   --color-surface: #ffffff;
-  --color-navy: #09192c;
-  --color-nav-active: #1b3f60;
+  --color-forest: #0f2a1d;
+  --color-subtle: #eef1ef;
+  --color-inset: #f5f7f6;
+  --color-note-bg: #eef3f0;
+  --color-exclusion-bg: #eaeeeb;
 
   /* Text */
-  --color-text: #101b2d;
-  --color-muted: #465363;
-  --color-on-navy: #ffffff;
-  --color-on-navy-muted: #cfd9e7;
-  --color-link: #0085eb;
+  --color-text: #13201a;
+  --color-secondary: #4e5d55;
+  --color-muted: #85938b;
+  --color-placeholder: #9aa7a0;
+  --color-on-forest-muted: #8fb09d;
+  --color-on-forest-label: #6f8f7c;
+  --color-on-forest-nav: #c7d7cd;
 
   /* Lines */
-  --color-border: #bdcbda;
-  --color-divider: #d9e1e8;
+  --color-border: #e2e7e3;
+  --color-control-border: #d5ddd7;
+  --color-dashed: #c9d2cc;
+  --color-track: #dce3de;
 
-  /* Controls and badges */
-  --color-primary: #206442;
-  --color-warning-bg: #fff0d2;
-  --color-warning-text: #874600;
-  --color-caution-text: #875000;
-  --color-neutral-bg: #e8edf2;
-  --color-evidence-bg: #e8f6ff;
-  --color-note-bg: #e6ebf0;
-  --color-unavailable-bg: #e9edf1;
-  --color-benefit-bg: #eaf8de;
+  /* Brand and status */
+  --color-primary: #1e6b45;
+  --color-mint: #7fe0a4;
+  --color-success: #2e9b57;
+  --color-success-text: #1e6b3f;
+  --color-success-bg: #e5f4ea;
+  --color-success-tint: #edf7f0;
+  --color-success-border: #cfe9d8;
+  --color-warning: #e59a0b;
+  --color-warning-text: #8a5300;
+  --color-warning-strong: #6b4100;
+  --color-warning-bg: #fff3dc;
+  --color-warning-tint: #fff8ea;
+  --color-warning-border: #f3d598;
+  --color-warning-icon-bg: #ffe8b8;
+  --color-info: #2f7fd8;
+  --color-info-text: #1f5faf;
+  --color-info-bg: #e7f0fc;
+  --color-neutral-text: #4a5a51;
+  --color-violet-bg: #f1ecfb;
+  --color-leaf-bg: #e5f2ea;
 
-  /* Strategy tints: timeline cell / card title */
-  --color-baseline-cell: #d9e8f2;
-  --color-baseline-title: #ebeef2;
-  --color-water-cell: #d4edfc;
-  --color-water-title: #dff2ff;
-  --color-soil-cell: #def3ce;
-  --color-soil-title: #e7f8de;
-
-  /* Sliders, replay, map */
-  --color-slider-track: #dbe0e3;
-  --color-slider-water: #009dc3;
-  --color-slider-soil: #29ae31;
-  --color-replay-track: #65e3e9;
-  --color-playhead: #00a6bf;
-  --color-playhead-text: #008099;
-  --color-map-bg: #5c7940;
+  /* Strategy accents: accent / timeline cell / card title */
+  --color-baseline: #64748b;
+  --color-baseline-cell: #eef1f5;
+  --color-baseline-title: #f2f4f7;
+  --color-water: #2f7fd8;
+  --color-water-cell: #e8f1fc;
+  --color-water-title: #edf4fd;
+  --color-soil: #2e9b57;
+  --color-soil-cell: #e7f4ea;
+  --color-soil-title: #edf7f0;
 
   --font-sans: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --line-height: 1.25;
 
-  --radius-control: 6px;
-  --radius-card: 8px;
-  --radius-map: 9px;
+  --radius-control: 10px;
+  --radius-inner: 12px;
+  --radius-card: 16px;
+  --shadow-card: 0 6px 16px rgb(15 31 23 / 0.05), 0 1px 2px rgb(15 31 23 / 0.05);
+  --shadow-float: 0 4px 12px rgb(0 0 0 / 0.12);
 
-  --sidebar-width: 180px;
+  --sidebar-width: 240px;
 }
 
 * { box-sizing: border-box; }
@@ -72,10 +87,10 @@ body {
   margin: 0;
   font-family: var(--font-sans);
   font-size: 14px;
-  line-height: var(--line-height);
+  line-height: normal;
   color: var(--color-text);
   background: var(--color-bg);
 }
 h1, h2, h3, p { margin: 0; }
 button, select, textarea, input { font: inherit; color: inherit; }
-:focus-visible { outline: 3px solid var(--color-link); outline-offset: 2px; }
+:focus-visible { outline: 3px solid var(--color-info); outline-offset: 2px; }

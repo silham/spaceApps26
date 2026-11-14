@@ -1,10 +1,14 @@
 import { useState } from 'react'
 import { api } from '../../api/client'
 import { useAsync } from '../../api/useAsync'
-import warnIcon from '../../assets/icon-warn.svg'
-import { SelectControl } from '../../components/Control'
-import { ctl } from '../../components/ctl'
+import alertIcon from '../../assets/v2/icon-alert-20.svg'
+import branchIcon from '../../assets/v2/icon-branch.svg'
+import calendarIcon from '../../assets/v2/icon-calendar.svg'
+import clockIcon from '../../assets/v2/icon-clock.svg'
+import infoIcon from '../../assets/v2/icon-info-18.svg'
+import playIcon from '../../assets/v2/icon-play.svg'
 import { DemoBadge } from '../../components/DemoBadge'
+import { Icon, SelectControl } from '../../components/ui'
 import { figmaDemo as demo } from '../../demo/figmaDemo'
 import type { View } from '../../layout/Sidebar'
 import type { JourneyStageName, Site, StageStatus } from '../../types/contracts'
@@ -19,11 +23,12 @@ type RunState = { status: 'idle' } | { status: 'running' } | { status: 'failed';
 
 const joinList = (items: string[]) =>
   items.length <= 1 ? items.join('') : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`
+const capitalise = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
 /**
- * Overview dashboard: Figma frame 3:2. Site list and pipeline statuses come from the API when it
- * provides them; everything else is the frame's illustrative content from demo/figmaDemo.ts and is
- * labelled DEMO on screen.
+ * Overview dashboard: Figma frame 25:49 (Redesign v2). Site list and pipeline statuses come from the
+ * API when it provides them; everything else is the frame's illustrative content from
+ * demo/figmaDemo.ts and is labelled DEMO on screen.
  */
 export function OverviewScreen({
   sites,
@@ -77,29 +82,44 @@ export function OverviewScreen({
       <div className="header">
         <div className="header__title">
           <h1>Your farm. Different futures.</h1>
-          <p>Compare rotations under the same weather conditions.</p>
+          <div className="header__subtitle">
+            {demo.isDemo && <DemoBadge />}
+            <span>Compare rotations under the same weather conditions.</span>
+          </div>
         </div>
-        <SelectControl label="Farm" value={siteId ?? ''} options={farmOptions} onChange={onSiteChange} />
-        <SelectControl
-          label="Display window"
-          prefix="Display window: "
-          value={demo.displayWindow}
-          options={[{ value: demo.displayWindow, label: demo.displayWindow }]}
-        />
-        {demo.isDemo && <DemoBadge />}
-        <button type="button" className={ctl('primary')} disabled={run.status === 'running'} onClick={runComparison}>
-          {run.status === 'running' ? 'Running…' : '▶  Run comparison'}
-        </button>
+        <div className="header__controls">
+          <SelectControl label="Farm" value={siteId ?? ''} options={farmOptions} onChange={onSiteChange} />
+          <SelectControl
+            label="Display window"
+            prefix="Display window: "
+            value={demo.displayWindow}
+            options={[{ value: demo.displayWindow, label: demo.displayWindow }]}
+          />
+          <button type="button" className="btn btn--primary" disabled={run.status === 'running'} onClick={runComparison}>
+            <Icon src={playIcon} size={14} />
+            {run.status === 'running' ? 'Running…' : 'Run comparison'}
+          </button>
+        </div>
       </div>
 
       {outdated && (
         <div className="banner" role="status">
-          <img src={warnIcon} width={22} height={22} alt="" />
-          <p className="banner__text">
-            Results outdated — {joinList(changed)} changed. Run comparison to refresh.
-          </p>
-          <div className="banner__gap" />
-          <p className="banner__run">Previous run {demo.run.id}</p>
+          <span className="tile">
+            <Icon src={alertIcon} size={20} />
+          </span>
+          <div className="banner__text">
+            <strong>Results outdated</strong>
+            <span>{capitalise(joinList(changed))} changed. Run comparison to refresh.</span>
+          </div>
+          <span className="banner__run">Previous run {demo.run.id}</span>
+          <button
+            type="button"
+            className="btn btn--secondary"
+            disabled={run.status === 'running'}
+            onClick={runComparison}
+          >
+            Refresh results
+          </button>
         </div>
       )}
       {run.status === 'failed' && (
@@ -108,11 +128,40 @@ export function OverviewScreen({
         </p>
       )}
 
-      <div className="sampling">
-        <p className="sampling__main">
-          {`Weather sampling: ${demo.run.sampleStartYear}–${demo.run.sampleEndYear}  ·  ${demo.run.nPaths} paired paths  ·  ${demo.run.horizonYears}-year horizon`}
-        </p>
-        <p className="sampling__sub">{demo.run.excludedNote}</p>
+      <div className="stats">
+        <div className="stat">
+          <span className="tile tile--leaf">
+            <Icon src={calendarIcon} size={20} />
+          </span>
+          <div className="stat__text">
+            <strong>
+              {demo.run.sampleStartYear}–{demo.run.sampleEndYear}
+            </strong>
+            <span>Weather sampling window</span>
+          </div>
+        </div>
+        <div className="stat">
+          <span className="tile tile--info">
+            <Icon src={branchIcon} size={20} />
+          </span>
+          <div className="stat__text">
+            <strong>{demo.run.nPaths}</strong>
+            <span>Paired weather paths</span>
+          </div>
+        </div>
+        <div className="stat">
+          <span className="tile tile--violet">
+            <Icon src={clockIcon} size={20} />
+          </span>
+          <div className="stat__text">
+            <strong>{demo.run.horizonYears} years</strong>
+            <span>Simulation horizon</span>
+          </div>
+        </div>
+        <div className="stat stat--note">
+          <Icon src={infoIcon} size={18} />
+          {demo.run.excludedNote}
+        </div>
       </div>
 
       <JourneySummary statuses={statuses} illustrative={!liveJourney} onInspect={() => onNavigate('journey')} />
@@ -141,6 +190,7 @@ export function OverviewScreen({
       <RunComparison
         strategies={demo.strategies}
         run={demo.run}
+        axes={demo.axes}
         outdated={outdated}
         showRanges={showRanges}
         sourceNote={demo.metricSourceNote}
@@ -150,7 +200,7 @@ export function OverviewScreen({
       <NextStep strategies={demo.strategies} outdated={outdated} />
 
       <footer className="source-footer">
-        <strong>{demo.sourceFooter}</strong>
+        <span>{demo.sourceFooter}</span>
         <span>Design concept — provided Figma frames supersede this mockup.</span>
       </footer>
     </>

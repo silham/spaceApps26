@@ -13,6 +13,6 @@ test('app shell renders the four views and the overview dashboard', async ({ pag
 test('editing a constraint keeps results marked outdated and export disabled', async ({ page }) => {
   await page.goto('/')
   await page.getByLabel('Must include a market crop').check()
-  await expect(page.getByText(/irrigation limit and market-crop requirement changed/)).toBeVisible()
+  await expect(page.getByText(/Irrigation limit and market-crop requirement changed/)).toBeVisible()
   await expect(page.getByRole('button', { name: /Export decision card/ })).toBeDisabled()
 })

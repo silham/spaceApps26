@@ -1,5 +1,5 @@
 /**
- * DEMO / illustrative content of Figma frame 3:2 ("Farm Time Machine / Primary dashboard").
+ * DEMO / illustrative content of Figma frame 25:49 ("Dashboard — Redesign v2").
  *
  * Nothing here is data or a model output. It is the designer's illustrative content, and the
  * dashboard always shows it under the Figma's own DEMO labels ("DEMO DATA", "DEMO / illustrative
@@ -13,7 +13,7 @@ export type Tone = 'baseline' | 'water' | 'soil'
 
 export interface RotationCellView {
   label: string
-  /** 'crop' renders the ♧ glyph, 'none' the · · · glyph used for bare soil and fallow. */
+  /** 'crop' renders the crop icon on a tinted cell, 'none' the dashed empty cell (bare soil, fallow). */
   glyph: 'crop' | 'none'
   warning?: boolean
 }
@@ -63,7 +63,7 @@ export const figmaDemo = {
     sampleEndYear: 2019,
     nPaths: 500,
     horizonYears: 5,
-    excludedNote: '1981–1983 excluded: solar gap  ·  2020–2025 reserved for final test',
+    excludedNote: '1981–1983 excluded: solar gap · 2020–2025 reserved for final test',
   },
   /** Inputs edited since run R-014; the frame shows this outdated state. */
   changedSinceRun: ['irrigation limit'],
@@ -79,7 +79,7 @@ export const figmaDemo = {
     ['compare', 'ok'],
   ] as [JourneyStageName, StageStatus][],
   field: { label: 'Demo field · 4.2 ha' },
-  priorities: { conserveWater: 68, protectSoil: 78 },
+  priorities: { conserveWater: 70, protectSoil: 80 },
   constraints: {
     irrigationLimit: '120 mm / season',
     soilProfile: 'Estimated',
@@ -89,10 +89,10 @@ export const figmaDemo = {
   replay: {
     year: 2018,
     startDate: '2018-06-18',
-    /** Illustrative calendar for the three timeline columns. Only the 18 Jun boundary comes from
-        the frame (its playhead sits there); the second boundary is a placeholder. */
-    betweenSeasonsStart: '2018-06-18',
-    seasonTwoStart: '2018-10-01',
+    /** Illustrative calendar for the three timeline columns. Both boundaries are placeholders,
+        chosen only so that 18 Jun falls where the frame draws its playhead. */
+    betweenSeasonsStart: '2018-04-21',
+    seasonTwoStart: '2018-08-04',
   },
   strategies: [
     {
@@ -132,7 +132,9 @@ export const figmaDemo = {
       soilCover: { p50: 246, p10: 231, p90: 260, paired: awaiting('benefit', 'more cover days') },
     },
   ] as StrategyView[],
+  /** Shared display axes (days) for the range bars, so the three strategies line up. */
+  axes: { waterStress: [0, 35], soilCover: [170, 270] } as { waterStress: [number, number]; soilCover: [number, number] },
   rotationWarning: 'Cover crop: uses water the next crop may need.',
   metricSourceNote: ['Water stress: POWER + demo crop/soil inputs', 'Cover: demo calendar + management assumptions'],
-  sourceFooter: 'Demo run rainfall: NASA POWER only  ·  Vegetation context: MODIS',
+  sourceFooter: 'Demo run rainfall: NASA POWER only · Vegetation context: MODIS',
 } as const

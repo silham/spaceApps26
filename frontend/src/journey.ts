@@ -13,11 +13,16 @@ export const STAGES: { id: JourneyStageName; label: string; question: string }[]
   { id: 'compare', label: 'Compare', question: 'Which trade-offs matter to this farmer?' },
 ]
 
-/** Status is always text + glyph, never colour alone. ok/warning/not_started glyphs are from Figma. */
-export const STATUS: Record<StageStatus, { glyph: string; label: string; warn: boolean }> = {
-  ok: { glyph: '✓', label: 'OK', warn: false },
-  warning: { glyph: '⚠', label: 'Warning', warn: true },
-  not_started: { glyph: '⊖', label: 'Not started', warn: false },
-  failed: { glyph: '✕', label: 'Failed', warn: true },
-  unavailable: { glyph: '⊖', label: 'Unavailable', warn: false },
+/** How a status is drawn. The frame defines three looks (OK, Warning, Not started); "failed" reuses
+    the warning look and "unavailable" the not-started look, each with its own text. */
+export type StatusKind = 'ok' | 'warning' | 'idle'
+
+export const STATUS: Record<StageStatus, { label: string; kind: StatusKind }> = {
+  ok: { label: 'OK', kind: 'ok' },
+  warning: { label: 'Warning', kind: 'warning' },
+  not_started: { label: 'Not started', kind: 'idle' },
+  failed: { label: 'Failed', kind: 'warning' },
+  unavailable: { label: 'Unavailable', kind: 'idle' },
 }
+
+export const KIND_TONE = { ok: 'success', warning: 'warning', idle: 'neutral' } as const

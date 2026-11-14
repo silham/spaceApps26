@@ -1,8 +1,7 @@
 import type { CSSProperties } from 'react'
-import leafIcon from '../../assets/icon-leaf-22.svg'
-import waterIcon from '../../assets/icon-water-22.svg'
-import { SelectControl } from '../../components/Control'
-import { ctl } from '../../components/ctl'
+import dropIcon from '../../assets/v2/icon-drop-16.svg'
+import leafIcon from '../../assets/v2/icon-leaf-16.svg'
+import { Badge, Icon, SelectControl } from '../../components/ui'
 
 export interface Priorities {
   conserveWater: number
@@ -31,8 +30,12 @@ function PrioritySlider({
 }) {
   return (
     <div className="priority">
-      <img src={icon} width={22} height={22} alt="" />
-      <label htmlFor={id}>{label}</label>
+      <label htmlFor={id}>
+        <span className={`tile ${tone === 'water' ? 'tile--info' : 'tile--success'}`}>
+          <Icon src={icon} size={16} />
+        </span>
+        {label}
+      </label>
       <input
         id={id}
         type="range"
@@ -47,7 +50,7 @@ function PrioritySlider({
   )
 }
 
-/** "What matters to your farm?" (Figma node 3:124): priorities kept separate from hard constraints. */
+/** "What matters to your farm?" (Figma node 26:197): priorities kept separate from hard constraints. */
 export function PrioritiesPanel({
   priorities,
   onPriorities,
@@ -65,11 +68,14 @@ export function PrioritiesPanel({
 }) {
   return (
     <section className="card priorities" aria-labelledby="priorities-h">
-      <h2 id="priorities-h">What matters to your farm?</h2>
+      <div className="card-title card-title--small">
+        <h2 id="priorities-h">What matters to your farm?</h2>
+        <p>Drag to weight what the comparison should favour.</p>
+      </div>
       <PrioritySlider
         id="priority-water"
         label="Conserve water"
-        icon={waterIcon}
+        icon={dropIcon}
         tone="water"
         value={priorities.conserveWater}
         onChange={(conserveWater) => onPriorities({ ...priorities, conserveWater })}
@@ -85,14 +91,17 @@ export function PrioritiesPanel({
       <div className="divider" />
       <h3>Farm constraints</h3>
       <div className="constraint">
-        <span className="constraint__label">Irrigation limit</span>
+        <span className="constraint__label">
+          Irrigation limit
+          {irrigationChanged && <Badge tone="warning">Changed</Badge>}
+        </span>
         <SelectControl
           label="Irrigation limit"
+          className={irrigationChanged ? 'select--changed' : ''}
           value={constraints.irrigationLimit}
           options={single(constraints.irrigationLimit)}
           title={PENDING}
         />
-        {irrigationChanged && <span className={ctl('warning')}>Changed</span>}
       </div>
       <div className="constraint">
         <span className="constraint__label">Soil profile</span>
