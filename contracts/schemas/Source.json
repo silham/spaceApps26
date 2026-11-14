@@ -5,6 +5,7 @@
       "enum": [
         "observed",
         "reanalysis",
+        "modeled",
         "estimated",
         "farmer_input",
         "literature",

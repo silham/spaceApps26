@@ -391,6 +391,45 @@
           ],
           "default": null,
           "title": "Uncertainty"
+        },
+        "low": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Lower bound in ``unit`` if the source documents one",
+          "title": "Low"
+        },
+        "high": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Upper bound in ``unit`` if the source documents one",
+          "title": "High"
+        },
+        "bounds_kind": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "What low/high are, e.g. 'documented range (SSURGO awc_l/awc_h)' or 'declared assumption ±20%'. Never a statistical interval unless one was actually computed.",
+          "title": "Bounds Kind"
         }
       },
       "required": [
@@ -1226,6 +1265,39 @@
           "title": "Reference",
           "type": "string"
         },
+        "source_ids": {
+          "description": "Sources actually used: the evaluated data and the reference (rule 2)",
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Ids",
+          "type": "array"
+        },
+        "train_period": {
+          "anyOf": [
+            {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "format": "date",
+                  "type": "string"
+                }
+              ],
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Training/tuning period (DEVELOPMENT_GUIDE.md section 8.3)",
+          "title": "Train Period"
+        },
         "calibration_period": {
           "anyOf": [
             {
@@ -1317,6 +1389,7 @@
       "enum": [
         "observed",
         "reanalysis",
+        "modeled",
         "estimated",
         "farmer_input",
         "literature",
@@ -1328,7 +1401,7 @@
     }
   },
   "title": "FarmTimeMachineContracts",
-  "description": "Schema version 1.0.0. Generated - do not edit.",
+  "description": "Schema version 1.1.0. Generated - do not edit.",
   "type": "object",
   "properties": {
     "Site": {

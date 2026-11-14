@@ -21,7 +21,8 @@ export type Variables = string[];
 /**
  * Keeps observed, estimated, farmer, reanalysis, literature and simulated values distinguishable.
  */
-export type ValueKind = "observed" | "reanalysis" | "estimated" | "farmer_input" | "literature" | "simulated" | "demo";
+export type ValueKind =
+  "observed" | "reanalysis" | "modeled" | "estimated" | "farmer_input" | "literature" | "simulated" | "demo";
 export type SpatialResolution = string | null;
 export type TemporalResolution = string | null;
 export type CoverageStart = string | null;
@@ -80,6 +81,18 @@ export type Unit1 = string;
 export type Reference = string | null;
 export type RegionRelevance = string | null;
 export type Uncertainty = string | null;
+/**
+ * Lower bound in ``unit`` if the source documents one
+ */
+export type Low = number | null;
+/**
+ * Upper bound in ``unit`` if the source documents one
+ */
+export type High = number | null;
+/**
+ * What low/high are, e.g. 'documented range (SSURGO awc_l/awc_h)' or 'declared assumption ±20%'. Never a statistical interval unless one was actually computed.
+ */
+export type BoundsKind = string | null;
 /**
  * MM-DD start/end
  */
@@ -158,6 +171,14 @@ export type IsDemo6 = boolean;
 export type Id8 = string;
 export type Target = string;
 export type Reference1 = string;
+/**
+ * Sources actually used: the evaluated data and the reference (rule 2)
+ */
+export type SourceIds2 = string[];
+/**
+ * Training/tuning period (DEVELOPMENT_GUIDE.md section 8.3)
+ */
+export type TrainPeriod = [unknown, unknown] | null;
 export type CalibrationPeriod = [unknown, unknown] | null;
 export type TestPeriod = [unknown, unknown] | null;
 export type SampleCount1 = number;
@@ -177,7 +198,7 @@ export type StageStatus = "not_started" | "ok" | "warning" | "failed" | "unavail
  * One plain-language sentence
  */
 export type Summary1 = string;
-export type SourceIds2 = string[];
+export type SourceIds3 = string[];
 export type ProcessingRunId1 = string | null;
 /**
  * Data for the stage's single chart
@@ -188,7 +209,7 @@ export type Chart = {
 export type IsDemo8 = boolean;
 
 /**
- * Schema version 1.0.0. Generated - do not edit.
+ * Schema version 1.1.0. Generated - do not edit.
  */
 export interface FarmTimeMachineContracts {
   Site?: Site;
@@ -311,6 +332,9 @@ export interface ParamValue {
   reference: Reference;
   region_relevance?: RegionRelevance;
   uncertainty?: Uncertainty;
+  low?: Low;
+  high?: High;
+  bounds_kind?: BoundsKind;
 }
 export interface StageLengthsDays {
   [k: string]: ParamValue;
@@ -384,6 +408,8 @@ export interface Validation {
   id: Id8;
   target: Target;
   reference: Reference1;
+  source_ids?: SourceIds2;
+  train_period?: TrainPeriod;
   calibration_period?: CalibrationPeriod;
   test_period?: TestPeriod;
   sample_count: SampleCount1;
@@ -410,7 +436,7 @@ export interface JourneyStage {
   stage: JourneyStageName;
   status: StageStatus;
   summary: Summary1;
-  source_ids?: SourceIds2;
+  source_ids?: SourceIds3;
   processing_run_id?: ProcessingRunId1;
   chart?: Chart;
   details?: Details;
