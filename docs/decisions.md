@@ -12,7 +12,7 @@ Record each decision with date, owner, rationale and the assumptions it affects.
 | D5 | Current practice + 2 alternative rotations | Open | | M4 | |
 | D6 | Supported edits (e.g. irrigation limit, planting window) | Open | | M1/M4 | |
 | D7 | Rainfall source per run (POWER vs GPM) | Open | | M3 | One source per run; never summed |
-| D8 | Soil information source | Open | | M3 | |
+| D8 | Soil information source: **USDA SSURGO (Soil Data Access) if the site is in the US; ISRIC SoilGrids 2.0 otherwise** | Resolved | 2026-11-14 | M3 | Both access routes verified. SSURGO gives AWC with documented low/high per horizon (feeds sensitivity, validation plan §4); SoilGrids is the global fallback, AWC derived from field capacity − wilting point means with no AWC interval (sensitivity uses the declared ±20% assumption). Root depth stays a crop parameter (M4). OpenLandMap-soildb not used: no verified access route. |
 | D9 | Figma link and frame IDs | Open | | M2 | |
 | D10 | Validation references | Open | | M5 | |
 | D11 | Second region | Open (cut-first) | | M1 | |
