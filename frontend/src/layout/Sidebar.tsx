@@ -6,15 +6,18 @@ import navGrid from '../assets/v2/nav-grid.svg'
 import navHome from '../assets/v2/nav-home.svg'
 import navLeaf from '../assets/v2/nav-leaf.svg'
 import navShield from '../assets/v2/nav-shield.svg'
+import pinIcon from '../assets/v2/icon-pin.svg'
 import { Icon } from '../components/ui'
 
-export type View = 'overview' | 'rotation' | 'journey' | 'evidence'
+export type View = 'overview' | 'rotation' | 'journey' | 'evidence' | 'add-farm'
 
 const NAV: { view: View; label: string; icon: string }[] = [
   { view: 'overview', label: 'Overview', icon: navHome },
   { view: 'rotation', label: 'Rotation planner', icon: navLeaf },
   { view: 'journey', label: 'Data Journey', icon: navGrid },
   { view: 'evidence', label: 'Evidence & validation', icon: navShield },
+  // Not in frame 25:49: entry point for user-selected farms (D13), styled as the other items.
+  { view: 'add-farm', label: 'Add a farm', icon: pinIcon },
 ]
 
 /** Sidebar (Figma node 25:50). */

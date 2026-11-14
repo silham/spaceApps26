@@ -134,6 +134,7 @@ def build_site_scenario(inputs: SiteEngineInputs, pool: tuple[int, int] = DEFAUL
     builder = SCENARIO_BUILDERS.get(inputs.site.id)
     if builder is None:
         raise EngineInputsNotAvailableError(
-            f"no strategies are defined for site {inputs.site.id!r} (D5 covers ks-field-2 only)"
+            f"no strategies are defined for site {inputs.site.id!r}: this farm is observe-only. Comparisons need "
+            "locally reviewed strategies and crop calendars, which exist for ks-field-2 only (D5, D13)"
         )
     return builder(inputs.forcing, list(range(pool[0], pool[1] + 1)), site_id=inputs.site.id)

@@ -6,6 +6,7 @@ import { Badge, Icon, type Tone } from './components/ui'
 import { figmaDemo } from './demo/figmaDemo'
 import { Sidebar, type View } from './layout/Sidebar'
 import { DataJourneyScreen } from './screens/DataJourneyScreen'
+import { AddFarmScreen } from './screens/AddFarmScreen'
 import { EvidenceScreen } from './screens/EvidenceScreen'
 import { OverviewScreen } from './screens/overview/OverviewScreen'
 import { RotationPlannerScreen } from './screens/RotationPlannerScreen'
@@ -15,10 +16,12 @@ export default function App() {
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null)
   const mainRef = useRef<HTMLElement>(null)
   const health = useAsync(api.health, [])
-  const sites = useAsync(api.sites, [])
+  const [sitesVersion, setSitesVersion] = useState(0)
+  const sites = useAsync(api.sites, [sitesVersion])
 
   const siteList = sites.status === 'ready' ? sites.data : []
-  const site = siteList.find((s) => s.id === selectedSiteId) ?? siteList[0]
+  // Default to the first loaded (non-DEMO) farm; the DEMO placeholder only when nothing else exists.
+  const site = siteList.find((s) => s.id === selectedSiteId) ?? siteList.find((s) => !s.is_demo) ?? siteList[0]
 
   // Move focus to the new view's heading so keyboard and screen-reader users land on the content.
   useEffect(() => {
@@ -56,6 +59,15 @@ export default function App() {
           {view === 'rotation' && <RotationPlannerScreen siteId={site?.id} />}
           {view === 'journey' && <DataJourneyScreen siteId={site?.id} />}
           {view === 'evidence' && <EvidenceScreen siteId={site?.id} />}
+          {view === 'add-farm' && (
+            <AddFarmScreen
+              onOpen={(id) => {
+                setSelectedSiteId(id)
+                setSitesVersion((n) => n + 1)
+                setView('overview')
+              }}
+            />
+          )}
         </main>
       </div>
     </div>

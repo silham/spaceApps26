@@ -773,6 +773,52 @@
       "title": "JourneyStageName",
       "type": "string"
     },
+    "NewSiteRequest": {
+      "additionalProperties": false,
+      "description": "A farm picked on the map anywhere in the world (D13: observe only unless strategies are reviewed).",
+      "properties": {
+        "name": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "latitude": {
+          "description": "Cropland latitudes; polar regions are refused",
+          "maximum": 75,
+          "minimum": -60,
+          "title": "Latitude",
+          "type": "number"
+        },
+        "longitude": {
+          "maximum": 180,
+          "minimum": -180,
+          "title": "Longitude",
+          "type": "number"
+        },
+        "boundary_geojson": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Polygon or MultiPolygon drawn by the user (WGS84); optional",
+          "title": "Boundary Geojson"
+        }
+      },
+      "required": [
+        "name",
+        "latitude",
+        "longitude"
+      ],
+      "title": "NewSiteRequest",
+      "type": "object"
+    },
     "Observation": {
       "additionalProperties": false,
       "properties": {
@@ -2014,6 +2060,120 @@
       "title": "Site",
       "type": "object"
     },
+    "SiteLoadStatus": {
+      "additionalProperties": false,
+      "properties": {
+        "site_id": {
+          "title": "Site Id",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "queued",
+            "running",
+            "done",
+            "failed"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "steps": {
+          "items": {
+            "$ref": "#/$defs/SiteLoadStep"
+          },
+          "title": "Steps",
+          "type": "array"
+        },
+        "started_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Started At"
+        },
+        "finished_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Finished At"
+        },
+        "has_strategies": {
+          "description": "False: observe only, no locally reviewed strategies (D13)",
+          "title": "Has Strategies",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "site_id",
+        "status",
+        "steps",
+        "has_strategies"
+      ],
+      "title": "SiteLoadStatus",
+      "type": "object"
+    },
+    "SiteLoadStep": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "enum": [
+            "weather",
+            "soil",
+            "vegetation"
+          ],
+          "title": "Name",
+          "type": "string"
+        },
+        "source": {
+          "description": "Product being loaded, e.g. 'NASA POWER daily'",
+          "title": "Source",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "pending",
+            "running",
+            "done",
+            "failed",
+            "skipped"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "message": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Message"
+        }
+      },
+      "required": [
+        "name",
+        "source",
+        "status"
+      ],
+      "title": "SiteLoadStep",
+      "type": "object"
+    },
     "SoilProfile": {
       "additionalProperties": false,
       "properties": {
@@ -2518,7 +2678,7 @@
     }
   },
   "title": "FarmTimeMachineContracts",
-  "description": "Schema version 1.2.0. Generated - do not edit.",
+  "description": "Schema version 1.3.0. Generated - do not edit.",
   "type": "object",
   "properties": {
     "Site": {
@@ -2589,6 +2749,15 @@
     },
     "DecisionCard": {
       "$ref": "#/$defs/DecisionCard"
+    },
+    "NewSiteRequest": {
+      "$ref": "#/$defs/NewSiteRequest"
+    },
+    "SiteLoadStep": {
+      "$ref": "#/$defs/SiteLoadStep"
+    },
+    "SiteLoadStatus": {
+      "$ref": "#/$defs/SiteLoadStatus"
     }
   }
 }

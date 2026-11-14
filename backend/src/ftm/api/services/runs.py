@@ -105,15 +105,21 @@ def _farmer_context(session: Session, site_id: str) -> FarmerContext | None:
 
 
 def _prepare(session: Session, site_id: str) -> _Prepared:
-    from ftm.data.engine_inputs import EngineInputsNotAvailableError
+    from ftm.data.engine_inputs import SCENARIO_BUILDERS, EngineInputsNotAvailableError
+    from ftm.engine.params import CatalogError
 
+    if site_id not in SCENARIO_BUILDERS:  # observe-only farm (D13): refuse before loading any engine input
+        raise SiteNotReadyError(
+            f"no strategies are defined for site {site_id!r}: this farm is observe-only. Comparisons need locally "
+            "reviewed strategies and crop calendars, which exist for ks-field-2 only (D5, D13)"
+        )
     try:
         inputs = load_site_engine_inputs(session, site_id)
         key = (site_id, inputs.forcing.attrs.get("processing_run_id") or inputs.weather_source.id)
         with _cache_lock:
             cached = _prepared_cache.get(key)
         scenario = cached.scenario if cached else build_site_scenario(inputs)
-    except EngineInputsNotAvailableError as exc:
+    except (EngineInputsNotAvailableError, CatalogError) as exc:
         raise SiteNotReadyError(str(exc)) from exc
     prepared = _Prepared(inputs, scenario, _farmer_context(session, site_id))
     with _cache_lock:

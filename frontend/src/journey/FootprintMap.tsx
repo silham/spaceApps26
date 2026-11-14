@@ -33,7 +33,8 @@ export function FootprintMap({ features }: { features: FootprintFeature[] }) {
   const el = useRef<HTMLDivElement>(null)
   const map = useRef<maplibregl.Map | null>(null)
   const hasGrid = features.some((f) => f.layer === 'weather_grid_point')
-  const [wide, setWide] = useState(false)
+  // With no outline or pixel to zoom to, the grid point is all there is, so show it rather than an empty map.
+  const [wide, setWide] = useState(() => !features.some((f) => f.layer !== 'weather_grid_point'))
   const shown = useMemo(() => features.filter((f) => wide || f.layer !== 'weather_grid_point'), [features, wide])
 
   useEffect(() => {

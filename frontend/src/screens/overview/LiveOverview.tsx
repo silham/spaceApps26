@@ -47,6 +47,8 @@ const joinList = (items: string[]) =>
 const capitalise = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 const fmt = (v: number | null | undefined) => (v == null ? '—' : Math.round(v).toLocaleString('en-GB'))
 const shortName = (name: string) => name.split(':')[0] ?? name
+const OBSERVE_ONLY =
+  'Observe only: this farm has no locally reviewed strategies or crop calendar yet, so rotations cannot be compared here.'
 
 /**
  * Overview for a loaded farm: every number comes from the API (runs, results, paired deltas, replay,
@@ -71,6 +73,9 @@ export function LiveOverview({
   const crops = useAsync(api.crops, [])
   const sources = useAsync(api.sources, [reload])
   const timeline = useAsync(() => api.timeline(siteId), [siteId])
+  const load = useAsync(() => api.siteLoad(siteId), [siteId])
+  // Observe-only farm (D13): no locally reviewed strategies, so no comparison can be run.
+  const observeOnly = load.status === 'ready' && !load.data.has_strategies
   const [farmer, setFarmer] = useState<FarmerContext | null>(null)
   useEffect(() => {
     api.farmerContext(siteId).then(setFarmer, () => setFarmer(null))
@@ -161,9 +166,11 @@ export function LiveOverview({
   const heldOut = run?.run.input_versions?.held_out_or_outside_pool_years
 
   const farmOptions = sites.map((s) => ({ value: s.id, label: `${s.name}${s.is_demo ? ' (DEMO)' : ''}` }))
-  const lockReason = !run
-    ? 'Run the comparison first.'
-    : runState.status === 'running'
+  const lockReason = observeOnly
+    ? 'Observe only: no strategies to choose from for this farm.'
+    : !run
+      ? 'Run the comparison first.'
+      : runState.status === 'running'
       ? 'Comparison is running…'
       : undefined
 
@@ -182,8 +189,8 @@ export function LiveOverview({
           <button
             type="button"
             className="btn btn--primary"
-            disabled={runState.status === 'running' || Boolean(problem)}
-            title={problem ?? undefined}
+            disabled={runState.status === 'running' || Boolean(problem) || observeOnly}
+            title={observeOnly ? OBSERVE_ONLY : (problem ?? undefined)}
             onClick={runComparison}
           >
             <Icon src={playIcon} size={14} />
@@ -310,7 +317,13 @@ export function LiveOverview({
 
       {runs.status === 'loading' && <StateView kind="loading" title="Loading runs…" />}
       {runs.status === 'error' && <StateView kind="failed" title="Runs could not be loaded">{runs.error.message}</StateView>}
-      {runs.status === 'ready' && !run && runState.status !== 'running' && (
+      {observeOnly && (
+        <StateView kind="unavailable" title="Observe only for this farm">
+          {OBSERVE_ONLY} The field history, map, data journey and evidence are real. Strategies and crop calendars are reviewed
+          per region before comparisons are offered (docs/decisions.md D13).
+        </StateView>
+      )}
+      {runs.status === 'ready' && !run && runState.status !== 'running' && !observeOnly && (
         <StateView kind="empty" title="No comparison run yet">
           Press <strong>Run comparison</strong> to simulate current practice and the alternatives on the same historical weather.
         </StateView>

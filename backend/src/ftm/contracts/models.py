@@ -12,10 +12,11 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-SCHEMA_VERSION = "1.2.0"
+SCHEMA_VERSION = "1.3.0"
 # 1.1.0: additive (MODELED kind, ParamValue bounds, Validation periods/sources)
 # 1.2.0: additive (RunRequest, RunDetail, PairedDelta, ReplayTrace, FarmerContext, EnvironmentalTimeline,
 #        DecisionCardRequest, DecisionCard; D6 supported edits)
+# 1.3.0: additive (NewSiteRequest, SiteLoadStep, SiteLoadStatus; user-selected locations, observe only, D13)
 
 # Wording agreed in DEVELOPMENT_GUIDE.md section 7: p10-p90 is NOT a calibrated prediction interval.
 RANGE_LABEL = "central 80% simulation range (p10–p90)"
@@ -502,6 +503,38 @@ class DecisionCard(Contract):
     is_demo: bool = False
 
 
+# --------------------------------------------------------------------------- user-selected locations (1.3.0)
+
+MAX_NEW_SITE_AREA_HA = 5000.0  # a field, not a region: larger outlines are refused
+
+
+class NewSiteRequest(Contract):
+    """A farm picked on the map anywhere in the world (D13: observe only unless strategies are reviewed)."""
+
+    name: str = Field(min_length=1, max_length=120)
+    latitude: float = Field(ge=-60, le=75, description="Cropland latitudes; polar regions are refused")
+    longitude: float = Field(ge=-180, le=180)
+    boundary_geojson: dict[str, Any] | None = Field(
+        default=None, description="Polygon or MultiPolygon drawn by the user (WGS84); optional"
+    )
+
+
+class SiteLoadStep(Contract):
+    name: Literal["weather", "soil", "vegetation"]
+    source: str = Field(description="Product being loaded, e.g. 'NASA POWER daily'")
+    status: Literal["pending", "running", "done", "failed", "skipped"]
+    message: str | None = None
+
+
+class SiteLoadStatus(Contract):
+    site_id: str
+    status: Literal["queued", "running", "done", "failed"]
+    steps: list[SiteLoadStep]
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
+    has_strategies: bool = Field(description="False: observe only, no locally reviewed strategies (D13)")
+
+
 ALL_CONTRACTS: list[type[Contract]] = [
     Site,
     Source,
@@ -526,4 +559,7 @@ ALL_CONTRACTS: list[type[Contract]] = [
     Priorities,
     DecisionCardRequest,
     DecisionCard,
+    NewSiteRequest,
+    SiteLoadStep,
+    SiteLoadStatus,
 ]
