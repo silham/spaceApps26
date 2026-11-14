@@ -70,6 +70,26 @@ def _ee_region(lat: float, lon: float, start: date, end: date) -> list[list[Any]
     return region
 
 
+def pixel_footprint(lat: float, lon: float) -> dict[str, Any]:
+    """GeoJSON polygon (EPSG:4326) of the MOD13Q1 pixel containing the point, from the product's own grid.
+
+    The sinusoidal pixel appears as a slightly skewed quadrilateral in lon/lat; that is its true shape.
+    """
+    import ee
+
+    project = get_settings().ee_project
+    if not project:
+        raise ModisError("EE_PROJECT is not set (add it to .env)")
+    ee.Initialize(project=project)
+    point = ee.Geometry.Point([lon, lat])
+    proj = ee.ImageCollection(COLLECTION).first().select("NDVI").projection()
+    cells = (
+        ee.Image.constant(1).toInt().reproject(proj).reduceToVectors(geometry=point, crs=proj, geometryType="polygon")
+    )
+    geom: dict[str, Any] = ee.Feature(cells.first()).geometry().transform("EPSG:4326", 0.1).getInfo()
+    return geom
+
+
 def raw_filename(lat: float, lon: float, start: date, end: date) -> str:
     return f"mod13q1_point_{lat:.5f}_{lon:.5f}_{start:%Y%m%d}_{end:%Y%m%d}.json"
 
@@ -262,7 +282,7 @@ def _acquired(composite_start: date, doy: float | None) -> date | None:
 # --------------------------------------------------------------------------- source record
 
 
-def build_source(snapshot: RawSnapshot, parsed: ModisRaw) -> Source:
+def build_source(snapshot: RawSnapshot, parsed: ModisRaw, footprint: dict[str, Any] | None = None) -> Source:
     dates = parsed.observations["date"]
     center = parsed.pixel_center_lon_lat
     return Source(
@@ -291,6 +311,7 @@ def build_source(snapshot: RawSnapshot, parsed: ModisRaw) -> Source:
             "Low vegetation index is not proof of bare soil (harvest, irrigation, cloud or crop type can explain it). "
             "Composites pick one observation per 16 days."
         ),
+        footprint_geojson=footprint,
         raw_path=snapshot.relative_path,
         raw_sha256=snapshot.sha256,
     )

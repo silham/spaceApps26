@@ -7,7 +7,7 @@ lives in `backend/src/ftm/`, never in a notebook.
 | Notebook | What it shows | Needs |
 |---|---|---|
 | `01_weather_eda.ipynb` | Collect → Check → Clean → Handle gaps → Align, then weather EDA (water gap by month, yearly series, suspect years, temperature trend) and soil profiles | DB with both candidate sites loaded |
-| `02_season_detection.ipynb` | *(planned)* MODIS vegetation curves, smoothing, season start/end tuning on 2001–2014 | MODIS extraction (Earth Engine) |
+| `02_season_detection.ipynb` | Field + satellite pixel check, 25-year NDVI record, how seasons are found, corn vs wheat years (double season), tuning on 2006–2014 and evaluation vs NASS planting dates | `ks-field-2` loaded with MODIS; `scripts/evaluate_phenology.py` run once |
 | `03_validation.ipynb` | *(planned)* weather-range coverage, season timing errors, ranking sensitivity, failures included | M4 ensemble |
 
 ## Run
