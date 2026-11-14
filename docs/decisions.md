@@ -43,6 +43,7 @@ Recorded 2026-11-14 while implementing Figma frame `25:49` (see D9). Each item i
 - **Range bars** on the strategy cards use fixed display axes (water stress 0–35 days, soil cover 170–270 days) so the three strategies line up; the frame's bar positions imply the same axes. The axes are illustrative until real results exist.
 - **Mode toggle** (Fixed allocation / Irrigation needed) is the frame's segmented control; "Irrigation needed" is disabled with a reason because the run has no such results.
 - **Layout is fluid above 1240 px** and matches the frame at 1440 px.
+- **Browser-tab favicon** (`frontend/public/favicon.svg`) is not in the frames. It reuses the frame's "Orbital leaf / Reversed" logo paths on a rounded tile in `--color-forest`, because the logo is white and needs a dark background. The tile is an assumption.
 - **Inter (the frame's typeface) is bundled as a font file** in `frontend/src/assets/fonts/` (latin subset from `@fontsource-variable/inter` 5.3.0, SIL OFL 1.1, licence alongside), so the app renders the same offline. It is a copied file, not a package dependency.
 
 **Fidelity check**
