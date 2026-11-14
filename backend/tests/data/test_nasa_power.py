@@ -101,6 +101,7 @@ def test_parse_keeps_fill_values_raw() -> None:
     assert obs[(obs.variable == "PRECTOTCORR") & (obs.date_key == "20240101")].raw_value.item() == 0.0
     assert parsed.units == {"PRECTOTCORR": "mm/day", "T2M_MAX": "C"}
     assert parsed.grid_point == (-100.5, 38.5)
+    assert parsed.elevation_m == 850.0
 
 
 def test_parse_requires_fill_value() -> None:

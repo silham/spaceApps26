@@ -26,3 +26,14 @@ def test_inputs_hash_is_order_independent() -> None:
 def test_new_id_prefix_and_uniqueness() -> None:
     ids = {new_id("sim") for _ in range(100)}
     assert len(ids) == 100 and all(i.startswith("sim_") for i in ids)
+
+
+def test_find_latest_raw_returns_newest(tmp_path: Path) -> None:
+    from ftm.data.raw_cache import find_latest_raw
+
+    for day in ("2026-01-01", "2026-02-01"):
+        f = tmp_path / "power" / day / "x.json"
+        f.parent.mkdir(parents=True)
+        f.write_bytes(day.encode())
+    assert find_latest_raw("power", "x.json", tmp_path) == tmp_path / "power" / "2026-02-01" / "x.json"
+    assert find_latest_raw("power", "missing.json", tmp_path) is None
