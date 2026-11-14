@@ -14,3 +14,35 @@ def test_health() -> None:
 def test_unimplemented_endpoints_say_so() -> None:
     assert client.post("/runs").status_code == 501
     assert client.post("/decision-card").status_code == 501
+
+
+def test_journey_route_returns_nine_stages_in_order(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    from ftm.api.routes import journey as route
+    from ftm.contracts.models import JourneyStage, StageStatus
+    from ftm.data.journey import ORDER
+    from ftm.db.session import get_session
+
+    stages = [JourneyStage(stage=n, status=StageStatus.NOT_STARTED, summary="x") for n in ORDER]
+    monkeypatch.setattr(route.journey, "build_journey", lambda site_id, session: stages)
+    app.dependency_overrides[get_session] = lambda: None
+    try:
+        body = client.get("/journey/ks-field-2").json()
+    finally:
+        app.dependency_overrides.clear()
+    assert [s["stage"] for s in body] == [n.value for n in ORDER]
+
+
+def test_journey_route_unknown_site_is_404(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    from ftm.api.routes import journey as route
+    from ftm.data.journey import SiteNotFoundError
+    from ftm.db.session import get_session
+
+    def missing(site_id: str, session: object) -> list[object]:
+        raise SiteNotFoundError(site_id)
+
+    monkeypatch.setattr(route.journey, "build_journey", missing)
+    app.dependency_overrides[get_session] = lambda: None
+    try:
+        assert client.get("/journey/nope").status_code == 404
+    finally:
+        app.dependency_overrides.clear()
