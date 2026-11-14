@@ -165,3 +165,353 @@ body {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* ================= Sidebar footer: layered hills landscape ================= */
+.sidebar {
+  --hills: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 200' preserveAspectRatio='xMidYMax slice'%3E%3Cdefs%3E%3CradialGradient id='g' cx='50%25' cy='62%25' r='55%25'%3E%3Cstop offset='0' stop-color='%2377d99a' stop-opacity='.45'/%3E%3Cstop offset='1' stop-color='%2377d99a' stop-opacity='0'/%3E%3C/radialGradient%3E%3ClinearGradient id='a' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23437f55'/%3E%3Cstop offset='1' stop-color='%231d4a30'/%3E%3C/linearGradient%3E%3ClinearGradient id='b' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23245c3a'/%3E%3Cstop offset='1' stop-color='%23123424'/%3E%3C/linearGradient%3E%3ClinearGradient id='c' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%2381b24a'/%3E%3Cstop offset='1' stop-color='%2339752f'/%3E%3C/linearGradient%3E%3ClinearGradient id='d' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23123a28'/%3E%3Cstop offset='1' stop-color='%23081c12'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='240' height='200' fill='url(%23g)'/%3E%3Cpath d='M0 120 C40 96 80 84 118 86 C160 88 200 108 240 112 V200 H0Z' fill='url(%23a)'/%3E%3Cpath d='M0 140 C30 124 60 128 90 138 C130 150 170 128 240 134 V200 H0Z' fill='url(%23b)' opacity='.95'/%3E%3Cpath d='M70 200 C100 160 150 140 240 138 V200Z' fill='url(%23c)'/%3E%3Cpath d='M110 200 C135 172 180 156 240 152' stroke='%23ffffff' stroke-opacity='.12' stroke-width='1.2' fill='none'/%3E%3Cpath d='M135 200 C158 180 195 168 240 164' stroke='%23ffffff' stroke-opacity='.1' stroke-width='1.2' fill='none'/%3E%3Cpath d='M0 168 C40 156 80 170 120 180 C160 190 200 182 240 186 V200 H0Z' fill='url(%23d)'/%3E%3C/svg%3E");
+  background:
+    var(--hills) center bottom / 100% 310px no-repeat,
+    radial-gradient(420px 300px at 0% 0%, rgb(127 224 164 / 0.16), transparent 70%),
+    linear-gradient(180deg, #123223 0%, #0b2216 62%, #0e3321 100%);
+  padding-bottom: 20px;
+}
+/* Cards over the artwork need enough body to stay legible. */
+.sidebar__challenge { backdrop-filter: blur(8px); background: linear-gradient(180deg, rgb(8 28 18 / 0.55), rgb(8 28 18 / 0.35)); }
+.sidebar__divider { background: rgb(255 255 255 / 0.14); }
+.sidebar__user { padding-top: 10px; text-shadow: 0 1px 6px rgb(0 0 0 / 0.5); }
+
+/* ================= Strategy cards: watermark + premium finish ================= */
+.strategy { position: relative; isolation: isolate; background: linear-gradient(180deg, #fff 0%, #fbfcfb 100%); border-radius: 18px; }
+.strategy > * { position: relative; z-index: 1; }
+/* Watermark: line art in the strategy's own colour, kept at ~7% so it reads as texture, not content. */
+.strategy::before {
+  content: ''; position: absolute; z-index: 0; right: -34px; bottom: 52px; width: 270px; height: 270px; pointer-events: none;
+  background: var(--mark) center / contain no-repeat; opacity: 0.075; transform: rotate(-6deg);
+  transition: opacity 0.4s, transform 0.6s var(--ease-out);
+}
+.strategy:hover::before { opacity: 0.11; transform: rotate(-3deg) scale(1.04); }
+.strategy--baseline {
+  --mark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 220 220' fill='none' stroke='%2364748b' stroke-width='3' stroke-linecap='round'%3E%3Ccircle cx='150' cy='60' r='28'/%3E%3Cpath d='M150 14v10M150 96v10M104 60h10M186 60h10M117 27l7 7M176 86l7 7M183 27l-7 7M124 86l-7 7'/%3E%3Cpath d='M0 140Q110 100 220 130M0 165Q110 125 220 155M0 190Q110 150 220 180M0 215Q110 175 220 205'/%3E%3C/svg%3E");
+}
+.strategy--water {
+  --mark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 220 220' fill='none' stroke='%232f7fd8' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M110 16C110 16 52 88 52 128a58 58 0 0 0 116 0C168 88 110 16 110 16Z'/%3E%3Cpath d='M82 132a28 28 0 0 0 22 27'/%3E%3Cellipse cx='110' cy='194' rx='62' ry='11'/%3E%3Cellipse cx='110' cy='194' rx='92' ry='17'/%3E%3C/svg%3E");
+}
+.strategy--soil {
+  --mark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 220 220' fill='none' stroke='%232e9b57' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M36 176C36 88 104 28 190 28C190 112 130 176 36 176Z'/%3E%3Cpath d='M36 176C78 128 120 88 190 28'/%3E%3Cpath d='M82 134l2-30M110 108l2-30M132 150l30-2M104 160l28-2'/%3E%3Cpath d='M0 204Q60 190 110 202T220 198'/%3E%3C/svg%3E");
+}
+/* Let the watermark show through the inset panels. */
+.strategy .paired { background-color: rgb(245 247 246 / 0.72); backdrop-filter: blur(1.5px); }
+.strategy .paired--benefit { background-color: rgb(237 247 240 / 0.78); }
+.strategy .paired--disadvantage { background-color: rgb(255 248 234 / 0.8); }
+
+/* Header band */
+.strategy__title { padding: 16px 22px; position: relative; border-bottom: 1px solid rgb(15 31 23 / 0.05); }
+.strategy--baseline .strategy__title { background: linear-gradient(180deg, #f6f7fa, #eef1f5); }
+.strategy--water .strategy__title { background: linear-gradient(180deg, #f2f7fe, #e6f0fc); }
+.strategy--soil .strategy__title { background: linear-gradient(180deg, #f3faf5, #e7f4ea); }
+.strategy__title h3 { font-weight: 650; letter-spacing: -0.02em; }
+.strategy__title h3 .dot { box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent); }
+.strategy__title p { letter-spacing: 0.02em; }
+
+/* Metrics */
+.metric__head .tile { width: 44px; height: 44px; border-radius: 14px; }
+.metric__value { font-size: 30px; font-variant-numeric: tabular-nums; }
+.metric__label { color: var(--color-secondary); }
+.rangebar::before { background: linear-gradient(90deg, #edf0ee, #e4e9e6); box-shadow: inset 0 1px 1px rgb(15 31 23 / 0.06); }
+.strategy .divider { background: linear-gradient(90deg, transparent, var(--color-border) 15%, var(--color-border) 85%, transparent); }
+.strategy__sources { padding-top: 4px; }
+.strategy__sources .link { font-weight: 600; }
+
+/* ================= Section cards (.card): premium surface ================= */
+.card {
+  position: relative; isolation: isolate; border: 1px solid transparent; border-radius: 20px; padding: 26px;
+  /* Gradient hairline: bright top-left edge falling to a faint green tint bottom-right. */
+  background:
+    linear-gradient(180deg, #ffffff 0%, #fbfcfb 100%) padding-box,
+    linear-gradient(140deg, rgb(255 255 255 / 0.95) 0%, rgb(15 31 23 / 0.09) 38%, rgb(30 107 69 / 0.22) 100%) border-box;
+  box-shadow: 0 1px 2px rgb(15 31 23 / 0.04), 0 12px 32px -14px rgb(15 31 23 / 0.16), 0 2px 0 rgb(255 255 255 / 0.8) inset;
+}
+/* Top sheen and a faint mint bloom in the corner; both sit behind content. */
+.card::before {
+  content: ''; position: absolute; z-index: -1; inset: 0 0 auto 0; height: 120px; border-radius: 20px 20px 0 0; pointer-events: none;
+  background: linear-gradient(180deg, rgb(238 246 241 / 0.7), rgb(238 246 241 / 0));
+}
+.card::after {
+  content: ''; position: absolute; z-index: -1; right: -60px; top: -60px; width: 220px; height: 220px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, rgb(127 224 164 / 0.16), transparent 68%);
+}
+.card:hover { box-shadow: 0 1px 2px rgb(15 31 23 / 0.04), 0 18px 44px -14px rgb(15 31 23 / 0.2), 0 2px 0 rgb(255 255 255 / 0.8) inset; }
+/* Stat tiles and the note keep their own treatment. */
+.stat::before, .stat::after { z-index: 0; }
+
+/* Titles get a short accent tick so each section has an anchor. */
+.card-title h2 { position: relative; padding-left: 14px; }
+.card-title h2::before {
+  content: ''; position: absolute; left: 0; top: 50%; width: 4px; height: 0.95em; transform: translateY(-50%); border-radius: 4px;
+  background: linear-gradient(180deg, var(--color-mint), var(--color-success));
+}
+.card-title p { padding-left: 14px; }
+
+/* Inner pieces */
+.card .divider { background: linear-gradient(90deg, transparent, var(--color-border) 12%, var(--color-border) 88%, transparent); }
+.steps { background: linear-gradient(180deg, #f8faf9, #f1f4f2); border-color: rgb(15 31 23 / 0.06); }
+.cell { box-shadow: inset 0 0 0 1px rgb(15 31 23 / 0.05), inset 0 1px 0 rgb(255 255 255 / 0.6); transition: transform 0.2s var(--ease-out), box-shadow 0.2s; }
+.cell:hover { transform: translateY(-1px); box-shadow: inset 0 0 0 1px rgb(15 31 23 / 0.08), 0 4px 10px -4px rgb(15 31 23 / 0.2); }
+.cell--baseline { background: linear-gradient(180deg, #f3f5f8, #e9edf2); }
+.cell--water { background: linear-gradient(180deg, #edf5fd, #e0ecfa); }
+.cell--soil { background: linear-gradient(180deg, #edf8f0, #e0f1e5); }
+.cell--none { box-shadow: none; }
+.cell--none:hover { transform: none; box-shadow: none; }
+.priority .tile { box-shadow: inset 0 0 0 1px rgb(15 31 23 / 0.05), inset 0 1px 0 rgb(255 255 255 / 0.7); }
+.comparison__explain { background: linear-gradient(90deg, #e8f2ec, #f1f7f3); box-shadow: inset 0 0 0 1px rgb(30 107 69 / 0.1); }
+.rotations__warning { box-shadow: inset 0 0 0 1px rgb(229 154 11 / 0.22); }
+.next__label i { background: linear-gradient(180deg, #eef8f1, #d9eee1); box-shadow: inset 0 0 0 1px rgb(30 107 69 / 0.15); }
+.next__export:not(:disabled) { background: linear-gradient(180deg, #2a8057, #1e6b45); box-shadow: 0 1px 0 rgb(255 255 255 / 0.22) inset, 0 6px 16px -4px rgb(30 107 69 / 0.45); }
+.source-footer { padding-top: 4px; letter-spacing: 0.01em; }
+
+/* ================= Card pass 2: per-card tint, dot texture, depth ================= */
+.card { --tint: 46 155 87; }
+.rotations { --tint: 47 127 216; }
+.comparison { --tint: 100 116 139; }
+.next { --tint: 124 92 214; }
+
+/* Top-edge light line in the card's own tint. */
+.card::before { box-shadow: inset 0 1px 0 rgb(var(--tint) / 0.38); background: linear-gradient(180deg, rgb(var(--tint) / 0.07), rgb(var(--tint) / 0)); height: 140px; }
+/* Corner bloom plus a fading dot grid (decorative texture only). */
+.card::after {
+  right: -10px; top: -10px; width: 340px; height: 200px; border-radius: 0 20px 0 0;
+  background:
+    radial-gradient(circle, rgb(var(--tint) / 0.22) 1px, transparent 1.4px) 0 0 / 14px 14px,
+    radial-gradient(ellipse at 100% 0%, rgb(var(--tint) / 0.12), transparent 65%);
+  -webkit-mask-image: radial-gradient(ellipse at 100% 0%, #000 0%, transparent 70%);
+  mask-image: radial-gradient(ellipse at 100% 0%, #000 0%, transparent 70%);
+}
+.card-title h2::before { background: linear-gradient(180deg, rgb(var(--tint) / 0.55), rgb(var(--tint))); box-shadow: 0 0 10px rgb(var(--tint) / 0.4); }
+
+/* "Previous run comparison" uses its own title wrapper: give it the same tick. */
+.comparison__title h2 { position: relative; padding-left: 14px; }
+.comparison__title h2::before {
+  content: ''; position: absolute; left: 0; top: 50%; width: 4px; height: 0.95em; transform: translateY(-50%); border-radius: 4px;
+  background: linear-gradient(180deg, rgb(var(--tint) / 0.55), rgb(var(--tint))); box-shadow: 0 0 10px rgb(var(--tint) / 0.4);
+}
+
+/* The comparison card is a tray: a recessed surface so the three strategy cards float above it. */
+.comparison {
+  background:
+    linear-gradient(180deg, #f6f8f7 0%, #eff3f1 100%) padding-box,
+    linear-gradient(140deg, rgb(255 255 255 / 0.95) 0%, rgb(15 31 23 / 0.09) 38%, rgb(30 107 69 / 0.22) 100%) border-box;
+}
+.comparison .strategy { box-shadow: 0 1px 2px rgb(15 31 23 / 0.05), 0 14px 30px -14px rgb(15 31 23 / 0.22); }
+.comparison .strategy:hover { box-shadow: 0 2px 4px rgb(15 31 23 / 0.06), 0 24px 44px -16px rgb(15 31 23 / 0.3); }
+.comparison__notes { border-top: 1px dashed rgb(15 31 23 / 0.1); }
+
+/* Data Journey steps */
+.step__dot { width: 32px; height: 32px; }
+.step:hover { background: #fff; box-shadow: 0 8px 20px -10px rgb(15 31 23 / 0.3), inset 0 0 0 1px rgb(15 31 23 / 0.05); }
+.step__status { box-shadow: inset 0 0 0 1px rgb(15 31 23 / 0.05); }
+.step__status--ok { box-shadow: inset 0 0 0 1px rgb(46 155 87 / 0.2); }
+.step__status--warning { box-shadow: inset 0 0 0 1px rgb(229 154 11 / 0.28); }
+.step__dot--warning { background: linear-gradient(180deg, #fff6e2, var(--color-warning-bg)); }
+
+/* Priorities & form controls */
+.priorities .select { background: linear-gradient(180deg, #fff, #fafbfa); }
+.slider::-webkit-slider-runnable-track { box-shadow: inset 0 1px 2px rgb(15 31 23 / 0.12); }
+.constraint__label .badge { box-shadow: inset 0 0 0 1px rgb(229 154 11 / 0.3); }
+.next textarea { background: linear-gradient(180deg, #fbfcfb, #fff); box-shadow: inset 0 1px 3px rgb(15 31 23 / 0.06); }
+.unavailable { background: repeating-linear-gradient(135deg, rgb(15 31 23 / 0.02) 0 6px, transparent 6px 12px), var(--color-inset); }
+
+/* Replay bar: scrubber thumb glow */
+.scrubber::-webkit-slider-thumb { box-shadow: 0 0 0 4px rgb(127 224 164 / 0.25), 0 2px 6px rgb(0 0 0 / 0.4); }
+.replay .btn--secondary { background: rgb(255 255 255); }
+
+/* Overlay layers removed: no sheen, corner glow or dot grid over .card, and no glow/rail over .stat. */
+.card::before, .card::after,
+.stat::before, .stat::after { content: none; }
+
+/* Hills now sit in the gap between the nav and the challenge/profile block, not behind it. */
+.sidebar {
+  background:
+    radial-gradient(420px 300px at 0% 0%, rgb(127 224 164 / 0.16), transparent 70%),
+    linear-gradient(180deg, #123223 0%, #0b2216 70%, #081c12 100%);
+}
+.sidebar > .spacer {
+  flex: 1 0 190px; margin: 0 -16px;
+  background: var(--hills) center bottom / 100% 100% no-repeat;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 28%, #000 86%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 28%, #000 86%, transparent 100%);
+}
+.sidebar__challenge { background: linear-gradient(180deg, rgb(255 255 255 / 0.08), rgb(255 255 255 / 0.03)); backdrop-filter: none; }
+.sidebar__user { text-shadow: none; }
+
+/* ================= Strategy cards, pass 2: structured "plan card" look =================
+   Same content and markup; each metric becomes an outlined row-card, the header gets a badge tile,
+   and the sources block becomes a tinted footer bar. */
+.strategy {
+  border: 1px solid color-mix(in srgb, var(--accent) 26%, #dfe5e1); border-radius: 18px; background: #fff;
+  box-shadow: 0 1px 2px rgb(15 31 23 / 0.05), 0 16px 32px -16px color-mix(in srgb, var(--accent) 38%, transparent);
+}
+.strategy::before { opacity: 0.045; }
+.strategy:hover::before { opacity: 0.07; }
+.strategy__accent { height: 5px; }
+
+/* Header: badge tile + title */
+.strategy__title { display: grid; grid-template-columns: auto 1fr; column-gap: 12px; align-items: center; padding: 16px 20px; }
+.strategy__title h3 { display: contents; }
+.strategy__title h3 .dot {
+  grid-row: 1 / span 2; width: 34px; height: 34px; border-radius: 10px; box-shadow: none;
+  background:
+    radial-gradient(circle, var(--accent) 0 5px, transparent 5.5px),
+    linear-gradient(180deg, #fff, color-mix(in srgb, var(--accent) 14%, #fff));
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, #fff);
+}
+.strategy__title h3 { font-size: 16px; }
+.strategy__title p { grid-column: 2; }
+
+/* Metric rows as outlined cards with a trailing chevron */
+.strategy__body { gap: 14px; padding: 18px 18px 0; }
+.strategy__body > .divider { display: none; }
+.metric {
+  gap: 12px; padding: 14px 16px; border: 1px solid var(--color-border); border-radius: 14px;
+  background: linear-gradient(180deg, #fff, #fafbfa); box-shadow: 0 1px 2px rgb(15 31 23 / 0.04);
+}
+.metric__head { position: relative; padding-right: 22px; }
+.metric__head::after {
+  content: ''; position: absolute; right: 2px; top: 50%; width: 7px; height: 7px; margin-top: -5px;
+  border-right: 2px solid var(--color-muted); border-top: 2px solid var(--color-muted); transform: rotate(45deg); opacity: 0.7;
+}
+.metric__head .tile { background: #fff !important; border: 1px solid var(--color-border); box-shadow: 0 1px 2px rgb(15 31 23 / 0.05); }
+.metric__value { font-size: 26px; line-height: 1.1; }
+.metric__label { font-size: 12.5px; color: var(--color-muted); }
+.metric .range { padding-top: 2px; }
+
+/* Paired callouts: crisper border, bolder title */
+.strategy .paired { border-radius: 14px; border-width: 1px; gap: 8px; }
+.strategy .paired--benefit { border-color: color-mix(in srgb, var(--color-success) 30%, #fff); }
+.strategy .paired--disadvantage { border-color: color-mix(in srgb, var(--color-warning) 45%, #fff); }
+.strategy .paired__title { font-size: 13.5px; font-weight: 650; }
+
+/* Footer bar: sources + Evidence link */
+.strategy__sources {
+  margin: 4px -18px 0; padding: 14px 18px 16px; gap: 6px; border-top: 1px solid color-mix(in srgb, var(--accent) 16%, var(--color-border));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 5%, #fff), color-mix(in srgb, var(--accent) 9%, #fff));
+}
+.strategy__sources .link { margin-top: 2px; color: color-mix(in srgb, var(--accent) 55%, #0f2a1d); }
+.strategy--baseline .strategy__sources .link { color: #475569; }
+.strategy--water .strategy__sources .link { color: #1f5faf; }
+.strategy--soil .strategy__sources .link { color: #1e6b3f; }
+
+/* Coloured top strip on the strategy cards removed. */
+.strategy__accent { display: none; }
+
+/* ================= Overview top area in the structured "plan card" look ================= */
+/* Header becomes a tinted band panel; controls sit inside it. */
+.header {
+  padding: 20px 24px; border: 1px solid #dbe4de; border-radius: 18px;
+  background: linear-gradient(180deg, #f9fbfa 0%, #eef4f0 100%);
+  box-shadow: 0 1px 2px rgb(15 31 23 / 0.05), 0 16px 32px -18px rgb(30 107 69 / 0.35), inset 0 1px 0 rgb(255 255 255 / 0.9);
+}
+.header__title::after { content: none; }
+.header .select, .header .btn--secondary { background: #fff; border-color: #d3ddd6; }
+
+/* Banner: outlined row with a white badge tile, like the metric rows. */
+.banner {
+  border: 1px solid color-mix(in srgb, var(--color-warning) 40%, #fff); border-radius: 16px; padding: 14px 16px;
+  background: linear-gradient(180deg, #fffaf0, #fff4de);
+  box-shadow: 0 1px 2px rgb(15 31 23 / 0.04), 0 14px 28px -16px rgb(229 154 11 / 0.45);
+}
+.banner::before { content: none; }
+.banner .tile { background: #fff; border: 1px solid rgb(229 154 11 / 0.35); box-shadow: 0 1px 2px rgb(15 31 23 / 0.05); animation: none; }
+.banner__run { background: #fff; box-shadow: inset 0 0 0 1px rgb(229 154 11 / 0.3); }
+.banner .btn--secondary { border-color: rgb(229 154 11 / 0.4); }
+
+/* Stat cards: tinted outline + wash per metric, white outlined icon tile. */
+.stat {
+  border: 1px solid color-mix(in srgb, rgb(var(--stat-accent)) 28%, #dfe5e1); border-radius: 16px; padding: 16px 18px;
+  background: linear-gradient(180deg, #fff 0%, color-mix(in srgb, rgb(var(--stat-accent)) 6%, #fff) 100%);
+  box-shadow: 0 1px 2px rgb(15 31 23 / 0.04), 0 14px 28px -16px rgb(var(--stat-accent) / 0.45);
+}
+.stat:not(.stat--note):hover { border-color: color-mix(in srgb, rgb(var(--stat-accent)) 45%, #dfe5e1); }
+.stat .tile { width: 44px; height: 44px; border-radius: 12px; background: #fff; border: 1px solid color-mix(in srgb, rgb(var(--stat-accent)) 25%, #e2e7e3); box-shadow: 0 1px 2px rgb(15 31 23 / 0.05); }
+.stat--note { border: 1px solid #dbe2dd; background: #eef2ef; }
+.banner .banner__run { display: inline-flex; align-items: center; padding: 6px 12px; line-height: 1.2; }
+
+/* Per-metric accent used by the stat cards above (green / blue / violet). */
+.stat { --stat-accent: 46 155 87; gap: 14px; }
+.stat:nth-child(2) { --stat-accent: 47 127 216; }
+.stat:nth-child(3) { --stat-accent: 124 92 214; }
+.stat__text strong { font-size: 26px; font-weight: 650; letter-spacing: -0.035em; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.stat__text span { font-size: 12.5px; }
+.stat--note { align-items: flex-start; padding: 16px 18px; }
+.header__title h1 { font-size: 34px; }
+.header__subtitle { flex-wrap: nowrap; }
+.header__subtitle > span:last-child { white-space: nowrap; }
+.header__controls .select select { max-width: 150px; }
+.header__subtitle .badge { letter-spacing: 0.08em; font-size: 11px; text-transform: uppercase; }
+.banner .banner__run { border-radius: 999px; }
+.banner .tile { width: 40px; height: 40px; border-radius: 12px; }
+.banner__text strong { font-size: 15px; }
+
+/* ================= Glow effects removed (neutral shadows only) ================= */
+.step__dot--ok, .banner .tile { animation: none; }
+.step__dot--ok { box-shadow: none; }
+.step__dot--warning { box-shadow: none; }
+.sidebar__item[aria-current='page']::before { box-shadow: none; }
+.sidebar__item[aria-current='page'] { background: rgb(255 255 255 / 0.1); }
+.sidebar { background-image: linear-gradient(180deg, #123223 0%, #0b2216 70%, #081c12 100%); }
+.replay { background: linear-gradient(180deg, #14362a, #0b2216); }
+.replay__play, .replay__play:hover { box-shadow: none; }
+.scrubber::-webkit-slider-thumb { box-shadow: 0 1px 3px rgb(0 0 0 / 0.35); }
+.playhead { box-shadow: none; }
+.card-title h2::before, .comparison__title h2::before { box-shadow: none; }
+.header, .banner, .stat, .strategy, .btn--primary, .btn--primary:hover:not(:disabled), .next__export:not(:disabled) {
+  --neutral-shadow: 0 1px 2px rgb(15 31 23 / 0.06), 0 8px 20px -12px rgb(15 31 23 / 0.2);
+}
+.header, .banner, .stat, .strategy { box-shadow: var(--neutral-shadow); }
+.btn--primary, .btn--primary:hover:not(:disabled), .next__export:not(:disabled) { box-shadow: 0 1px 0 rgb(255 255 255 / 0.2) inset, 0 1px 2px rgb(15 31 23 / 0.25); }
+.strategy:hover, .comparison .strategy:hover { box-shadow: 0 2px 4px rgb(15 31 23 / 0.06), 0 14px 28px -14px rgb(15 31 23 / 0.25); }
+.map__float, .map { box-shadow: 0 1px 2px rgb(15 31 23 / 0.1), 0 8px 20px -10px rgb(15 31 23 / 0.3); }
+:focus-visible { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--color-info); }
+
+/* ================= Rotation planner: strategy list as plan cards ================= */
+.page-card > h2 { position: relative; padding-left: 14px; font-size: 20px; letter-spacing: -0.025em; font-weight: 650; }
+.page-card > h2::before {
+  content: ''; position: absolute; left: 0; top: 50%; width: 4px; height: 0.95em; transform: translateY(-50%); border-radius: 4px;
+  background: linear-gradient(180deg, rgb(var(--tint) / 0.55), rgb(var(--tint)));
+}
+.page-card .list { gap: 18px; }
+.page-card .list > li {
+  --accent: var(--color-baseline);
+  gap: 0; padding: 0; overflow: hidden; align-items: stretch;
+  border: 1px solid color-mix(in srgb, var(--accent) 26%, #dfe5e1); border-radius: 16px; background: #fff;
+  box-shadow: 0 1px 2px rgb(15 31 23 / 0.05), 0 8px 20px -12px rgb(15 31 23 / 0.2);
+  transition: box-shadow 0.25s var(--ease-out), transform 0.25s var(--ease-out);
+}
+.page-card .list > li:nth-child(3n + 2) { --accent: var(--color-water); }
+.page-card .list > li:nth-child(3n) { --accent: var(--color-soil); }
+.page-card .list > li:last-child { padding-bottom: 0; }
+.page-card .list > li:hover { transform: translateY(-2px); box-shadow: 0 2px 4px rgb(15 31 23 / 0.06), 0 14px 28px -14px rgb(15 31 23 / 0.28); }
+
+/* Header band: badge tile + name + tags */
+.page-card .list > li > .row:first-child {
+  gap: 10px; padding: 14px 18px; flex-wrap: wrap;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 4%, #fff), color-mix(in srgb, var(--accent) 11%, #fff));
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 18%, var(--color-border));
+}
+.page-card .list h3 { display: flex; align-items: center; gap: 12px; font-size: 16px; font-weight: 650; letter-spacing: -0.02em; }
+.page-card .list h3::before {
+  content: ''; flex: none; width: 32px; height: 32px; border-radius: 10px;
+  background: radial-gradient(circle, var(--accent) 0 5px, transparent 5.5px), linear-gradient(180deg, #fff, color-mix(in srgb, var(--accent) 14%, #fff));
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, #fff);
+}
+
+/* Season chips: outlined row-cards with an accent edge */
+.page-card .list > li > .row:nth-child(2) { gap: 12px; padding: 16px 18px; }
+.chip {
+  position: relative; padding: 11px 16px 11px 18px; border: 1px solid var(--color-border); border-radius: 12px;
+  background: linear-gradient(180deg, #fff, #fafbfa); box-shadow: 0 1px 2px rgb(15 31 23 / 0.04);
+  font-variant-numeric: tabular-nums; color: var(--color-text);
+}
+.chip::before { content: ''; position: absolute; left: 0; top: 9px; bottom: 9px; width: 3px; border-radius: 0 3px 3px 0; background: var(--accent, var(--color-baseline)); }
+
+/* Feasibility alert as a callout inside the card */
+.page-card .alert { margin: 0 18px 16px; border-radius: 12px; border-color: color-mix(in srgb, var(--color-warning) 45%, #fff); font-weight: 600; }
