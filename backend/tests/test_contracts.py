@@ -32,6 +32,6 @@ def test_generated_schemas_are_up_to_date() -> None:
     for model in ALL_CONTRACTS:
         path = out / f"{model.__name__}.json"
         assert path.exists(), f"missing {path.name}; run `make contracts`"
-        assert json.loads(path.read_text()) == model.model_json_schema(mode="serialization"), (
+        assert json.loads(path.read_text(encoding="utf-8")) == model.model_json_schema(mode="serialization"), (
             f"{path.name} is stale; run `make contracts`"
         )
