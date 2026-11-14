@@ -1,0 +1,10 @@
+{
+  "_source": "FAO-56 (Allen et al. 1998) Chapter 7, Table 19 'Typical soil water characteristics for different soil types'. TEW given for Ze = 0.10 m. Ranges as printed. Used ONLY as a DEMO soil assumption when no site soil profile exists (site soil comes from M3, decision D8).",
+  "url": "https://www.fao.org/4/x0490e/x0490e0c.htm",
+  "textures": {
+    "sandy_loam": {"theta_fc": [0.18, 0.28], "theta_wp": [0.06, 0.16], "awc_m3_m3": [0.11, 0.15], "rew_mm": [6, 10], "tew_mm": [15, 20], "annex7_class": "medium", "tr55_hsg": "A"},
+    "loam": {"theta_fc": [0.20, 0.30], "theta_wp": [0.07, 0.17], "awc_m3_m3": [0.13, 0.18], "rew_mm": [8, 10], "tew_mm": [16, 22], "annex7_class": "medium", "tr55_hsg": "B"},
+    "silt_loam": {"theta_fc": [0.22, 0.36], "theta_wp": [0.09, 0.21], "awc_m3_m3": [0.13, 0.19], "rew_mm": [8, 11], "tew_mm": [18, 25], "annex7_class": "medium", "tr55_hsg": "B"}
+  },
+  "_notes": "annex7_class follows the FAO-56 Chapter 6 text for Fig. 30b (medium = sandy loam, loam, silt loam, silt). tr55_hsg follows the TR-55 Appendix A texture table for disturbed profiles (A = sand, loamy sand, sandy loam; B = silt loam, loam); a real hydrologic soil group must come from the soil survey."
+}

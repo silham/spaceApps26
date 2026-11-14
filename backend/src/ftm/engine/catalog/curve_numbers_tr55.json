@@ -1,0 +1,13 @@
+{
+  "_source": "USDA SCS/NRCS Technical Release 55, Urban Hydrology for Small Watersheds, Second Ed., June 1986, Table 2-2b 'Runoff curve numbers for cultivated agricultural lands' (p. 2-6). Footnote 1: average runoff condition, Ia = 0.2S. Footnote 3: good hydrologic condition = factors encourage infiltration (e.g. residue cover >= 20%).",
+  "url": "https://ponce.sdsu.edu/tr55.pdf",
+  "covers": {
+    "fallow_bare_soil": {"A": 77, "B": 86, "C": 91, "D": 94},
+    "fallow_crop_residue_good": {"A": 74, "B": 83, "C": 88, "D": 90},
+    "row_crops_straight_row_good": {"A": 67, "B": 78, "C": 85, "D": 89},
+    "row_crops_straight_row_poor": {"A": 72, "B": 81, "C": 88, "D": 91},
+    "small_grain_straight_row_good": {"A": 63, "B": 75, "C": 83, "D": 87},
+    "small_grain_straight_row_poor": {"A": 65, "B": 76, "C": 84, "D": 88}
+  },
+  "_limitations": "Curve numbers describe average conditions for design; accuracy decreases for historical storms and for runoff below 0.5 in; snowmelt and rain on frozen ground are not covered (TR-55 chapter 2, Limitations)."
+}

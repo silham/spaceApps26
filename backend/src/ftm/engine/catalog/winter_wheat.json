@@ -1,0 +1,26 @@
+{
+  "_status": "ILLUSTRATIVE candidate for the DEMO run. Not the D4 crop set (D4 is open). Values are FAO-56 generic table values, not local calibration.",
+  "profile": {
+    "id": "winter-wheat",
+    "name": "Winter wheat",
+    "kc_ini": {"value": 0.4, "unit": "-", "reference": "FAO-56 Table 12, 'Winter Wheat - with frozen soils'", "region_relevance": "Frozen-soil winters assumed (0.7 applies to non-frozen soils)", "uncertainty": "0.4-0.7 by winter soil state; wetting frequency also matters"},
+    "kc_mid": {"value": 1.15, "unit": "-", "reference": "FAO-56 Table 12, Winter Wheat", "region_relevance": "Sub-humid reference climate; adjusted with FAO-56 eq. 62 at run time", "uncertainty": "Generic value"},
+    "kc_end": {"value": 0.25, "unit": "-", "reference": "FAO-56 Table 12, Winter Wheat, Kc end 0.25-0.4, footnote 10", "region_relevance": "0.25 = machine harvest (footnote 10: higher value is for hand-harvested crops)", "uncertainty": "0.25-0.4"},
+    "stage_lengths_days": {
+      "ini": {"value": 160, "unit": "days", "reference": "FAO-56 Table 11, Winter Wheat, October planting, 'Idaho, USA' row (160/75/75/25)", "region_relevance": "US frozen-winter row (Table 11 footnote 2: stages lengthen with dormancy); not specific to either candidate site", "uncertainty": "Indicative only; local calendars differ (Table 11 footnote)"},
+      "dev": {"value": 75, "unit": "days", "reference": "FAO-56 Table 11, Winter Wheat, 'Idaho, USA'", "region_relevance": "As for ini", "uncertainty": "As for ini"},
+      "mid": {"value": 75, "unit": "days", "reference": "FAO-56 Table 11, Winter Wheat, 'Idaho, USA'", "region_relevance": "As for ini", "uncertainty": "As for ini"},
+      "late": {"value": 25, "unit": "days", "reference": "FAO-56 Table 11, Winter Wheat, 'Idaho, USA'", "region_relevance": "As for ini", "uncertainty": "As for ini"}
+    },
+    "max_root_depth_m": {"value": 1.8, "unit": "m", "reference": "FAO-56 Table 22, Winter Wheat: 1.5-1.8 m", "region_relevance": "Larger value for modelling soil water stress (Table 22 footnote 1)", "uncertainty": "1.5-1.8 m"},
+    "depletion_fraction_p": {"value": 0.55, "unit": "-", "reference": "FAO-56 Table 22; daily ETc adjustment p = p_table + 0.04(5 - ETc), limited to 0.1-0.8", "region_relevance": "Generic", "uncertainty": "Soil-texture adjustment of 5-10% possible"},
+    "planting_window": null,
+    "is_cover_crop": false,
+    "notes": "Table 11 'Idaho, USA' row lists October planting; printed total 335 days matches the stage sum.",
+    "is_demo": false
+  },
+  "engine_extras": {
+    "max_height_m": {"value": 1.0, "unit": "m", "reference": "FAO-56 Table 12, h for wheat", "region_relevance": "Generic", "uncertainty": "Variety dependent"},
+    "tr55_cover": "small_grain_straight_row_good"
+  }
+}
