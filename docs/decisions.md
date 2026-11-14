@@ -50,3 +50,17 @@ Recorded 2026-11-14 while implementing Figma frame `25:49` (see D9). Each item i
 **Fidelity check**
 
 - Checked on 2026-11-14 at a 1440 px viewport against the v2 frame's screenshot: section positions and sizes are within a few pixels (page height 2916 px vs 2918 px). This was a manual comparison; the Playwright visual check is not automated yet.
+
+**Live app (2026-11-14, M1 building across areas; M2 to review).** Each item is an assumption, not a resolved decision. The Figma file still holds only frame `25:49` and the component sheets (checked via the Figma connector), so these views extend its card, badge, button and select patterns and add no colours.
+
+- **Live vs DEMO.** A farm that is not marked DEMO gets the live Overview (`LiveOverview.tsx`): every number comes from the API. The DEMO farm and the no-API case keep the frame's illustrative content, labelled DEMO (`figmaDemo.ts`).
+- **Rotation rows are proportional** to the comparison horizon (seasons placed by date, hatched = rainfed) instead of the frame's three equal columns, because live strategies have 2–3 seasons of different lengths and the replay playhead must sit on the true date. Node `27:175` is extended, not copied.
+- **Planting stepper (±1 day, bound ±14, D6)** sits under each strategy name; **irrigation mode and limit** are in the constraints card ("As needed" / "Fixed limit per season"). Edits mark results outdated and lock the export until `POST /runs` returns; the run is synchronous (~4 s), so the UI shows a running state, not polling.
+- **Replay** uses `GET /runs/{id}/replay`: one window, one path (no range), held-out years selectable but labelled replay-only, unavailable windows disabled with their reason, "Replay a dry year" = lowest total rain among enabled windows (unknown rain never counts as dry). Playback pauses once at the turning point (largest soil-water difference between strategies) and says what to try.
+- **Map** reuses the Data Journey footprint map (MapLibre, no imagery basemap, so it adds no unlisted data source). The frame's static farmland image is not used for live farms. If the browser cannot start WebGL, an error boundary shows "map could not be drawn" instead of blanking the page.
+- **New sections without a frame:** Field history timeline (rain, Tmax/Tmin, QA-passed NDVI; gaps stay gaps), Trade-offs (scatter of irrigation need vs possible low-cover days with whiskers + a table with all 9 metrics + the priority ordering rule), "Confirm farm details" dialog, decision-card result panel with PDF/JSON links.
+- **Priorities** order feasible options only (D12); the rule is printed. Infeasible options are listed as "not ranked" with their reasons.
+- **Evidence** shows only the sources the selected run used, the run's limitations and unsupported claims, the crop parameter table with references (missing = "blocks the claim"), and stored validation results.
+- **Data Journey** gains a "What does this mean?" note per stage and a Compare table (paired differences).
+- **Accessibility:** skip link; focus moves to the view heading on navigation; replay controls are native range/select/buttons; every chart has an accessible name and the same numbers in a table.
+- **Not done:** automated screenshot comparison with the Figma frame (the 1440 px check is still manual); the two views without frames have not been design-reviewed.

@@ -46,6 +46,7 @@ contracts:     ## regenerate JSON Schema + TS types from pydantic contracts
 test:
 	$(BACKEND) pytest
 	$(FRONTEND) run typecheck
+	$(FRONTEND) run test
 
 lint:
 	$(BACKEND) ruff check . && uv run ruff format --check .

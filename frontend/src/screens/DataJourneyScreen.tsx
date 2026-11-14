@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { api } from '../api/client'
 import { useAsync } from '../api/useAsync'
 import { DemoBadge } from '../components/DemoBadge'
+import { ErrorBoundary } from '../components/ErrorBoundary'
 import { Badge } from '../components/ui'
 import { KIND_TONE, STAGES, STATUS } from '../journey'
 import { CoverageStrip, GapMarkers, MissingTimeline, ObservedVsDetected, RawVsClean, ViCurveChart } from '../journey/charts'
@@ -28,6 +29,30 @@ function sourceIndex(stages: JourneyStage[]): Map<string, SourceInfo> {
   return new Map(list.map((r) => [r.source_id, r]))
 }
 
+interface DeltaRow { strategy: string; metric: string; unit: string; p10: number | null; p50: number | null; p90: number | null; share_better: number | null }
+function PairedDeltasChart({ stage }: { stage: JourneyStage }) {
+  const rows = Array.isArray(stage.chart?.rows) ? (stage.chart.rows as DeltaRow[]) : null
+  if (!rows) return <p className="muted small">Comparison data arrived in an unexpected form, so nothing is drawn.</p>
+  const n = (v: number | null) => (v == null ? '—' : Math.round(v).toLocaleString('en-GB'))
+  return (
+    <div className="table-wrap">
+      <table className="metrics-table">
+        <caption className="small muted">{String(stage.chart?.title ?? '')}</caption>
+        <thead><tr><th scope="col">Strategy</th><th scope="col">Metric</th><th scope="col">Median Δ</th><th scope="col">p10 to p90</th><th scope="col">Better on</th></tr></thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={`${r.strategy}-${r.metric}`}>
+              <td>{r.strategy}</td><td>{r.metric.replace(/_/g, ' ')}</td>
+              <td className="num">{n(r.p50)} {r.unit}</td><td className="num">{n(r.p10)} to {n(r.p90)}</td>
+              <td className="num">{r.share_better == null ? '—' : `${Math.round(r.share_better * 100)}% of paths`}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 function StageChart({ stage }: { stage: JourneyStage }) {
   switch (chartType(stage)) {
     case 'coverage_strip': return <CoverageStrip stage={stage} />
@@ -36,6 +61,7 @@ function StageChart({ stage }: { stage: JourneyStage }) {
     case 'gap_markers': return <GapMarkers stage={stage} />
     case 'vi_curve': return <ViCurveChart stage={stage} />
     case 'observed_vs_detected': return <ObservedVsDetected stage={stage} />
+    case 'paired_deltas': return <PairedDeltasChart stage={stage} />
     case 'footprint_map': {
       const features = readFootprints(stage)
       return features ? <FootprintMap features={features} /> : <p className="muted small">Map data arrived in an unexpected form, so nothing is drawn.</p>
@@ -161,8 +187,16 @@ export function DataJourneyScreen({ siteId }: { siteId: string | undefined }) {
                 {payload?.is_demo && <DemoBadge />}
               </div>
               <p className="muted">{def.question}</p>
+              <details className="detail-block">
+                <summary>What does this mean?</summary>
+                <p className="small">{def.meaning}</p>
+              </details>
               {payload && <p>{payload.summary}</p>}
-              {payload && <StageChart stage={payload} />}
+              {payload && (
+                <ErrorBoundary what="This chart">
+                  <StageChart stage={payload} />
+                </ErrorBoundary>
+              )}
               {payload && <StageDetails stage={payload} sources={sources} />}
               {payload && <SourceFooter stage={payload} sources={sources} />}
             </li>
