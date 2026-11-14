@@ -30,9 +30,12 @@ PASSWORD = "a long test passphrase 123"
 
 @pytest.fixture
 def session() -> Iterator[Session]:
-    conn = get_engine().connect()
-    conn.execute(text("select id from app_user limit 1"))
-    conn.rollback()
+    try:
+        conn = get_engine().connect()
+        conn.execute(text("select id from app_user limit 1"))
+        conn.rollback()
+    except Exception as exc:
+        pytest.skip(f"no migrated Postgres available: {exc.__class__.__name__}")
     transaction = conn.begin()
     s = Session(bind=conn, join_transaction_mode="create_savepoint", expire_on_commit=False)
     try:
