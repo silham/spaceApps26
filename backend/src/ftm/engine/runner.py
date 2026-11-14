@@ -41,6 +41,7 @@ from ftm.engine.ensemble import (
     MODEL_VERSION,
     REPLAY_METHOD,
     BlockPool,
+    EnsembleConfig,
     PathOutcome,
     SoilRunConfig,
     horizon_blocks,
@@ -101,6 +102,8 @@ class EngineRequest:
     n_paths: int = 0
     seed: int = 0
     replay_years: tuple[int, ...] | None = None  # set: replay these consecutive years instead of bootstrap
+    # Declared sample pool (validation plan s1): e.g. (1984, 2019) for ET0 targets. None = every usable year.
+    pool_range: tuple[int, int] | None = None
     available_crop_ids: set[str] | None = None
     trace_dir: Path | None = None  # set: write per-strategy Parquet traces under it
 
@@ -148,6 +151,8 @@ def validate_request(req: EngineRequest) -> ForcingInfo:
         raise EngineInputError("initial soil water must be a fraction of field capacity in [0, 1]")
     if not req.soil.data_depth_m > 0:
         raise EngineInputError("soil data depth must be > 0 m")
+    if req.pool_range is not None and req.pool_range[0] > req.pool_range[1]:
+        raise EngineInputError(f"sample pool {req.pool_range} ends before it starts")
     if req.replay_years is None and req.n_paths < 1:
         raise EngineInputError("n_paths must be >= 1 for the bootstrap ensemble")
     return info
@@ -158,7 +163,9 @@ def _source_ids(req: EngineRequest) -> list[str]:
     return list(dict.fromkeys(ids))
 
 
-def _common_limitations(req: EngineRequest, et0_days: dict[str, int], n_paths: int) -> list[str]:
+def _common_limitations(
+    req: EngineRequest, et0: pd.DataFrame, et0_days: dict[str, int], pool: BlockPool, n_paths: int
+) -> list[str]:
     lim = [
         "Historical weather is resampled; this is not a climate forecast.",
         f"p10-p90 is the {RANGE_LABEL} across weather paths, not a calibrated prediction interval.",
@@ -177,6 +184,11 @@ def _common_limitations(req: EngineRequest, et0_days: dict[str, int], n_paths: i
         lim.append(f"Irrigation rule: {IRRIGATION_RULE}.")
     if n := et0_days.get(HARGREAVES, 0):
         lim.append(f"ET0 used the Hargreaves fallback (FAO-56 eq. 52) on {n} day(s) of the record.")
+    in_pool = et0.index.year.isin(pool.pool_years)
+    if n_pool := int(((et0["et0_method"] == HARGREAVES) & in_pool).sum()):
+        lim.append(f"{n_pool} of those Hargreaves day(s) fall inside the sample pool used for the ranges.")
+    if req.replay_years and any(y not in pool.pool_years for y in req.replay_years):
+        lim.append("Replayed year(s) lie outside the sample pool (held out); shown for replay only, no range.")
     if n_paths < MIN_PATHS_FOR_RANGE:
         lim.append(f"Only {n_paths} path(s): p10/p90 are not reported below {MIN_PATHS_FOR_RANGE} paths.")
     return lim
@@ -210,7 +222,7 @@ def run_engine(req: EngineRequest) -> EngineOutput:
     config = SoilRunConfig(soil=req.soil, initial_fraction=req.initial_fraction)
     n_years = horizon_blocks(req.horizon)
     keep = req.trace_dir is not None
-    pool = usable_blocks(req.forcing, et0, req.horizon[0].strftime("%m-%d"))
+    pool = usable_blocks(req.forcing, et0, req.horizon[0].strftime("%m-%d"), req.pool_range)
     method = REPLAY_METHOD if req.replay_years is not None else BOOTSTRAP_METHOD
 
     outcomes: list[PathOutcome] = []
@@ -226,6 +238,7 @@ def run_engine(req: EngineRequest) -> EngineOutput:
                 mode=req.mode,
                 allocation_mm_per_season=req.allocation_mm_per_season,
                 years=req.replay_years,
+                pool_range=req.pool_range,
                 keep_traces=keep,
             )
             outcomes = [one]
@@ -241,6 +254,7 @@ def run_engine(req: EngineRequest) -> EngineOutput:
                 allocation_mm_per_season=req.allocation_mm_per_season,
                 n_paths=req.n_paths,
                 seed=req.seed,
+                pool_range=req.pool_range,
                 keep_traces=keep,
             )
     except ValueError as exc:
@@ -260,7 +274,7 @@ def run_engine(req: EngineRequest) -> EngineOutput:
         or any(s.is_demo for s in req.strategies)
         or any(c.profile.is_demo for c in req.crops.values())
     )
-    usable_starts = [pd.Timestamp(f"{y}-{req.horizon[0]:%m-%d}") for y in pool.usable_years]
+    usable_starts = [pd.Timestamp(f"{y}-{req.horizon[0]:%m-%d}") for y in pool.pool_years]
     sample_period = (
         (usable_starts[0].date(), (usable_starts[-1] + pd.DateOffset(years=1) - pd.Timedelta(days=1)).date())
         if usable_starts
@@ -287,13 +301,15 @@ def run_engine(req: EngineRequest) -> EngineOutput:
             "elevation_m": f"{req.elevation_m:g}",
             "initial_fraction_of_field_capacity": f"{req.initial_fraction:g}",
             "irrigation_rule": SUPPORTED_IRRIGATION_RULE,
+            **EnsembleConfig(req.horizon, req.pool_range, len(outcomes), req.seed, method).describe(),
+            "held_out_or_outside_pool_years": ",".join(map(str, pool.outside_pool_years)) or "none",
             **({"replay_years": "-".join(map(str, req.replay_years))} if req.replay_years else {}),
         },
         created_at=datetime.now(UTC),
         is_demo=is_demo,
     )
 
-    common = _common_limitations(req, et0_days, len(outcomes))
+    common = _common_limitations(req, et0, et0_days, pool, len(outcomes))
     summary = summarize(outcomes)
     fixed = req.mode is SimulationMode.FIXED_ALLOCATION
     metrics = [m for m in SUPPORTED_METRICS if fixed or m != "allocation_shortfall_days"]
@@ -366,7 +382,8 @@ def _journey(
         what = "replayed" if req.replay_years else f"run on {run.n_paths} resampled weather paths"
         summary = (
             f"{n_ok} of {len(feas)} strategies {what} of {run.horizon_years} season(s), from "
-            f"{len(pool.usable_years)} usable seasons ({len(pool.excluded)} excluded for missing data)."
+            f"{len(pool.pool_years)} usable seasons in the sample pool ({len(pool.excluded)} excluded for missing "
+            f"data, {len(pool.outside_pool_years)} outside the pool)."
         )
     return JourneyStage(
         stage=JourneyStageName.SIMULATE,
@@ -377,8 +394,8 @@ def _journey(
         chart={
             "type": "bar",
             "title": "Season blocks available to the simulation",
-            "labels": ["usable", "excluded"],
-            "values": [len(pool.usable_years), len(pool.excluded)],
+            "labels": ["in sample pool", "outside pool (replay only)", "excluded (missing data)"],
+            "values": [len(pool.pool_years), len(pool.outside_pool_years), len(pool.excluded)],
             "unit": "seasons",
         },
         details={

@@ -1,0 +1,97 @@
+{
+  "_status": "D4 resolved 2026-11-14 by M4: Kansas-local season from USDA NASS dates + FAO-56 split. Season length pending.",
+  "profile": {
+    "id": "winter-wheat-ks",
+    "name": "Winter wheat (Kansas-local season length)",
+    "kc_ini": {
+      "value": 0.4,
+      "unit": "-",
+      "reference": "FAO-56 Table 12, 'Winter Wheat - with frozen soils'",
+      "region_relevance": "Frozen-soil winters assumed (0.7 applies to non-frozen soils)",
+      "uncertainty": "0.4-0.7 by winter soil state; wetting frequency also matters"
+    },
+    "kc_mid": {
+      "value": 1.15,
+      "unit": "-",
+      "reference": "FAO-56 Table 12, Winter Wheat",
+      "region_relevance": "Sub-humid reference climate; adjusted with FAO-56 eq. 62 at run time",
+      "uncertainty": "Generic value"
+    },
+    "kc_end": {
+      "value": 0.25,
+      "unit": "-",
+      "reference": "FAO-56 Table 12, Winter Wheat, Kc end 0.25-0.4, footnote 10",
+      "region_relevance": "0.25 = machine harvest (footnote 10: higher value is for hand-harvested crops)",
+      "uncertainty": "0.25-0.4"
+    },
+    "stage_lengths_days": {
+      "ini": {
+        "value": null,
+        "unit": "days",
+        "reference": null,
+        "region_relevance": "Kansas (ks-field-2); derived from local_calendar once it is filled",
+        "uncertainty": "PENDING (D4, 2026-11-14): season length from USDA NASS Kansas planting/harvest dates, not yet obtained"
+      },
+      "dev": {
+        "value": null,
+        "unit": "days",
+        "reference": null,
+        "region_relevance": "Kansas (ks-field-2); derived from local_calendar once it is filled",
+        "uncertainty": "PENDING (D4, 2026-11-14): season length from USDA NASS Kansas planting/harvest dates, not yet obtained"
+      },
+      "mid": {
+        "value": null,
+        "unit": "days",
+        "reference": null,
+        "region_relevance": "Kansas (ks-field-2); derived from local_calendar once it is filled",
+        "uncertainty": "PENDING (D4, 2026-11-14): season length from USDA NASS Kansas planting/harvest dates, not yet obtained"
+      },
+      "late": {
+        "value": null,
+        "unit": "days",
+        "reference": null,
+        "region_relevance": "Kansas (ks-field-2); derived from local_calendar once it is filled",
+        "uncertainty": "PENDING (D4, 2026-11-14): season length from USDA NASS Kansas planting/harvest dates, not yet obtained"
+      }
+    },
+    "max_root_depth_m": {
+      "value": 1.8,
+      "unit": "m",
+      "reference": "FAO-56 Table 22, Winter Wheat: 1.5-1.8 m",
+      "region_relevance": "Larger value for modelling soil water stress (Table 22 footnote 1)",
+      "uncertainty": "1.5-1.8 m"
+    },
+    "depletion_fraction_p": {
+      "value": 0.55,
+      "unit": "-",
+      "reference": "FAO-56 Table 22; daily ETc adjustment p = p_table + 0.04(5 - ETc), limited to 0.1-0.8",
+      "region_relevance": "Generic",
+      "uncertainty": "Soil-texture adjustment of 5-10% possible"
+    },
+    "planting_window": null,
+    "is_cover_crop": false,
+    "notes": "Same FAO-56 Table 12 Kc, root depth, p and height as winter-wheat. Stage lengths are local (D4): NASS Kansas season length split in the FAO-56 Table 11 Idaho proportions 160:75:75:25. Until a cited season length is entered, every strategy using this crop is infeasible.",
+    "is_demo": false
+  },
+  "engine_extras": {
+    "max_height_m": {
+      "value": 1.0,
+      "unit": "m",
+      "reference": "FAO-56 Table 12, h for wheat",
+      "region_relevance": "Generic",
+      "uncertainty": "Variety dependent"
+    },
+    "tr55_cover": "small_grain_straight_row_good",
+    "local_calendar": {
+      "season_days": null,
+      "reference": null,
+      "split_from": "FAO-56 Table 11, Winter Wheat, 'Idaho, USA' row (October planting): 160/75/75/25 = 335 days",
+      "split_proportions": [
+        160,
+        75,
+        75,
+        25
+      ]
+    }
+  }
+}

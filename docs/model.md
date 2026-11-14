@@ -1,15 +1,15 @@
 # Model documentation
 
-Owner: M4. Engine version `0.2.0` (`ftm.engine.ensemble.MODEL_VERSION`).
+Owner: M4. Engine version `0.3.0` (`ftm.engine.ensemble.MODEL_VERSION`).
 
 Main references:
 - Allen, Pereira, Raes & Smith (1998), *Crop evapotranspiration*, FAO Irrigation and Drainage Paper 56 ("FAO-56"), https://www.fao.org/4/x0490e/x0490e00.htm. Source ID `lit-fao56-1998`.
 - USDA SCS (1986), *Urban Hydrology for Small Watersheds*, TR-55, 2nd ed. Source ID `lit-usda-tr55-1986`.
 
-**Status.** Everything in "Implemented" is code with tests in `backend/tests/engine/`. Every run today is **DEMO**, for three reasons:
-- The crop values are cited FAO-56 generic table values marked ILLUSTRATIVE, because the D4 crop set is open.
-- The soil is a FAO-56 Table 19 assumption, because D8 site soil is open.
-- The strategies are illustrative, because D5 is open.
+**Status.** Everything in "Implemented" is code with tests in `backend/tests/engine/`.
+- **Primary site `ks-field-2`** (D3, resolved): real POWER weather from the DB works end to end. The SSURGO soil and the D4/D5 strategies are wired in.
+- **D4 is not finished.** The Kansas winter wheat season length (USDA NASS) is not in the catalog yet, so every ks-field-2 strategy is **infeasible with that reason** until it is. `--wheat fao56-idaho` runs the FAO-56 Idaho row as printed, for checking only.
+- **DEMO runs** (`scripts/run_engine_demo.py`) use synthetic weather, a FAO-56 Table 19 soil and illustrative strategies.
 
 ---
 
@@ -28,6 +28,7 @@ Main references:
 - mode and allocation
 - initial condition
 - paths and seed, or replay years
+- the declared sample pool (`pool_range`, e.g. 1984–2019)
 
 `validate_request` rejects a request, with a readable `EngineInputError`, when any of these holds:
 - the forcing breaks the contract
@@ -38,9 +39,10 @@ Main references:
 - the run is `fixed_allocation` without an allocation, or `irrigation_needed` with one
 - the initial fraction is outside [0, 1]
 - `n_paths` < 1
+- the sample pool is reversed, or holds no usable season (the run is blocked)
 
 `EngineOutput` holds:
-- a `SimulationRun`, whose `input_versions` carry the weather processing-run ID, the soil profile ID, the crop-catalog SHA-256, the elevation, the initial condition and the irrigation rule
+- a `SimulationRun`, whose `input_versions` carry the weather processing-run ID, the soil profile ID, the crop-catalog SHA-256, the elevation, the initial condition, the irrigation rule and the ensemble config: block definition, horizon, sample pool, held-out years, path count, seed, method. `sample_period` is the sample pool period.
 - one `Result` per strategy × metric
 - the per-strategy `Feasibility`
 - the block pool, replay windows and SIMULATE `JourneyStage`
@@ -63,6 +65,13 @@ Infeasible strategies get results with `null` values, `sample_count = 0` and the
 - **Provenance columns:** exactly one `source_id` and one `processing_run_id`. Two rainfall sources are therefore never summed.
 - **Usable values:** only values flagged `ok` or `estimated` are used. A NaN with a usable flag is rejected.
 - **Units:** POWER AG units, with no conversion.
+
+**M3 store frame.** `from_store_frame` adapts `ftm.data.forcing.get_daily_forcing` output without changing values. That frame has an index of `datetime.date` and keeps `source_ids`, `processing_run_id` and `units` in `frame.attrs`. The adapter:
+- converts the index to a `DatetimeIndex`
+- copies the provenance into columns
+- checks every engine variable's unit against the expected unit, raising an error on a mismatch and never converting
+
+It is tested with M3's own `to_wide` pivot.
 
 ### Reference evapotranspiration (`engine.et0`)
 
@@ -161,8 +170,12 @@ Each failed constraint comes back as a readable reason:
 - **Blocks:** agricultural years anchored on the horizon start.
   - A block with any unusable rain day or any NaN ET0 day is **excluded with its reason**. Days are never skipped, because a skipped day would act as 0 mm rain.
   - The run is blocked only if no usable block remains.
-  - POWER has no solar radiation before 1984, so 1981–1983 drop out this way.
+- **Sample pool (validation plan v1.2 §1):** the bootstrap draws only from `pool_range`.
+  - For ET₀ targets the pool is **1984–2019**. POWER has no solar radiation before 1984, so 1981–1983 would otherwise get Hargreaves ET₀ on every day; they are *not* excluded by the data check, only by the pool.
+  - **2020–2025 are held out.** They can be replayed on screen (with a limitation saying so) but never build or tune a range.
+  - The runner reports Hargreaves days that fall inside the pool.
 - **Bootstrap:** independent years drawn by `numpy.random.default_rng(seed)`. The same inputs and seed give identical results (tested).
+- **Coverage helper:** `ensemble_weather_paths(forcing, et0, EnsembleConfig)` returns exactly the weather paths a run with that config uses (tested equal to a run's paths). M5's coverage evaluation can rebuild the ensemble per held-out year.
 - **Replay (`run_replay`):** one consecutive window, for example "replay 1995–1996". A window crossing an excluded year is refused with its reason, never shortened or swapped.
 - **Pairing:** one weather frame per path is shared by every strategy (tested).
 - **Warm-up:** each strategy is first run over the path's first block from the declared initial fraction of field capacity, and the main run starts from that end state.
@@ -193,6 +206,44 @@ Each failed constraint comes back as a readable reason:
 - **Strategy IDs:** `engine-demo-*`.
 - `--power LAT LON` uses real POWER data through M3's adapter. The outputs stay DEMO because the soil and strategies are still DEMO.
 
+### Sensitivity (`engine.sensitivity`, validation plan §4)
+
+- **Inputs varied:**
+  - AWC low/mid/high: SSURGO `awc_l`/`awc_r`/`awc_h`, rebuilt from M3's cached snapshot or given explicitly with a source label
+  - initial soil water: 25/50/75 % of field capacity
+  - planting-date shift: −14/0/+14 days. The whole crop season moves, harvest included, and fallow seasons stay.
+  - allocation: −20/0/+20 %, fixed-allocation mode only
+- **Cases:** `one_at_a_time` gives 8 + 1 runs (6 + 1 without allocation). `full_grid` gives 81, or 27 without allocation.
+- **Pairing:** every case keeps the seed, pool, horizon and path count, so all cases draw **the same weather paths**. This is checked at run time, and a mismatch raises an error.
+- **Ranking:** strategies are ordered by the median of irrigation, stress days, cover days and possible low-cover days. Equal medians are a tie. A shift that breaks a hard constraint is infeasible with its reason, and that case is reported as "not comparable".
+- **Output:** "ranking unchanged in X of Y combinations; changed by: …". This measures robustness, not accuracy.
+
+### Planting calendar and ks-field-2 strategies (`engine.calendar`, `engine.scenarios`)
+
+**FAO-56 Table 11 footnote 2 rules**, applied to the site's own POWER temperatures over the sample pool:
+- **Maize:** spring planting on the first day from 1 Feb on which the trailing 10-day mean of (Tmax + Tmin)/2 is ≥ 13 °C.
+- **Winter wheat:** autumn sowing on the first day from 1 Aug on which that mean is ≤ 17 °C, or on 1 Dec, whichever comes first.
+- The strategy calendar uses the median day across pool years, and the spread is reported. A year with a temperature gap in the window gives no date, never a filled one.
+- At ks-field-2 over 1984–2019: maize **10 Apr** (p10–p90 of years 21 Mar – 28 Apr; earlier than typical Kansas practice, because the rule fires at the first spring warmth) and wheat **7 Oct** (24 Sep – 15 Oct).
+
+**Grain sorghum** has no FAO-56 rule.
+- The main-season planting date of **1 Jun** is an M4 scenario choice inside the FAO-56 Table 11 "May/June" planting period.
+- The double crop is planted the day after the wheat harvest.
+
+**D5 strategies:**
+- **Baseline:** irrigated corn, then irrigated winter wheat.
+- **Alternative A:** the baseline plus rainfed double-crop sorghum.
+- **Alternative B:** rainfed sorghum, then irrigated wheat.
+- Seasons end at maturity (the stage sum). Frost and harvest logistics are not modelled.
+
+**Kansas wheat (`winter-wheat-ks`, D4).**
+- It uses the FAO-56 Table 12 Kc, root depth, p and height.
+- Its stage lengths come from `engine_extras.local_calendar`: a cited season length split 160:75:75:25 (the FAO-56 Idaho row's proportions), with the rounding put into the last stage.
+- A season length without a reference is rejected.
+- While the length is null, every strategy using this wheat is infeasible: "missing cited parameters (stage_lengths_days.*)".
+
+**Site run:** `scripts/run_engine_site.py --site-id ks-field-2 --weather-source <id>`. It reads the site, weather source and soil profile from the DB, and the POWER grid elevation (858 m) from the raw snapshot. It stops if anything is missing.
+
 ---
 
 ## Planned / not implemented
@@ -204,6 +255,8 @@ Each failed constraint comes back as a readable reason:
 - Parameter-uncertainty draws: ranges today reflect weather variability only.
 - Ks evaluated on the previous day's depletion. Today it is evaluated after the same day's water inputs.
 - Paddy or ponded conditions (guide section 3), and capillary rise.
+- The Kansas wheat season length from USDA NASS. The value is pending: `quickstats.nass.usda.gov` and the Agricultural Handbook 628 PDF were unreachable from M4's network on 2026-11-14.
+- The SSURGO hydrologic soil group. Today it is inferred from texture (TR-55 Appendix A) and disclosed. M3 could add `hydgrp` to the SDA query.
 
 ## Proposals to M1 (contracts are not changed by M4)
 

@@ -15,7 +15,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from datetime import UTC, date, datetime
+from datetime import date
 from pathlib import Path
 
 import pandas as pd
@@ -32,29 +32,22 @@ from ftm.engine.demo import (
     demo_strategies,
     synthetic_forcing,
 )
-from ftm.engine.forcing import TDEW, flag_col
+from ftm.engine.forcing import TDEW, from_store_frame
 from ftm.engine.params import demo_soil, load_crops
 from ftm.engine.runner import EngineInputError, EngineOutput, EngineRequest, run_engine
-from ftm.provenance import sha256_file
 
 
-def power_forcing(lat: float, lon: float, start: date, end: date) -> tuple[pd.DataFrame, Source, float | None]:
-    """Real POWER weather through M3's adapter and pipeline, pivoted to the engine's wide shape."""
+def power_forcing(
+    lat: float, lon: float, start: date, end: date, timezone: str
+) -> tuple[pd.DataFrame, Source, float | None]:
+    """Real POWER weather through M3's adapter and pipeline (as scripts/load_power.py), without the DB."""
     from ftm.data.adapters import nasa_power
+    from ftm.data.forcing import to_wide
     from ftm.data.pipeline.run import AlignContext, run_daily_pipeline
-    from ftm.data.raw_cache import RawSnapshot, find_latest_raw
 
-    params = (*nasa_power.DEFAULT_PARAMETERS, TDEW)  # T2MDEW requested on PR #2
-    name = nasa_power.raw_filename(lat, lon, start, end)
-    cached = find_latest_raw(nasa_power.SOURCE_KEY, name)
-    if cached is not None:
-        root = get_settings().raw_dir
-        mtime = datetime.fromtimestamp(cached.stat().st_mtime, UTC)
-        snap = RawSnapshot(cached, cached.relative_to(root.parent).as_posix(), sha256_file(cached), mtime)
-    else:
-        snap = nasa_power.fetch_daily(lat, lon, start, end, params)
+    snap = nasa_power.fetch_daily_cached(lat, lon, start, end, (*nasa_power.DEFAULT_PARAMETERS, TDEW))
     parsed = nasa_power.parse_daily(snap.path.read_bytes())
-    source = nasa_power.build_source(f"power-{lat:.4f}-{lon:.4f}", snap, parsed)
+    source = nasa_power.build_source(nasa_power.source_id_for(snap), snap, parsed)
     res = run_daily_pipeline(
         parsed.observations,
         site_id="demo-site",
@@ -64,7 +57,7 @@ def power_forcing(lat: float, lon: float, start: date, end: date) -> tuple[pd.Da
         end=end,
         value_kind=ValueKind.REANALYSIS,
         align=AlignContext(
-            timezone="America/Chicago",  # demo-site timezone (data/fixtures/demo.json)
+            timezone=timezone,
             source_time_standard=parsed.time_standard,
             native_resolution=nasa_power.NATIVE_RESOLUTION,
             grid_point=parsed.grid_point,
@@ -72,15 +65,9 @@ def power_forcing(lat: float, lon: float, start: date, end: date) -> tuple[pd.Da
     )
     obs = res.observations
     obs = obs[(obs["quality_flag"] != QualityFlag.DUPLICATE.value) & (obs["date"] >= start) & (obs["date"] <= end)]
-    obs = obs.assign(date=pd.to_datetime(obs["date"]))
-    wide = obs.pivot(index="date", columns="variable", values="processed_value").astype("float64")
-    flags = obs.pivot(index="date", columns="variable", values="quality_flag").add_suffix("__flag")
-    df = wide.join(flags).asfreq("D")
-    for v in wide.columns:
-        df[flag_col(v)] = df[flag_col(v)].fillna(QualityFlag.MISSING.value)
-    df.index.name = "date"
-    df["source_id"], df["processing_run_id"] = source.id, res.run.id
-    return df, source, parsed.elevation_m
+    wide = to_wide(obs[["date", "variable", "unit", "processed_value", "quality_flag"]], start, end)
+    wide.attrs.update(source_ids=[source.id], processing_run_id=res.run.id)
+    return from_store_frame(wide), source, parsed.elevation_m
 
 
 def _fmt(v: float | None) -> str:
@@ -139,7 +126,7 @@ def main() -> None:
     if args.power:
         lat, lon = args.power
         site = site.model_copy(update={"latitude": lat, "longitude": lon})
-        forcing, source, elevation = power_forcing(lat, lon, date(1984, 1, 1), date(2014, 12, 31))  # M5 pool
+        forcing, source, elevation = power_forcing(lat, lon, date(1981, 1, 1), date(2025, 12, 31), site.timezone)
         if elevation is None:
             raise SystemExit("POWER did not report an elevation; the engine never assumes one.")
         note = f"{elevation:.0f} m, POWER grid-cell elevation (fallback until Site.elevation_m exists)"
@@ -168,6 +155,7 @@ def main() -> None:
         n_paths=args.paths,
         seed=args.seed,
         replay_years=tuple(range(args.replay, args.replay + horizon_years)) if args.replay else None,
+        pool_range=(1984, 2019) if args.power else None,  # validation plan v1.2: ET0 pool, 2020-2025 held out
         trace_dir=get_settings().results_dir if args.traces else None,
     )
     try:

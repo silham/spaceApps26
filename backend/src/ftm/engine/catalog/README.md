@@ -14,3 +14,8 @@ Replace or confirm them with M5 and local contacts.
 - `soil_textures_fao56.json`: FAO-56 Table 19 ranges, used only as a DEMO soil assumption until the
   site soil profile from M3 (D8) is available.
 - `curve_numbers_tr55.json`: TR-55 Table 2-2b curve numbers, checked against the 1986 document (p. 2-6).
+- `winter_wheat_ks.json` (D4): winter wheat for `ks-field-2` with the FAO-56 Table 12 Kc, root depth, p and height,
+  and a **Kansas-local season length** in `engine_extras.local_calendar`. The source is USDA NASS Kansas planting and
+  harvest dates, split in the FAO-56 Table 11 Idaho proportions 160:75:75:25. `season_days` and `reference` are
+  **null until the NASS dates are entered**, so the crop is infeasible until then. A length without a reference is
+  rejected.

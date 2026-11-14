@@ -16,6 +16,7 @@ from ftm.contracts.models import CropProfile, ParamValue, SoilProfile, Source, V
 
 CATALOG_DIR = Path(__file__).parent / "catalog"
 CROP_FILES = ("maize_grain.json", "sorghum_grain.json", "winter_wheat.json")
+LOCAL_CROP_FILES = ("winter_wheat_ks.json",)  # site-local season lengths (D4), see local_calendar
 EXPECTED_UNITS = {"kc_ini": "-", "kc_mid": "-", "kc_end": "-", "max_root_depth_m": "m", "depletion_fraction_p": "-"}
 
 # Literature the engine actually uses (AGENTS.md rule 2). Kind LITERATURE keeps them distinct from data.
@@ -88,8 +89,37 @@ def validate_crop(entry: CropEntry) -> None:
         raise CatalogError(f"{prof.id}: unknown TR-55 cover class {entry.tr55_cover!r}")
 
 
+def split_season(season_days: int, proportions: list[int]) -> list[int]:
+    """Split a local season length in fixed stage proportions; rounding goes to the last stage, sum exact."""
+    if season_days <= 0 or len(proportions) != 4 or min(proportions) <= 0:
+        raise CatalogError("season_days must be > 0 and proportions four positive numbers")
+    total = sum(proportions)
+    parts = [round(season_days * p / total) for p in proportions[:3]]
+    return [*parts, season_days - sum(parts)]
+
+
+def _apply_local_calendar(raw: dict[str, Any]) -> None:
+    """Fill stage lengths from ``engine_extras.local_calendar`` when a cited season length is present."""
+    cal = raw.get("engine_extras", {}).get("local_calendar")
+    if not cal or cal.get("season_days") is None:
+        return
+    if not cal.get("reference"):
+        raise CatalogError(f"{raw['profile']['id']}: local season length {cal['season_days']} has no reference")
+    lengths = split_season(int(cal["season_days"]), list(cal["split_proportions"]))
+    ref = f"Derived: {cal['reference']} season of {cal['season_days']} d, split as {cal['split_from']}"
+    for stage, days in zip(("ini", "dev", "mid", "late"), lengths, strict=True):
+        raw["profile"]["stage_lengths_days"][stage] = {
+            "value": days,
+            "unit": "days",
+            "reference": ref,
+            "region_relevance": "Site-local season length (D4)",
+            "uncertainty": "Stage split assumes the FAO-56 row's proportions hold locally",
+        }
+
+
 def load_crop(path: Path) -> CropEntry:
     raw: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
+    _apply_local_calendar(raw)
     extras = raw.get("engine_extras", {})
     entry = CropEntry(
         profile=CropProfile.model_validate(raw["profile"]),
@@ -105,6 +135,10 @@ def load_crop(path: Path) -> CropEntry:
 def load_crops(directory: Path = CATALOG_DIR, files: tuple[str, ...] = CROP_FILES) -> dict[str, CropEntry]:
     crops = [load_crop(directory / f) for f in files]
     return {c.profile.id: c for c in crops}
+
+
+def load_local_crops(directory: Path = CATALOG_DIR) -> dict[str, CropEntry]:
+    return load_crops(directory, LOCAL_CROP_FILES)
 
 
 def load_curve_numbers(directory: Path = CATALOG_DIR) -> dict[str, Any]:
@@ -161,3 +195,49 @@ def demo_soil(site_id: str, texture: str = "silt_loam", bound: Literal["low", "m
             f"Hydrologic soil group {tex['tr55_hsg']} from the TR-55 Appendix A texture table (assumption).",
         ),
     )
+
+
+def _texture_key(texture: str | None) -> str | None:
+    return None if texture is None else texture.strip().lower().replace(" ", "_")
+
+
+def soil_spec_from_profile(
+    profile: SoilProfile, *, data_depth_m: float, hsg: HSG | None = None, extra_notes: tuple[str, ...] = ()
+) -> SoilSpec:
+    """Engine soil inputs from a stored ``SoilProfile`` (e.g. M3's SSURGO profile).
+
+    AWC and texture come from the profile. The FAO-56 Annex 7 class comes from the texture. The TR-55
+    hydrologic soil group should come from the soil survey; when it is not given it is inferred from the
+    texture (TR-55 Appendix A, disturbed profiles) and disclosed. An unknown texture blocks the run.
+    """
+    key = _texture_key(profile.texture)
+    textures = load_soil_textures()["textures"]
+    if key not in textures:
+        raise CatalogError(
+            f"soil texture {profile.texture!r} is not in the FAO-56 Table 19 catalog; "
+            "the bare-soil class and hydrologic group are unknown"
+        )
+    tex = textures[key]
+    notes = list(extra_notes)
+    if hsg is None:
+        hsg = tex["tr55_hsg"]
+        notes.append(
+            f"Hydrologic soil group {hsg} inferred from texture '{profile.texture}' (TR-55 Appendix A); "
+            "the soil survey's own group is not loaded yet."
+        )
+    return SoilSpec(
+        profile=profile, data_depth_m=data_depth_m, hsg=hsg, annex7_class=tex["annex7_class"], notes=tuple(notes)
+    )
+
+
+def with_awc(soil: SoilSpec, awc_mm_per_m: float, label: str) -> SoilSpec:
+    """Same soil with AWC replaced (sensitivity). ``label`` says where the value comes from."""
+    if not awc_mm_per_m > 0:
+        raise ValueError("AWC must be > 0 mm/m")
+    old = soil.profile.available_water_capacity_mm_per_m
+    new_param = old.model_copy(update={"value": float(awc_mm_per_m), "region_relevance": label})
+    profile = soil.profile.model_copy(
+        update={"id": f"{soil.profile.id}@awc{awc_mm_per_m:g}", "available_water_capacity_mm_per_m": new_param}
+    )
+    note = f"Sensitivity: AWC set to {awc_mm_per_m:g} mm/m ({label})."
+    return SoilSpec(profile, soil.data_depth_m, soil.hsg, soil.annex7_class, (*soil.notes, note))

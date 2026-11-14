@@ -113,6 +113,32 @@ def assert_forcing_contract(df: pd.DataFrame) -> ForcingInfo:
     )
 
 
+def from_store_frame(frame: pd.DataFrame) -> pd.DataFrame:
+    """Adapt ``ftm.data.forcing.get_daily_forcing`` output (M3) to the engine's frame. Never reshapes values.
+
+    M3 returns an index of ``datetime.date`` and keeps provenance and units in ``frame.attrs``. Here the
+    index becomes a ``DatetimeIndex``, ``source_id`` / ``processing_run_id`` become columns, and every
+    engine variable's unit is checked against ``EXPECTED_UNITS``: a mismatch is an error, never converted.
+    """
+    attrs = dict(frame.attrs)
+    sources = list(attrs.get("source_ids") or [])
+    if len(sources) != 1:
+        raise ForcingContractError(f"exactly one weather source per run, got source_ids={sources}")
+    run_id = attrs.get("processing_run_id")
+    if not run_id:
+        raise ForcingContractError("frame.attrs has no processing_run_id")
+    units: dict[str, str] = dict(attrs.get("units") or {})
+    for v in (*REQUIRED_VARIABLES, *OPTIONAL_VARIABLES):
+        if v in frame.columns and units.get(v) != EXPECTED_UNITS[v]:
+            raise ForcingContractError(f"{v}: unit {units.get(v)!r}, expected {EXPECTED_UNITS[v]!r}; not converted")
+    out = frame.copy()
+    out.index = pd.DatetimeIndex(pd.to_datetime(out.index), name="date")
+    out["source_id"] = str(sources[0])
+    out["processing_run_id"] = str(run_id)
+    out.attrs = attrs
+    return out
+
+
 def usable(df: pd.DataFrame, variable: str) -> pd.Series:
     """Boolean mask: value present and flagged OK or ESTIMATED. Absent variable -> all False."""
     if variable not in df.columns:

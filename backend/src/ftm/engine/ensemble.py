@@ -11,6 +11,9 @@
 - Pairing: each path's weather is built once and every strategy runs on that same object.
 - Warm-up: each strategy is first run on its own year-1 schedule over the path's first block, and the
   main run starts from that end state (declared spin-up; reduces the effect of the initial condition).
+- Sample pool (validation plan section 1): bootstrap draws only from the declared ``pool_years`` (e.g.
+  1984-2019 for anything using ET0). Usable years outside it (e.g. held-out 2020-2025) can be replayed on
+  screen but never build or tune a range.
 - Output: p10/p50/p90 per metric labelled as a central 80% simulation range (``RANGE_LABEL``), only when
   at least ``MIN_PATHS_FOR_RANGE`` paths exist; otherwise p10/p90 are None.
 """
@@ -32,7 +35,7 @@ from ftm.engine.params import CropEntry, SoilSpec
 from ftm.engine.rotation import PathWeather, cover_indicators, daily_schedule
 from ftm.engine.water_balance import BucketInputs, SoilState, end_state, simulate_bucket, state_at_fraction
 
-MODEL_VERSION = "0.2.0"
+MODEL_VERSION = "0.3.0"
 BOOTSTRAP_METHOD = "season_aligned_block_bootstrap_iid_years"
 REPLAY_METHOD = "consecutive_year_replay"
 # Engine choice, not a calibrated value: with n paths, p10/p90 rest on n/10 paths per tail; below 20 paths a
@@ -42,8 +45,48 @@ MIN_PATHS_FOR_RANGE = 20
 
 @dataclass(frozen=True)
 class BlockPool:
-    usable_years: list[int]
+    usable_years: list[int]  # complete blocks with usable rain and ET0 every day (data check only)
     excluded: list[dict[str, object]]  # {"year", "start", "reason"}
+    pool_range: tuple[int, int] | None = None  # declared sample pool; None = every usable year
+
+    @property
+    def pool_years(self) -> list[int]:
+        """Usable years the bootstrap may draw from."""
+        if self.pool_range is None:
+            return list(self.usable_years)
+        a, b = self.pool_range
+        return [y for y in self.usable_years if a <= y <= b]
+
+    @property
+    def outside_pool_years(self) -> list[int]:
+        """Usable years kept out of the ranges (replay only), e.g. the held-out test years."""
+        return [y for y in self.usable_years if y not in self.pool_years]
+
+
+@dataclass(frozen=True)
+class EnsembleConfig:
+    """Everything that defines the resampling, recorded with every run (validation plan section 3)."""
+
+    horizon: tuple[date, date]
+    pool_range: tuple[int, int] | None
+    n_paths: int
+    seed: int
+    method: str = "season_aligned_block_bootstrap_iid_years"
+
+    @property
+    def anchor_md(self) -> str:
+        return self.horizon[0].strftime("%m-%d")
+
+    def describe(self) -> dict[str, str]:
+        pool = "all usable years" if self.pool_range is None else f"{self.pool_range[0]}-{self.pool_range[1]}"
+        return {
+            "block_definition": f"agricultural year starting {self.anchor_md} (whole block, all variables together)",
+            "horizon": f"{self.horizon[0]} to {self.horizon[1]}",
+            "sample_pool": pool,
+            "n_paths": str(self.n_paths),
+            "seed": str(self.seed),
+            "method": self.method,
+        }
 
 
 @dataclass(frozen=True)
@@ -79,8 +122,12 @@ def horizon_blocks(horizon: tuple[date, date]) -> int:
     return end.year - start.year + (1 if end.strftime("%m-%d") >= start.strftime("%m-%d") else 0)
 
 
-def usable_blocks(forcing: pd.DataFrame, et0: pd.DataFrame, anchor_md: str) -> BlockPool:
+def usable_blocks(
+    forcing: pd.DataFrame, et0: pd.DataFrame, anchor_md: str, pool_range: tuple[int, int] | None = None
+) -> BlockPool:
     """Split complete agricultural-year blocks into usable and excluded (with reasons)."""
+    if pool_range is not None and pool_range[0] > pool_range[1]:
+        raise ValueError(f"sample pool {pool_range} ends before it starts")
     rain_ok = usable(forcing, RAIN)
     et0_ok = et0["et0_mm_day"].notna()
     years, excluded = [], []
@@ -98,16 +145,16 @@ def usable_blocks(forcing: pd.DataFrame, et0: pd.DataFrame, anchor_md: str) -> B
             excluded.append({"year": y, "start": start.date().isoformat(), "reason": "; ".join(reasons)})
         else:
             years.append(y)
-    return BlockPool(usable_years=years, excluded=excluded)
+    return BlockPool(usable_years=years, excluded=excluded, pool_range=pool_range)
 
 
 def bootstrap_paths(pool: BlockPool, *, n_paths: int, horizon_years: int, seed: int) -> list[tuple[int, ...]]:
-    if not pool.usable_years:
-        raise ValueError("no usable season blocks; run blocked (see BlockPool.excluded for reasons)")
+    if not pool.pool_years:
+        raise ValueError("no usable season blocks in the sample pool; run blocked (see excluded blocks for reasons)")
     if n_paths < 1:
         raise ValueError("n_paths must be >= 1")
     rng = np.random.default_rng(seed)
-    draws = rng.choice(np.asarray(pool.usable_years), size=(n_paths, horizon_years), replace=True)
+    draws = rng.choice(np.asarray(pool.pool_years), size=(n_paths, horizon_years), replace=True)
     return [tuple(int(y) for y in row) for row in draws]
 
 
@@ -122,7 +169,8 @@ def replay_windows(pool: BlockPool, *, horizon_years: int, first: int, last: int
         if bad:
             parts = [f"{y}: {excluded.get(y, 'no complete data block')}" for y in bad]
             reason = "Replay unavailable: " + " | ".join(parts)
-        out.append({"years": years, "enabled": not bad, "reason": reason})
+        in_pool = not bad and all(y in pool.pool_years for y in years)
+        out.append({"years": years, "enabled": not bad, "reason": reason, "in_sample_pool": in_pool})
     return out
 
 
@@ -306,10 +354,11 @@ def run_ensemble(
     allocation_mm_per_season: float | None,
     n_paths: int,
     seed: int,
+    pool_range: tuple[int, int] | None = None,
     keep_traces: bool = False,
 ) -> tuple[BlockPool, list[PathOutcome]]:
-    """Seeded bootstrap of whole season blocks; every strategy shares each path's weather."""
-    pool = usable_blocks(forcing, et0, horizon[0].strftime("%m-%d"))
+    """Seeded bootstrap of whole season blocks from the sample pool; strategies share each path's weather."""
+    pool = usable_blocks(forcing, et0, horizon[0].strftime("%m-%d"), pool_range)
     paths = bootstrap_paths(pool, n_paths=n_paths, horizon_years=horizon_blocks(horizon), seed=seed)
     outcomes = _run_paths(
         daily_weather(forcing, et0),
@@ -336,10 +385,14 @@ def run_replay(
     mode: SimulationMode,
     allocation_mm_per_season: float | None,
     years: tuple[int, ...],
+    pool_range: tuple[int, int] | None = None,
     keep_traces: bool = True,
 ) -> tuple[BlockPool, PathOutcome]:
-    """Replay one consecutive run of historical years. A disabled window raises with its reason."""
-    pool = usable_blocks(forcing, et0, horizon[0].strftime("%m-%d"))
+    """Replay one consecutive run of historical years (held-out years allowed: replay builds no range).
+
+    A disabled window raises with its reason.
+    """
+    pool = usable_blocks(forcing, et0, horizon[0].strftime("%m-%d"), pool_range)
     n = horizon_blocks(horizon)
     if len(years) != n or any(b - a != 1 for a, b in pairwise(years)):
         raise ValueError(f"replay needs {n} consecutive years, got {years}")
@@ -358,3 +411,21 @@ def run_replay(
         keep_traces=keep_traces,
     )
     return pool, outcome
+
+
+def ensemble_weather_paths(
+    forcing: pd.DataFrame, et0: pd.DataFrame, config: EnsembleConfig
+) -> tuple[BlockPool, list[tuple[tuple[int, ...], pd.DataFrame]]]:
+    """The exact weather paths a run with ``config`` uses, without simulating strategies.
+
+    For M5's coverage evaluation: aggregate each path's weather over a season window and compare the
+    p10-p90 of those totals with the held-out observed season (validation plan section 3).
+    """
+    pool = usable_blocks(forcing, et0, config.anchor_md, config.pool_range)
+    years = bootstrap_paths(
+        pool, n_paths=config.n_paths, horizon_years=horizon_blocks(config.horizon), seed=config.seed
+    )
+    weather = daily_weather(forcing, et0)
+    return pool, [
+        (y, build_path_forcing(weather, y, anchor_md=config.anchor_md, base_year=config.horizon[0].year)) for y in years
+    ]
