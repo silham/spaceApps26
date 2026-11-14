@@ -1,4 +1,4 @@
-.PHONY: up down install migrate migration seed api web test lint format contracts backup
+.PHONY: up down install migrate migration seed demo-load demo-restore api web test lint format contracts backup
 
 BACKEND := cd backend && uv run
 FRONTEND := cd frontend && pnpm
@@ -21,6 +21,17 @@ migration:     ## create a migration: make migration m="add foo"
 
 seed:          ## load DEMO fixtures
 	$(BACKEND) python scripts/seed_demo.py
+
+demo-load:     ## load ks-field-2 (POWER, SSURGO, MODIS) and register its strategies; needs network + .env keys
+	$(BACKEND) python scripts/load_site.py --site-id ks-field-2 --name "Kansas field 2 (irrigated pivot)" \
+		--lat 38.01517 --lon -100.92496 --timezone America/Chicago \
+		--boundary ../docs/site-search/ks-field-2.geojson --area-ha 45.8 \
+		--status "primary site (D3); local confirmation pending" $(LOAD_ARGS)
+	$(BACKEND) python scripts/seed_site.py --site-id ks-field-2
+
+demo-restore:  ## restore the offline demo from backups/ (made by make backup)
+	docker compose exec -T db pg_restore -U ftm -d ftm --clean --if-exists < backups/ftm.dump
+	tar xzf backups/static.tgz
 
 api:           ## FastAPI on :8000
 	$(BACKEND) uvicorn ftm.api.main:app --reload --port 8000
