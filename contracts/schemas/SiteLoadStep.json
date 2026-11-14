@@ -1,0 +1,49 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "enum": [
+        "weather",
+        "soil",
+        "vegetation"
+      ],
+      "title": "Name",
+      "type": "string"
+    },
+    "source": {
+      "description": "Product being loaded, e.g. 'NASA POWER daily'",
+      "title": "Source",
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "pending",
+        "running",
+        "done",
+        "failed",
+        "skipped"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "message": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Message"
+    }
+  },
+  "required": [
+    "name",
+    "source",
+    "status"
+  ],
+  "title": "SiteLoadStep",
+  "type": "object"
+}

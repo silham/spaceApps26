@@ -369,9 +369,37 @@ export type PdfUrl = string | null;
  */
 export type Sha256 = string | null;
 export type IsDemo12 = boolean;
+export type Name4 = string;
+/**
+ * Cropland latitudes; polar regions are refused
+ */
+export type Latitude1 = number;
+export type Longitude1 = number;
+/**
+ * Polygon or MultiPolygon drawn by the user (WGS84); optional
+ */
+export type BoundaryGeojson1 = {
+  [k: string]: unknown;
+} | null;
+export type Name5 = "weather" | "soil" | "vegetation";
+/**
+ * Product being loaded, e.g. 'NASA POWER daily'
+ */
+export type Source1 = string;
+export type Status = "pending" | "running" | "done" | "failed" | "skipped";
+export type Message = string | null;
+export type SiteId10 = string;
+export type Status1 = "queued" | "running" | "done" | "failed";
+export type Steps1 = SiteLoadStep[];
+export type StartedAt = string | null;
+export type FinishedAt = string | null;
+/**
+ * False: observe only, no locally reviewed strategies (D13)
+ */
+export type HasStrategies = boolean;
 
 /**
- * Schema version 1.2.0. Generated - do not edit.
+ * Schema version 1.3.0. Generated - do not edit.
  */
 export interface FarmTimeMachineContracts {
   Site?: Site;
@@ -397,6 +425,9 @@ export interface FarmTimeMachineContracts {
   Priorities?: Priorities;
   DecisionCardRequest?: DecisionCardRequest;
   DecisionCard?: DecisionCard;
+  NewSiteRequest?: NewSiteRequest;
+  SiteLoadStep?: SiteLoadStep;
+  SiteLoadStatus?: SiteLoadStatus;
 }
 export interface Site {
   id: Id;
@@ -790,4 +821,27 @@ export interface DecisionCard {
   pdf_url: PdfUrl;
   sha256?: Sha256;
   is_demo?: IsDemo12;
+}
+/**
+ * A farm picked on the map anywhere in the world (D13: observe only unless strategies are reviewed).
+ */
+export interface NewSiteRequest {
+  name: Name4;
+  latitude: Latitude1;
+  longitude: Longitude1;
+  boundary_geojson?: BoundaryGeojson1;
+}
+export interface SiteLoadStep {
+  name: Name5;
+  source: Source1;
+  status: Status;
+  message?: Message;
+}
+export interface SiteLoadStatus {
+  site_id: SiteId10;
+  status: Status1;
+  steps: Steps1;
+  started_at?: StartedAt;
+  finished_at?: FinishedAt;
+  has_strategies: HasStrategies;
 }

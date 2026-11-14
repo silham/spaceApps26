@@ -1,0 +1,116 @@
+{
+  "$defs": {
+    "SiteLoadStep": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "enum": [
+            "weather",
+            "soil",
+            "vegetation"
+          ],
+          "title": "Name",
+          "type": "string"
+        },
+        "source": {
+          "description": "Product being loaded, e.g. 'NASA POWER daily'",
+          "title": "Source",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "pending",
+            "running",
+            "done",
+            "failed",
+            "skipped"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "message": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Message"
+        }
+      },
+      "required": [
+        "name",
+        "source",
+        "status"
+      ],
+      "title": "SiteLoadStep",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "site_id": {
+      "title": "Site Id",
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "queued",
+        "running",
+        "done",
+        "failed"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "steps": {
+      "items": {
+        "$ref": "#/$defs/SiteLoadStep"
+      },
+      "title": "Steps",
+      "type": "array"
+    },
+    "started_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Started At"
+    },
+    "finished_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Finished At"
+    },
+    "has_strategies": {
+      "description": "False: observe only, no locally reviewed strategies (D13)",
+      "title": "Has Strategies",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "site_id",
+    "status",
+    "steps",
+    "has_strategies"
+  ],
+  "title": "SiteLoadStatus",
+  "type": "object"
+}

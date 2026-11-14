@@ -7,8 +7,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ftm.api.routes._geo import as_geojson
+from ftm.api.services import sites as site_svc
 from ftm.api.services.decisions import catalog_crops
-from ftm.contracts.models import EnvironmentalTimeline, FarmerContext, Site
+from ftm.contracts.models import EnvironmentalTimeline, FarmerContext, NewSiteRequest, Site, SiteLoadStatus
 from ftm.data.engine_inputs import latest_weather_source_id
 from ftm.data.forcing import FLAG_SUFFIX, ForcingNotAvailableError, get_daily_forcing
 from ftm.data.vegetation import VegetationNotAvailableError, get_vi_composites
@@ -37,6 +38,28 @@ def _to_contract(session: Session, row: SiteRow) -> Site:
 @router.get("", response_model=list[Site])
 def list_sites(session: SessionDep) -> list[Site]:
     return [_to_contract(session, r) for r in session.scalars(select(SiteRow).order_by(SiteRow.id))]
+
+
+@router.post("", response_model=SiteLoadStatus, status_code=202)
+def create_site(req: NewSiteRequest, session: SessionDep) -> SiteLoadStatus:
+    """Register a farm picked on the map and start loading its data in the background (D13: observe only).
+
+    Weather (NASA POWER, global), soil (SSURGO in the contiguous US, SoilGrids elsewhere; D8) and MODIS
+    vegetation (needs Earth Engine on the server). Poll ``GET /sites/{id}/load``. The same point again returns
+    the existing farm instead of loading twice.
+    """
+    try:
+        return site_svc.create_site(session, req)
+    except site_svc.SiteRequestError as exc:
+        raise HTTPException(422, str(exc)) from None
+
+
+@router.get("/{site_id}/load", response_model=SiteLoadStatus)
+def get_load_status(site_id: str, session: SessionDep) -> SiteLoadStatus:
+    try:
+        return site_svc.load_status(session, site_id)
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from None
 
 
 @router.get("/{site_id}", response_model=Site)
