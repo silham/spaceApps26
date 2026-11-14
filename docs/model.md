@@ -8,7 +8,7 @@ Main references:
 
 **Status.** Everything in "Implemented" is code with tests in `backend/tests/engine/`.
 - **Primary site `ks-field-2`** (D3, resolved): real POWER weather from the DB works end to end. The SSURGO soil and the D4/D5 strategies are wired in.
-- **D4 is not finished.** The Kansas winter wheat season length (USDA NASS) is not in the catalog yet, so every ks-field-2 strategy is **infeasible with that reason** until it is. `--wheat fao56-idaho` runs the FAO-56 Idaho row as printed, for checking only.
+- **Kansas wheat season length is filled (D4):** median 268 days (36 seasons harvested 1984–2019, range 249–287) from USDA NASS Crop Progress, statewide not field-level, source `nass_5f3d5f6af6a82ee7`. Stage lengths 128/60/60/20 days. All three ks-field-2 strategies fit the 2027–2028 horizon. `--wheat fao56-idaho` runs the FAO-56 Idaho row as printed, for checking only.
 - **DEMO runs** (`scripts/run_engine_demo.py`) use synthetic weather, a FAO-56 Table 19 soil and illustrative strategies.
 
 ---
@@ -249,7 +249,7 @@ M5 owns the analyses in `ftm.validation.sensitivity` and `ftm.validation.coverag
 - It uses the FAO-56 Table 12 Kc, root depth, p and height.
 - Its stage lengths come from `engine_extras.local_calendar`: a cited season length split 160:75:75:25 (the FAO-56 Idaho row's proportions), with the rounding put into the last stage.
 - A season length without a reference is rejected.
-- While the length is null, every strategy using this wheat is infeasible: "missing cited parameters (stage_lengths_days.*)".
+- Filled 2026-11-14: 268 days → 128/60/60/20 (ini/dev/mid/late). If the length were null, every strategy using this wheat would be infeasible: "missing cited parameters (stage_lengths_days.*)".
 - `scripts/derive_wheat_season.py --write` fills it from USDA NASS Crop Progress through M3's adapter. It takes the median of statewide 50 % planted to 50 % harvested over seasons harvested 1984–2019; held-out years are never read. It needs `NASS_API_KEY`.
 
 **Site run:** `scripts/run_engine_site.py --site-id ks-field-2 --weather-source <id>`. It reads the site, weather source and soil profile from the DB, and the POWER grid elevation (858 m) from the raw snapshot. It stops if anything is missing.
@@ -265,7 +265,6 @@ M5 owns the analyses in `ftm.validation.sensitivity` and `ftm.validation.coverag
 - Parameter-uncertainty draws: ranges today reflect weather variability only.
 - Ks evaluated on the previous day's depletion. Today it is evaluated after the same day's water inputs.
 - Paddy or ponded conditions (guide section 3), and capillary rise.
-- The Kansas wheat season length from USDA NASS. The value is pending: `quickstats.nass.usda.gov` and the Agricultural Handbook 628 PDF were unreachable from M4's network on 2026-11-14.
 - The SSURGO hydrologic soil group. Today it is inferred from texture (TR-55 Appendix A) and disclosed. M3 could add `hydgrp` to the SDA query.
 
 ## Proposals to M1 (contracts are not changed by M4)
