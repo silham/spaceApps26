@@ -100,6 +100,226 @@
       "title": "CropProfile",
       "type": "object"
     },
+    "DecisionCard": {
+      "additionalProperties": false,
+      "description": "Everything needed to review a decision later: choice, reason, evidence, assumptions, open questions.",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "site_id": {
+          "title": "Site Id",
+          "type": "string"
+        },
+        "site_name": {
+          "title": "Site Name",
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "chosen_strategy_id": {
+          "title": "Chosen Strategy Id",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "priorities": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Priorities"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "farmer_context": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FarmerContext"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run": {
+          "$ref": "#/$defs/SimulationRun"
+        },
+        "request": {
+          "$ref": "#/$defs/RunRequest"
+        },
+        "strategies": {
+          "items": {
+            "$ref": "#/$defs/Strategy"
+          },
+          "title": "Strategies",
+          "type": "array"
+        },
+        "results": {
+          "items": {
+            "$ref": "#/$defs/Result"
+          },
+          "title": "Results",
+          "type": "array"
+        },
+        "deltas": {
+          "items": {
+            "$ref": "#/$defs/PairedDelta"
+          },
+          "title": "Deltas",
+          "type": "array"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/Source"
+          },
+          "title": "Sources",
+          "type": "array"
+        },
+        "crops": {
+          "items": {
+            "$ref": "#/$defs/CropProfile"
+          },
+          "title": "Crops",
+          "type": "array"
+        },
+        "assumptions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Assumptions",
+          "type": "array"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        },
+        "local_review_questions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Local Review Questions",
+          "type": "array"
+        },
+        "unsupported_claims": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Unsupported Claims",
+          "type": "array"
+        },
+        "json_url": {
+          "title": "Json Url",
+          "type": "string"
+        },
+        "pdf_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Pdf Url"
+        },
+        "sha256": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "SHA-256 of the exported JSON",
+          "title": "Sha256"
+        },
+        "is_demo": {
+          "default": false,
+          "title": "Is Demo",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "site_id",
+        "site_name",
+        "created_at",
+        "chosen_strategy_id",
+        "reason",
+        "priorities",
+        "farmer_context",
+        "run",
+        "request",
+        "strategies",
+        "results",
+        "deltas",
+        "sources",
+        "crops",
+        "assumptions",
+        "limitations",
+        "local_review_questions",
+        "unsupported_claims",
+        "json_url",
+        "pdf_url"
+      ],
+      "title": "DecisionCard",
+      "type": "object"
+    },
+    "DecisionCardRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "site_id": {
+          "title": "Site Id",
+          "type": "string"
+        },
+        "run_id": {
+          "title": "Run Id",
+          "type": "string"
+        },
+        "chosen_strategy_id": {
+          "title": "Chosen Strategy Id",
+          "type": "string"
+        },
+        "reason": {
+          "maxLength": 4000,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "priorities": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Priorities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "site_id",
+        "run_id",
+        "chosen_strategy_id",
+        "reason"
+      ],
+      "title": "DecisionCardRequest",
+      "type": "object"
+    },
     "DecisionRecord": {
       "additionalProperties": false,
       "properties": {
@@ -138,6 +358,315 @@
         "created_at"
       ],
       "title": "DecisionRecord",
+      "type": "object"
+    },
+    "EnvironmentalTimeline": {
+      "additionalProperties": false,
+      "description": "Daily weather and satellite vegetation for the Observe timeline. Missing values stay null.",
+      "properties": {
+        "site_id": {
+          "title": "Site Id",
+          "type": "string"
+        },
+        "start": {
+          "format": "date",
+          "title": "Start",
+          "type": "string"
+        },
+        "end": {
+          "format": "date",
+          "title": "End",
+          "type": "string"
+        },
+        "weather_source_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Weather Source Id"
+        },
+        "processing_run_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Processing Run Id"
+        },
+        "dates": {
+          "items": {
+            "format": "date",
+            "type": "string"
+          },
+          "title": "Dates",
+          "type": "array"
+        },
+        "rain_mm": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Rain Mm",
+          "type": "array"
+        },
+        "rain_flag": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Rain Flag",
+          "type": "array"
+        },
+        "tmax_c": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Tmax C",
+          "type": "array"
+        },
+        "tmin_c": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Tmin C",
+          "type": "array"
+        },
+        "vegetation_source_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Vegetation Source Id"
+        },
+        "vegetation_dates": {
+          "items": {
+            "format": "date",
+            "type": "string"
+          },
+          "title": "Vegetation Dates",
+          "type": "array"
+        },
+        "ndvi": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Ndvi",
+          "type": "array"
+        },
+        "vegetation_note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Vegetation Note"
+        },
+        "source_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Ids",
+          "type": "array"
+        },
+        "is_demo": {
+          "default": false,
+          "title": "Is Demo",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "site_id",
+        "start",
+        "end",
+        "weather_source_id",
+        "processing_run_id",
+        "dates",
+        "rain_mm",
+        "rain_flag",
+        "tmax_c",
+        "tmin_c",
+        "source_ids"
+      ],
+      "title": "EnvironmentalTimeline",
+      "type": "object"
+    },
+    "FarmerContext": {
+      "additionalProperties": false,
+      "description": "Farmer-confirmed inputs (value kind farmer_input). Unconfirmed fields stay null, never guessed.",
+      "properties": {
+        "value_kind": {
+          "const": "farmer_input",
+          "default": "farmer_input",
+          "title": "Value Kind",
+          "type": "string"
+        },
+        "confirmed": {
+          "default": false,
+          "title": "Confirmed",
+          "type": "boolean"
+        },
+        "planting_history": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Planting History"
+        },
+        "harvest_history": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Harvest History"
+        },
+        "soil_confirmed": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Farmer agrees with the stored soil profile",
+          "title": "Soil Confirmed"
+        },
+        "soil_notes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Soil Notes"
+        },
+        "irrigation_allocation_mm": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "mm per irrigated season",
+          "title": "Irrigation Allocation Mm"
+        },
+        "equipment": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Equipment",
+          "type": "array"
+        },
+        "available_crop_ids": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Crops the farmer can grow; None = not stated (all catalog crops allowed)",
+          "title": "Available Crop Ids"
+        },
+        "market_use": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Market Use"
+        },
+        "updated_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Updated At"
+        }
+      },
+      "title": "FarmerContext",
       "type": "object"
     },
     "Feasibility": {
@@ -337,6 +866,146 @@
       "title": "Observation",
       "type": "object"
     },
+    "PairedDelta": {
+      "additionalProperties": false,
+      "description": "Strategy minus baseline on the same weather path, summarised across paths (paired comparison).",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "run_id": {
+          "title": "Run Id",
+          "type": "string"
+        },
+        "strategy_id": {
+          "title": "Strategy Id",
+          "type": "string"
+        },
+        "baseline_strategy_id": {
+          "title": "Baseline Strategy Id",
+          "type": "string"
+        },
+        "metric": {
+          "title": "Metric",
+          "type": "string"
+        },
+        "unit": {
+          "title": "Unit",
+          "type": "string"
+        },
+        "p10": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "P10"
+        },
+        "p50": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "P50"
+        },
+        "p90": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "P90"
+        },
+        "range_label": {
+          "default": "central 80% simulation range (p10–p90)",
+          "title": "Range Label",
+          "type": "string"
+        },
+        "better_direction": {
+          "anyOf": [
+            {
+              "enum": [
+                "lower",
+                "higher"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Which direction is preferable for this metric; None = no preferred direction",
+          "title": "Better Direction"
+        },
+        "share_better": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Fraction of paths where the strategy beats the baseline",
+          "title": "Share Better"
+        },
+        "share_worse": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Share Worse"
+        },
+        "sample_count": {
+          "title": "Sample Count",
+          "type": "integer"
+        },
+        "source_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Ids",
+          "type": "array"
+        },
+        "is_demo": {
+          "default": false,
+          "title": "Is Demo",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "run_id",
+        "strategy_id",
+        "baseline_strategy_id",
+        "metric",
+        "unit",
+        "p10",
+        "p50",
+        "p90",
+        "better_direction",
+        "share_better",
+        "share_worse",
+        "sample_count"
+      ],
+      "title": "PairedDelta",
+      "type": "object"
+    },
     "ParamValue": {
       "additionalProperties": false,
       "description": "A literature/local parameter. ``value=None`` means missing: the claim it supports is blocked.",
@@ -440,6 +1109,28 @@
       "title": "ParamValue",
       "type": "object"
     },
+    "Priorities": {
+      "additionalProperties": false,
+      "description": "Farmer priorities rank feasible options; they never override hard constraints.",
+      "properties": {
+        "conserve_water": {
+          "default": 50,
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Conserve Water",
+          "type": "integer"
+        },
+        "protect_soil": {
+          "default": 50,
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Protect Soil",
+          "type": "integer"
+        }
+      },
+      "title": "Priorities",
+      "type": "object"
+    },
     "ProcessingRun": {
       "additionalProperties": false,
       "properties": {
@@ -531,6 +1222,299 @@
       ],
       "title": "QualityFlag",
       "type": "string"
+    },
+    "ReplaySeries": {
+      "additionalProperties": false,
+      "properties": {
+        "strategy_id": {
+          "title": "Strategy Id",
+          "type": "string"
+        },
+        "crop_id": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Crop Id",
+          "type": "array"
+        },
+        "in_crop": {
+          "items": {
+            "type": "boolean"
+          },
+          "title": "In Crop",
+          "type": "array"
+        },
+        "storage_mm": {
+          "description": "Root-zone soil water at the end of the day",
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Storage Mm",
+          "type": "array"
+        },
+        "ks": {
+          "description": "FAO-56 water-stress coefficient (1 = no stress)",
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Ks",
+          "type": "array"
+        },
+        "irrigation_mm": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Irrigation Mm",
+          "type": "array"
+        },
+        "aet_mm": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Aet Mm",
+          "type": "array"
+        },
+        "metrics": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "This single path's metrics (no range: one path)",
+          "title": "Metrics",
+          "type": "object"
+        }
+      },
+      "required": [
+        "strategy_id",
+        "crop_id",
+        "in_crop",
+        "storage_mm",
+        "ks",
+        "irrigation_mm",
+        "aet_mm",
+        "metrics"
+      ],
+      "title": "ReplaySeries",
+      "type": "object"
+    },
+    "ReplayTrace": {
+      "additionalProperties": false,
+      "description": "One historical weather window replayed day by day for every strategy (identical weather).",
+      "properties": {
+        "run_id": {
+          "title": "Run Id",
+          "type": "string"
+        },
+        "years": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Years",
+          "type": "array"
+        },
+        "in_sample_pool": {
+          "title": "In Sample Pool",
+          "type": "boolean"
+        },
+        "dates": {
+          "description": "Strategy-calendar dates (the comparison horizon)",
+          "items": {
+            "format": "date",
+            "type": "string"
+          },
+          "title": "Dates",
+          "type": "array"
+        },
+        "source_dates": {
+          "description": "The historical dates whose weather is replayed",
+          "items": {
+            "format": "date",
+            "type": "string"
+          },
+          "title": "Source Dates",
+          "type": "array"
+        },
+        "rain_mm": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Rain Mm",
+          "type": "array"
+        },
+        "et0_mm": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Et0 Mm",
+          "type": "array"
+        },
+        "series": {
+          "items": {
+            "$ref": "#/$defs/ReplaySeries"
+          },
+          "title": "Series",
+          "type": "array"
+        },
+        "turning_point": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Turning Point"
+        },
+        "turning_point_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Turning Point Reason"
+        },
+        "source_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Ids",
+          "type": "array"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        },
+        "is_demo": {
+          "default": false,
+          "title": "Is Demo",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "run_id",
+        "years",
+        "in_sample_pool",
+        "dates",
+        "source_dates",
+        "rain_mm",
+        "et0_mm",
+        "series",
+        "turning_point",
+        "turning_point_reason",
+        "source_ids"
+      ],
+      "title": "ReplayTrace",
+      "type": "object"
+    },
+    "ReplayWindow": {
+      "additionalProperties": false,
+      "properties": {
+        "years": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Years",
+          "type": "array"
+        },
+        "enabled": {
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Why the window cannot be replayed",
+          "title": "Reason"
+        },
+        "in_sample_pool": {
+          "description": "False: held out or outside the pool; replay only, never a range",
+          "title": "In Sample Pool",
+          "type": "boolean"
+        },
+        "rain_mm": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Total usable rainfall over the window's years",
+          "title": "Rain Mm"
+        }
+      },
+      "required": [
+        "years",
+        "enabled",
+        "in_sample_pool"
+      ],
+      "title": "ReplayWindow",
+      "type": "object"
     },
     "Result": {
       "additionalProperties": false,
@@ -643,6 +1627,139 @@
         "source_ids"
       ],
       "title": "Result",
+      "type": "object"
+    },
+    "RunDetail": {
+      "additionalProperties": false,
+      "description": "A stored run with everything the comparison screens need besides results and deltas.",
+      "properties": {
+        "run": {
+          "$ref": "#/$defs/SimulationRun"
+        },
+        "request": {
+          "$ref": "#/$defs/RunRequest"
+        },
+        "strategies": {
+          "description": "As simulated (edits applied), each with its feasibility",
+          "items": {
+            "$ref": "#/$defs/Strategy"
+          },
+          "title": "Strategies",
+          "type": "array"
+        },
+        "replay_windows": {
+          "items": {
+            "$ref": "#/$defs/ReplayWindow"
+          },
+          "title": "Replay Windows",
+          "type": "array"
+        },
+        "excluded_blocks": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Excluded Blocks",
+          "type": "array"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        },
+        "source_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Ids",
+          "type": "array"
+        },
+        "scenario_notes": {
+          "description": "How planting dates were derived",
+          "items": {
+            "type": "string"
+          },
+          "title": "Scenario Notes",
+          "type": "array"
+        },
+        "unsupported_claims": {
+          "description": "Shown as unavailable, never estimated",
+          "items": {
+            "type": "string"
+          },
+          "title": "Unsupported Claims",
+          "type": "array"
+        },
+        "cached": {
+          "default": false,
+          "description": "True: an identical earlier run was returned",
+          "title": "Cached",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "run",
+        "request",
+        "strategies",
+        "replay_windows",
+        "source_ids"
+      ],
+      "title": "RunDetail",
+      "type": "object"
+    },
+    "RunRequest": {
+      "additionalProperties": false,
+      "description": "A comparison run with the D6 supported edits only. Unsupported edits are rejected, never approximated.",
+      "properties": {
+        "site_id": {
+          "title": "Site Id",
+          "type": "string"
+        },
+        "mode": {
+          "$ref": "#/$defs/SimulationMode",
+          "default": "irrigation_needed"
+        },
+        "allocation_mm": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Net irrigation allocation per irrigated season (mm); fixed_allocation only",
+          "title": "Allocation Mm"
+        },
+        "planting_shift_days": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "description": "strategy_id -> days to move every crop season (|days| <= 14, D6)",
+          "title": "Planting Shift Days",
+          "type": "object"
+        },
+        "n_paths": {
+          "default": 200,
+          "maximum": 500,
+          "minimum": 20,
+          "title": "N Paths",
+          "type": "integer"
+        },
+        "seed": {
+          "default": 20261114,
+          "title": "Seed",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "site_id"
+      ],
+      "title": "RunRequest",
       "type": "object"
     },
     "SeasonPlan": {
@@ -1401,7 +2518,7 @@
     }
   },
   "title": "FarmTimeMachineContracts",
-  "description": "Schema version 1.1.0. Generated - do not edit.",
+  "description": "Schema version 1.2.0. Generated - do not edit.",
   "type": "object",
   "properties": {
     "Site": {
@@ -1439,6 +2556,39 @@
     },
     "JourneyStage": {
       "$ref": "#/$defs/JourneyStage"
+    },
+    "RunRequest": {
+      "$ref": "#/$defs/RunRequest"
+    },
+    "ReplayWindow": {
+      "$ref": "#/$defs/ReplayWindow"
+    },
+    "RunDetail": {
+      "$ref": "#/$defs/RunDetail"
+    },
+    "PairedDelta": {
+      "$ref": "#/$defs/PairedDelta"
+    },
+    "ReplaySeries": {
+      "$ref": "#/$defs/ReplaySeries"
+    },
+    "ReplayTrace": {
+      "$ref": "#/$defs/ReplayTrace"
+    },
+    "FarmerContext": {
+      "$ref": "#/$defs/FarmerContext"
+    },
+    "EnvironmentalTimeline": {
+      "$ref": "#/$defs/EnvironmentalTimeline"
+    },
+    "Priorities": {
+      "$ref": "#/$defs/Priorities"
+    },
+    "DecisionCardRequest": {
+      "$ref": "#/$defs/DecisionCardRequest"
+    },
+    "DecisionCard": {
+      "$ref": "#/$defs/DecisionCard"
     }
   }
 }

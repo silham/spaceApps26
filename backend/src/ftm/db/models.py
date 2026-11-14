@@ -160,6 +160,9 @@ class SimulationRunRow(TimestampMixin, Base):
     model_version: Mapped[str] = mapped_column(String(32))
     input_versions: Mapped[dict[str, Any]] = mapped_column(default=dict)
     inputs_hash: Mapped[str] = mapped_column(String(64), index=True)
+    detail: Mapped[dict[str, Any] | None] = mapped_column(
+        JSONB, nullable=True, comment="RunDetail contract (minus run) + Simulate journey stage"
+    )
     is_demo: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
@@ -182,6 +185,29 @@ class ResultRow(TimestampMixin, Base):
     is_demo: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
+class PairedDeltaRow(TimestampMixin, Base):
+    """Strategy minus baseline per weather path, summarised (PairedDelta contract)."""
+
+    __tablename__ = "paired_delta"
+    __table_args__ = (Index("ix_paired_delta_run", "run_id"),)
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    run_id: Mapped[str] = mapped_column(ForeignKey("simulation_run.id"))
+    strategy_id: Mapped[str] = mapped_column(ForeignKey("strategy.id"))
+    baseline_strategy_id: Mapped[str] = mapped_column(ForeignKey("strategy.id"))
+    metric: Mapped[str] = mapped_column(String(64))
+    unit: Mapped[str] = mapped_column(String(32))
+    p10: Mapped[float | None] = mapped_column(Float)
+    p50: Mapped[float | None] = mapped_column(Float)
+    p90: Mapped[float | None] = mapped_column(Float)
+    better_direction: Mapped[str | None] = mapped_column(String(8))
+    share_better: Mapped[float | None] = mapped_column(Float)
+    share_worse: Mapped[float | None] = mapped_column(Float)
+    sample_count: Mapped[int] = mapped_column(Integer)
+    source_ids: Mapped[list[Any]] = mapped_column(default=list)
+    is_demo: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
 class ValidationRow(TimestampMixin, Base):
     __tablename__ = "validation"
 
@@ -200,3 +226,7 @@ class DecisionRecordRow(TimestampMixin, Base):
     chosen_strategy_id: Mapped[str] = mapped_column(ForeignKey("strategy.id"))
     run_id: Mapped[str] = mapped_column(ForeignKey("simulation_run.id"))
     reason: Mapped[str] = mapped_column(Text)
+    payload: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True, comment="DecisionCard contract")
+    json_path: Mapped[str | None] = mapped_column(Text)
+    pdf_path: Mapped[str | None] = mapped_column(Text)
+    sha256: Mapped[str | None] = mapped_column(String(64))

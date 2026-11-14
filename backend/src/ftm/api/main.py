@@ -3,10 +3,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from ftm import MODEL_VERSION, __version__
-from ftm.api.routes import decisions, health, journey, runs, sites, sources, strategies
+from ftm import __version__
+from ftm.api.routes import catalog, decisions, health, journey, runs, sites, sources, strategies
 from ftm.config import get_settings
 from ftm.contracts.models import SCHEMA_VERSION
+from ftm.engine.ensemble import MODEL_VERSION
 
 
 def create_app() -> FastAPI:
@@ -22,7 +23,7 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    for module in (health, sites, sources, strategies, journey, runs, decisions):
+    for module in (health, sites, sources, strategies, journey, runs, decisions, catalog):
         app.include_router(module.router)
     return app
 

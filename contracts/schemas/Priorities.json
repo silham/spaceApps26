@@ -1,0 +1,22 @@
+{
+  "additionalProperties": false,
+  "description": "Farmer priorities rank feasible options; they never override hard constraints.",
+  "properties": {
+    "conserve_water": {
+      "default": 50,
+      "maximum": 100,
+      "minimum": 0,
+      "title": "Conserve Water",
+      "type": "integer"
+    },
+    "protect_soil": {
+      "default": 50,
+      "maximum": 100,
+      "minimum": 0,
+      "title": "Protect Soil",
+      "type": "integer"
+    }
+  },
+  "title": "Priorities",
+  "type": "object"
+}

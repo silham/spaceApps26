@@ -1,0 +1,140 @@
+{
+  "additionalProperties": false,
+  "description": "Strategy minus baseline on the same weather path, summarised across paths (paired comparison).",
+  "properties": {
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "run_id": {
+      "title": "Run Id",
+      "type": "string"
+    },
+    "strategy_id": {
+      "title": "Strategy Id",
+      "type": "string"
+    },
+    "baseline_strategy_id": {
+      "title": "Baseline Strategy Id",
+      "type": "string"
+    },
+    "metric": {
+      "title": "Metric",
+      "type": "string"
+    },
+    "unit": {
+      "title": "Unit",
+      "type": "string"
+    },
+    "p10": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "P10"
+    },
+    "p50": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "P50"
+    },
+    "p90": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "P90"
+    },
+    "range_label": {
+      "default": "central 80% simulation range (p10–p90)",
+      "title": "Range Label",
+      "type": "string"
+    },
+    "better_direction": {
+      "anyOf": [
+        {
+          "enum": [
+            "lower",
+            "higher"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Which direction is preferable for this metric; None = no preferred direction",
+      "title": "Better Direction"
+    },
+    "share_better": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Fraction of paths where the strategy beats the baseline",
+      "title": "Share Better"
+    },
+    "share_worse": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Share Worse"
+    },
+    "sample_count": {
+      "title": "Sample Count",
+      "type": "integer"
+    },
+    "source_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Source Ids",
+      "type": "array"
+    },
+    "is_demo": {
+      "default": false,
+      "title": "Is Demo",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "id",
+    "run_id",
+    "strategy_id",
+    "baseline_strategy_id",
+    "metric",
+    "unit",
+    "p10",
+    "p50",
+    "p90",
+    "better_direction",
+    "share_better",
+    "share_worse",
+    "sample_count"
+  ],
+  "title": "PairedDelta",
+  "type": "object"
+}

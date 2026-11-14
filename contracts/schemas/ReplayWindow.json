@@ -1,0 +1,54 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "years": {
+      "items": {
+        "type": "integer"
+      },
+      "title": "Years",
+      "type": "array"
+    },
+    "enabled": {
+      "title": "Enabled",
+      "type": "boolean"
+    },
+    "reason": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Why the window cannot be replayed",
+      "title": "Reason"
+    },
+    "in_sample_pool": {
+      "description": "False: held out or outside the pool; replay only, never a range",
+      "title": "In Sample Pool",
+      "type": "boolean"
+    },
+    "rain_mm": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Total usable rainfall over the window's years",
+      "title": "Rain Mm"
+    }
+  },
+  "required": [
+    "years",
+    "enabled",
+    "in_sample_pool"
+  ],
+  "title": "ReplayWindow",
+  "type": "object"
+}

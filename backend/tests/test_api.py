@@ -11,9 +11,21 @@ def test_health() -> None:
     assert {"schema_version", "model_version", "demo_mode"} <= body.keys()
 
 
-def test_unimplemented_endpoints_say_so() -> None:
-    assert client.post("/runs").status_code == 501
-    assert client.post("/decision-card").status_code == 501
+def test_health_reports_the_engine_model_version() -> None:
+    from ftm.engine.ensemble import MODEL_VERSION
+
+    assert client.get("/health").json()["model_version"] == MODEL_VERSION
+
+
+def test_run_and_card_requests_are_validated() -> None:
+    from ftm.db.session import get_session
+
+    app.dependency_overrides[get_session] = lambda: None
+    try:
+        assert client.post("/runs", json={}).status_code == 422
+        assert client.post("/decision-cards", json={"site_id": "s"}).status_code == 422
+    finally:
+        app.dependency_overrides.clear()
 
 
 def test_journey_route_returns_nine_stages_in_order(monkeypatch) -> None:  # type: ignore[no-untyped-def]
