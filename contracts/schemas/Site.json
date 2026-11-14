@@ -1,0 +1,75 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "latitude": {
+      "maximum": 90,
+      "minimum": -90,
+      "title": "Latitude",
+      "type": "number"
+    },
+    "longitude": {
+      "maximum": 180,
+      "minimum": -180,
+      "title": "Longitude",
+      "type": "number"
+    },
+    "boundary_geojson": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Boundary Geojson"
+    },
+    "timezone": {
+      "description": "IANA timezone used for analysis, e.g. 'America/Chicago'",
+      "title": "Timezone",
+      "type": "string"
+    },
+    "area_ha": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Area Ha"
+    },
+    "farmer_context": {
+      "additionalProperties": true,
+      "description": "Farmer-confirmed context (irrigation allocation, equipment, ...)",
+      "title": "Farmer Context",
+      "type": "object"
+    },
+    "is_demo": {
+      "default": false,
+      "title": "Is Demo",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "id",
+    "name",
+    "latitude",
+    "longitude",
+    "timezone"
+  ],
+  "title": "Site",
+  "type": "object"
+}

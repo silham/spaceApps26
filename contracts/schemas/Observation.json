@@ -1,0 +1,121 @@
+{
+  "$defs": {
+    "QualityFlag": {
+      "enum": [
+        "ok",
+        "flagged",
+        "rejected",
+        "missing",
+        "duplicate",
+        "estimated"
+      ],
+      "title": "QualityFlag",
+      "type": "string"
+    },
+    "ValueKind": {
+      "description": "Keeps observed, estimated, farmer, reanalysis, literature and simulated values distinguishable.",
+      "enum": [
+        "observed",
+        "reanalysis",
+        "estimated",
+        "farmer_input",
+        "literature",
+        "simulated",
+        "demo"
+      ],
+      "title": "ValueKind",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "site_id": {
+      "title": "Site Id",
+      "type": "string"
+    },
+    "source_id": {
+      "title": "Source Id",
+      "type": "string"
+    },
+    "observed_at": {
+      "description": "Original timestamp, timezone-aware",
+      "format": "date-time",
+      "title": "Observed At",
+      "type": "string"
+    },
+    "variable": {
+      "title": "Variable",
+      "type": "string"
+    },
+    "unit": {
+      "title": "Unit",
+      "type": "string"
+    },
+    "raw_value": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "As delivered by the source; never modified",
+      "title": "Raw Value"
+    },
+    "processed_value": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Processed Value"
+    },
+    "quality_flag": {
+      "$ref": "#/$defs/QualityFlag",
+      "default": "ok"
+    },
+    "value_kind": {
+      "$ref": "#/$defs/ValueKind"
+    },
+    "imputation_method": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Imputation Method"
+    },
+    "processing_run_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Processing Run Id"
+    }
+  },
+  "required": [
+    "site_id",
+    "source_id",
+    "observed_at",
+    "variable",
+    "unit",
+    "raw_value",
+    "value_kind"
+  ],
+  "title": "Observation",
+  "type": "object"
+}

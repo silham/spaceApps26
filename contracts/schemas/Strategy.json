@@ -1,0 +1,136 @@
+{
+  "$defs": {
+    "Feasibility": {
+      "additionalProperties": false,
+      "properties": {
+        "feasible": {
+          "title": "Feasible",
+          "type": "boolean"
+        },
+        "reasons": {
+          "description": "Human-readable; required when infeasible",
+          "items": {
+            "type": "string"
+          },
+          "title": "Reasons",
+          "type": "array"
+        }
+      },
+      "required": [
+        "feasible"
+      ],
+      "title": "Feasibility",
+      "type": "object"
+    },
+    "SeasonPlan": {
+      "additionalProperties": false,
+      "properties": {
+        "crop_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "None = fallow",
+          "title": "Crop Id"
+        },
+        "plant_date": {
+          "format": "date",
+          "title": "Plant Date",
+          "type": "string"
+        },
+        "end_date": {
+          "description": "Harvest or termination date",
+          "format": "date",
+          "title": "End Date",
+          "type": "string"
+        },
+        "irrigation_rule": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Irrigation Rule"
+        },
+        "residue_management": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Residue Management"
+        }
+      },
+      "required": [
+        "crop_id",
+        "plant_date",
+        "end_date"
+      ],
+      "title": "SeasonPlan",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "site_id": {
+      "title": "Site Id",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "is_baseline": {
+      "default": false,
+      "title": "Is Baseline",
+      "type": "boolean"
+    },
+    "seasons": {
+      "items": {
+        "$ref": "#/$defs/SeasonPlan"
+      },
+      "title": "Seasons",
+      "type": "array"
+    },
+    "feasibility": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Feasibility"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "is_demo": {
+      "default": false,
+      "title": "Is Demo",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "id",
+    "site_id",
+    "name",
+    "seasons"
+  ],
+  "title": "Strategy",
+  "type": "object"
+}

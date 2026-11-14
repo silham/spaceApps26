@@ -34,9 +34,7 @@ PAYLOAD = {
 CONTENT = json.dumps(PAYLOAD).encode()
 
 
-def _client(
-    status: int = 200, content: bytes = CONTENT, seen: list[httpx.Request] | None = None
-) -> httpx.Client:
+def _client(status: int = 200, content: bytes = CONTENT, seen: list[httpx.Request] | None = None) -> httpx.Client:
     def handler(request: httpx.Request) -> httpx.Response:
         if seen is not None:
             seen.append(request)
@@ -46,9 +44,7 @@ def _client(
 
 
 def test_request_params() -> None:
-    params = nasa_power.build_request_params(
-        38.5, -100.5, date(2024, 1, 1), date(2024, 1, 3), ["T2M_MAX"]
-    )
+    params = nasa_power.build_request_params(38.5, -100.5, date(2024, 1, 1), date(2024, 1, 3), ["T2M_MAX"])
     assert params["start"] == "20240101" and params["end"] == "20240103"
     assert params["community"] == "AG" and params["format"] == "JSON"
 
@@ -99,17 +95,10 @@ def test_parse_keeps_fill_values_raw() -> None:
     obs = parsed.observations
     assert len(obs) == 6
     assert parsed.fill_value == -999.0
-    rain_day2 = obs[
-        (obs.variable == "PRECTOTCORR") & (obs.date_key == "20240102")
-    ].raw_value.item()
+    rain_day2 = obs[(obs.variable == "PRECTOTCORR") & (obs.date_key == "20240102")].raw_value.item()
     assert rain_day2 == -999.0  # decoding is the QA step's job, not the adapter's
     # A real zero rainfall stays zero; it is distinguishable from missing.
-    assert (
-        obs[
-            (obs.variable == "PRECTOTCORR") & (obs.date_key == "20240101")
-        ].raw_value.item()
-        == 0.0
-    )
+    assert obs[(obs.variable == "PRECTOTCORR") & (obs.date_key == "20240101")].raw_value.item() == 0.0
     assert parsed.units == {"PRECTOTCORR": "mm/day", "T2M_MAX": "C"}
     assert parsed.grid_point == (-100.5, 38.5)
 
@@ -134,13 +123,9 @@ def test_build_source_metadata(tmp_path: Path) -> None:
         client=_client(),
         raw_dir=tmp_path / "raw",
     )
-    src = nasa_power.build_source(
-        "src_power_test", snap, nasa_power.parse_daily(CONTENT)
-    )
+    src = nasa_power.build_source("src_power_test", snap, nasa_power.parse_daily(CONTENT))
     assert src.kind == ValueKind.REANALYSIS
-    assert src.coverage_start == date(2024, 1, 1) and src.coverage_end == date(
-        2024, 1, 3
-    )
+    assert src.coverage_start == date(2024, 1, 1) and src.coverage_end == date(2024, 1, 3)
     assert src.raw_sha256 == snap.sha256 and src.raw_path == snap.relative_path
     assert src.units["PRECTOTCORR"] == "mm/day"
     assert src.attribution and "POWER" in src.attribution

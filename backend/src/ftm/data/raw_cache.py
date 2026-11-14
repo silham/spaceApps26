@@ -20,9 +20,7 @@ class RawSnapshot:
     retrieved_at: datetime
 
 
-def save_raw(
-    source_key: str, filename: str, content: bytes, raw_dir: Path | None = None
-) -> RawSnapshot:
+def save_raw(source_key: str, filename: str, content: bytes, raw_dir: Path | None = None) -> RawSnapshot:
     """Write a downloaded payload to ``data/raw/<source_key>/<YYYY-MM-DD>/<filename>``.
 
     Refuses to overwrite existing files: a re-download gets a new filename or date.

@@ -35,7 +35,9 @@ def main() -> None:
         s.flush()
         for res in demo.results:
             s.merge(ResultRow(**res.model_dump(exclude={"range_label"})))
-    print(f"Seeded DEMO data: {len(demo.sites)} site(s), {len(demo.strategies)} strategies, {len(demo.results)} results")
+    print(
+        f"Seeded DEMO data: {len(demo.sites)} site(s), {len(demo.strategies)} strategies, {len(demo.results)} results"
+    )
 
 
 if __name__ == "__main__":

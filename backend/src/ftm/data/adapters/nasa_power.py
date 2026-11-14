@@ -84,9 +84,7 @@ def build_request_params(
 
 
 def raw_filename(latitude: float, longitude: float, start: date, end: date) -> str:
-    return (
-        f"daily_point_{latitude:.4f}_{longitude:.4f}_{start:%Y%m%d}_{end:%Y%m%d}.json"
-    )
+    return f"daily_point_{latitude:.4f}_{longitude:.4f}_{start:%Y%m%d}_{end:%Y%m%d}.json"
 
 
 def fetch_daily(
@@ -132,23 +130,17 @@ def parse_daily(content: bytes) -> PowerDaily:
 
     header = payload.get("header") or {}
     if "fill_value" not in header:
-        raise PowerResponseError(
-            "POWER header has no fill_value; cannot tell missing from real values"
-        )
+        raise PowerResponseError("POWER header has no fill_value; cannot tell missing from real values")
     fill_value = float(header["fill_value"])
 
     try:
         series: dict[str, dict[str, Any]] = payload["properties"]["parameter"]
     except (KeyError, TypeError) as exc:
-        raise PowerResponseError(
-            "POWER response has no properties.parameter block"
-        ) from exc
+        raise PowerResponseError("POWER response has no properties.parameter block") from exc
 
     meta: dict[str, dict[str, Any]] = payload.get("parameters") or {}
     units = {name: str(meta.get(name, {}).get("units", "unknown")) for name in series}
-    long_names = {
-        name: str(meta.get(name, {}).get("longname", name)) for name in series
-    }
+    long_names = {name: str(meta.get(name, {}).get("longname", name)) for name in series}
 
     rows = [
         {
@@ -161,14 +153,10 @@ def parse_daily(content: bytes) -> PowerDaily:
         for name, values in series.items()
         for key, value in values.items()
     ]
-    observations = pd.DataFrame(
-        rows, columns=["date_key", "date", "variable", "unit", "raw_value"]
-    )
+    observations = pd.DataFrame(rows, columns=["date_key", "date", "variable", "unit", "raw_value"])
 
     coords = (payload.get("geometry") or {}).get("coordinates")
-    grid_point = (
-        (float(coords[0]), float(coords[1])) if coords and len(coords) >= 2 else None
-    )
+    grid_point = (float(coords[0]), float(coords[1])) if coords and len(coords) >= 2 else None
     api = header.get("api") or {}
 
     return PowerDaily(

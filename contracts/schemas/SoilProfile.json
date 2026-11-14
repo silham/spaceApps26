@@ -1,0 +1,118 @@
+{
+  "$defs": {
+    "ParamValue": {
+      "additionalProperties": false,
+      "description": "A literature/local parameter. ``value=None`` means missing: the claim it supports is blocked.",
+      "properties": {
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Value"
+        },
+        "unit": {
+          "title": "Unit",
+          "type": "string"
+        },
+        "reference": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Citation (DOI/URL/table). Required when value is set.",
+          "title": "Reference"
+        },
+        "region_relevance": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Region Relevance"
+        },
+        "uncertainty": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Uncertainty"
+        }
+      },
+      "required": [
+        "value",
+        "unit",
+        "reference"
+      ],
+      "title": "ParamValue",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "site_id": {
+      "title": "Site Id",
+      "type": "string"
+    },
+    "available_water_capacity_mm_per_m": {
+      "$ref": "#/$defs/ParamValue"
+    },
+    "root_zone_depth_m": {
+      "$ref": "#/$defs/ParamValue"
+    },
+    "texture": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Texture"
+    },
+    "source_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Source Ids",
+      "type": "array"
+    },
+    "is_demo": {
+      "default": false,
+      "title": "Is Demo",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "id",
+    "site_id",
+    "available_water_capacity_mm_per_m",
+    "root_zone_depth_m",
+    "source_ids"
+  ],
+  "title": "SoilProfile",
+  "type": "object"
+}

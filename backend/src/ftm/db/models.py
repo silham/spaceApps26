@@ -8,7 +8,7 @@ and are referenced by path + SHA-256.
 """
 
 from datetime import date, datetime
-from typing import Any
+from typing import Any, ClassVar
 
 from geoalchemy2 import Geometry
 from sqlalchemy import (
@@ -30,7 +30,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
 class Base(DeclarativeBase):
-    type_annotation_map = {dict[str, Any]: JSONB, list[Any]: JSONB}
+    type_annotation_map: ClassVar[dict[Any, Any]] = {dict[str, Any]: JSONB, list[Any]: JSONB}
 
 
 class TimestampMixin:
