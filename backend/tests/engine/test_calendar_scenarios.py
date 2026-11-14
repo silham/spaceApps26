@@ -68,11 +68,14 @@ def test_split_season_keeps_the_sum_exact() -> None:
         split_season(0, [1, 1, 1, 1])
 
 
-def test_kansas_wheat_is_blocked_until_a_cited_season_length_exists(tmp_path: Path) -> None:
+def test_kansas_wheat_season_is_cited_and_needs_a_reference(tmp_path: Path) -> None:
     entry = load_local_crops()["winter-wheat-ks"]
-    assert all(v.value is None for v in entry.profile.stage_lengths_days.values())
+    lengths = {k: v.value for k, v in entry.profile.stage_lengths_days.items()}
+    assert lengths == {"ini": 128, "dev": 60, "mid": 60, "late": 20}  # NASS median 268 d, 160:75:75:25
+    assert "USDA NASS" in str(entry.profile.stage_lengths_days["ini"].reference)
     raw = json.loads((CATALOG_DIR / "winter_wheat_ks.json").read_text(encoding="utf-8"))
     raw["engine_extras"]["local_calendar"]["season_days"] = 270
+    raw["engine_extras"]["local_calendar"]["reference"] = None
     path = tmp_path / "w.json"
     path.write_text(json.dumps(raw), encoding="utf-8")
     with pytest.raises(CatalogError, match="no reference"):
@@ -85,15 +88,17 @@ def test_kansas_wheat_is_blocked_until_a_cited_season_length_exists(tmp_path: Pa
     assert "TEST ONLY" in str(filled.profile.stage_lengths_days["ini"].reference)
 
 
-def test_ks_field_2_scenarios_are_paired_and_blocked_honestly() -> None:
+def test_ks_field_2_scenarios_are_paired_and_feasible() -> None:
     f = make_forcing("1984-01-01", "2019-12-31", seed=5)
     scen = build_ks_field_2(f, list(range(1984, 2020)))
     ids = [s.id for s in scen.strategies]
     assert ids == ["ks2-current-corn-wheat", "ks2-alt-a-double-crop", "ks2-alt-b-sorghum-wheat"]
     assert scen.strategies[0].is_baseline and all(s.site_id == "ks-field-2" for s in scen.strategies)
-    for s in scen.strategies:  # every strategy uses Kansas wheat, which is still pending
+    for s in scen.strategies:  # Kansas wheat (NASS season) fits all three inside the 2027-2028 horizon
         feas = check_feasibility(s, scen.crops, horizon=SCENARIO_HORIZON, soil=soil())
-        assert not feas.feasible and "winter-wheat-ks" in " ".join(feas.reasons)
+        assert feas.feasible, (s.id, feas.reasons)
+    alt_a = scen.strategies[1].seasons
+    assert alt_a[2].crop_id == "sorghum-grain" and alt_a[2].plant_date > alt_a[1].end_date
     idaho = build_ks_field_2(f, list(range(1984, 2020)), wheat="fao56-idaho")
     feas = {s.id: check_feasibility(s, idaho.crops, horizon=SCENARIO_HORIZON, soil=soil()) for s in idaho.strategies}
     assert feas["ks2-current-corn-wheat"].feasible and feas["ks2-alt-b-sorghum-wheat"].feasible
