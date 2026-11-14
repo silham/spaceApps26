@@ -80,7 +80,9 @@ def _journey(res: PipelineResult, source_id: str, is_demo: bool) -> list[Journey
     counts = {f.value: int((df["quality_flag"] == f.value).sum()) for f in QualityFlag}
     common = {"source_ids": [source_id], "processing_run_id": run.id, "is_demo": is_demo}
 
-    missing = counts[QualityFlag.MISSING.value] + counts[QualityFlag.ESTIMATED.value]
+    # Counts come from each step's own record: later steps change flags (a rejected value can become
+    # ESTIMATED), so final flag counts would misreport what Check and Clean actually found.
+    missing = sum(v["missing"] for v in per_var.values())
     check_stage = JourneyStage(
         stage=JourneyStageName.CHECK,
         status=StageStatus.WARNING if missing or counts[QualityFlag.DUPLICATE.value] else StageStatus.OK,
@@ -94,7 +96,7 @@ def _journey(res: PipelineResult, source_id: str, is_demo: bool) -> list[Journey
         **common,
     )
 
-    rejected = counts[QualityFlag.REJECTED.value]
+    rejected = sum(clean_step.params["rejected_per_variable"].values())
     clean_stage = JourneyStage(
         stage=JourneyStageName.CLEAN,
         status=StageStatus.WARNING if rejected or counts[QualityFlag.FLAGGED.value] else StageStatus.OK,

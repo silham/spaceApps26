@@ -154,3 +154,31 @@ def test_journey_payloads_and_provenance() -> None:
     assert [s.name for s in res.run.steps] == ["qa", "clean", "handle_gaps"]
     assert (res.observations.processing_run_id == res.run.id).all()
     assert stages[JourneyStageName.HANDLE_GAPS].status.value == "warning"  # rain gap unresolved
+
+
+def test_journey_counts_survive_later_steps() -> None:
+    """A value rejected by Clean and then gap-filled must still count as rejected, not as missing."""
+    start = date(2024, 1, 1)
+    rows = [
+        {
+            "date_key": (start + timedelta(days=i)).strftime("%Y%m%d"),
+            "date": start + timedelta(days=i),
+            "variable": "T2M_MAX",
+            "unit": "C",
+            "raw_value": 500.0 if i == 2 else 10.0 + i,
+        }
+        for i in range(5)
+    ]
+    res = run_daily_pipeline(
+        pd.DataFrame(rows),
+        site_id="s",
+        source_id="src",
+        fill_value=-999.0,
+        start=start,
+        end=start + timedelta(days=4),
+        value_kind=ValueKind.REANALYSIS,
+    )
+    stages = {s.stage: s for s in res.journey}
+    assert stages[JourneyStageName.CHECK].summary.endswith("0 missing, 0 duplicate.")
+    assert stages[JourneyStageName.CLEAN].summary.startswith("1 impossible values rejected")
+    assert "1 values estimated" in stages[JourneyStageName.HANDLE_GAPS].summary
