@@ -1,0 +1,39 @@
+{
+  "additionalProperties": false,
+  "description": "The comparison horizon on the real calendar: it starts the day after the last observed weather day.",
+  "properties": {
+    "site_id": {
+      "title": "Site Id",
+      "type": "string"
+    },
+    "observed_end": {
+      "description": "Last day with usable NASA POWER rain and temperature",
+      "format": "date",
+      "title": "Observed End",
+      "type": "string"
+    },
+    "start": {
+      "format": "date",
+      "title": "Start",
+      "type": "string"
+    },
+    "end": {
+      "format": "date",
+      "title": "End",
+      "type": "string"
+    },
+    "weather_source_id": {
+      "title": "Weather Source Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "site_id",
+    "observed_end",
+    "start",
+    "end",
+    "weather_source_id"
+  ],
+  "title": "PredictionHorizon",
+  "type": "object"
+}

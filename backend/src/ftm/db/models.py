@@ -258,3 +258,20 @@ class DecisionRecordRow(TimestampMixin, Base):
     json_path: Mapped[str | None] = mapped_column(Text)
     pdf_path: Mapped[str | None] = mapped_column(Text)
     sha256: Mapped[str | None] = mapped_column(String(64))
+
+
+class ForecastSnapshotRow(TimestampMixin, Base):
+    """One seasonal-forecast download for a farm (D16). Raw daily members are the source's raw snapshot; the
+    monthly anomaly file is referenced here. Odds and weights are recomputed from these files on demand."""
+
+    __tablename__ = "forecast_snapshot"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    site_id: Mapped[str] = mapped_column(ForeignKey("site.id"), index=True)
+    source_id: Mapped[str] = mapped_column(ForeignKey("source.id"))
+    retrieved_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    forecast_start: Mapped[date] = mapped_column(Date)
+    forecast_end: Mapped[date] = mapped_column(Date)
+    n_members: Mapped[int] = mapped_column(Integer)
+    monthly_raw_path: Mapped[str] = mapped_column(Text)
+    monthly_raw_sha256: Mapped[str] = mapped_column(String(64))

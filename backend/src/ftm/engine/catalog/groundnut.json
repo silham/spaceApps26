@@ -78,7 +78,12 @@
     "planting_window": null,
     "is_cover_crop": false,
     "notes": "The Table 11 plant-date cell of this row is garbled in the online text and is not used.",
-    "is_demo": false
+    "is_demo": false,
+    "family": "Fabaceae",
+    "legume": true,
+    "traits_reference": "USDA PLANTS Database (plants.usda.gov), family of Arachis hypogaea; legume nitrogen fixation: Mohler & Johnson (2009) Crop Rotation on Organic Farms: A Planning Manual, SARE/NRAES-177",
+    "t_base_c": null,
+    "table11_planting_months": null
   },
   "engine_extras": {
     "max_height_m": {

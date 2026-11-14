@@ -3,25 +3,105 @@
   "profile": {
     "id": "sorghum-grain",
     "name": "Sorghum (grain)",
-    "kc_ini": {"value": 0.3, "unit": "-", "reference": "FAO-56 Table 12, Cereals group Kc ini", "region_relevance": "Generic; better estimated from wetting interval (FAO-56 Fig. 29/30, Annex 7)", "uncertainty": "0.1-1.15 with wetting frequency"},
-    "kc_mid": {"value": 1.05, "unit": "-", "reference": "FAO-56 Table 12, 'Sorghum - grain', Kc mid 1.00-1.10 (midpoint used)", "region_relevance": "Sub-humid reference climate; adjusted with FAO-56 eq. 62 at run time", "uncertainty": "1.00-1.10"},
-    "kc_end": {"value": 0.55, "unit": "-", "reference": "FAO-56 Table 12, 'Sorghum - grain'", "region_relevance": "Sub-humid reference climate; adjusted with FAO-56 eq. 65 because Kc end > 0.45", "uncertainty": "Generic value"},
-    "stage_lengths_days": {
-      "ini": {"value": 20, "unit": "days", "reference": "FAO-56 Table 11, Sorghum, May/June planting, 'USA, Pakis., Med.' row (20/35/40/30)", "region_relevance": "US row of the table; not site-specific", "uncertainty": "Printed total is 130 days but the stages sum to 125; the stage values are used and the mismatch is disclosed"},
-      "dev": {"value": 35, "unit": "days", "reference": "FAO-56 Table 11, Sorghum, 'USA, Pakis., Med.'", "region_relevance": "As for ini", "uncertainty": "As for ini"},
-      "mid": {"value": 40, "unit": "days", "reference": "FAO-56 Table 11, Sorghum, 'USA, Pakis., Med.'", "region_relevance": "As for ini", "uncertainty": "As for ini"},
-      "late": {"value": 30, "unit": "days", "reference": "FAO-56 Table 11, Sorghum, 'USA, Pakis., Med.'", "region_relevance": "As for ini", "uncertainty": "As for ini"}
+    "kc_ini": {
+      "value": 0.3,
+      "unit": "-",
+      "reference": "FAO-56 Table 12, Cereals group Kc ini",
+      "region_relevance": "Generic; better estimated from wetting interval (FAO-56 Fig. 29/30, Annex 7)",
+      "uncertainty": "0.1-1.15 with wetting frequency"
     },
-    "max_root_depth_m": {"value": 2.0, "unit": "m", "reference": "FAO-56 Table 22, Sorghum - grain: 1.0-2.0 m", "region_relevance": "Larger value for modelling soil water stress (Table 22 footnote 1)", "uncertainty": "1.0-2.0 m"},
-    "depletion_fraction_p": {"value": 0.55, "unit": "-", "reference": "FAO-56 Table 22; daily ETc adjustment p = p_table + 0.04(5 - ETc), limited to 0.1-0.8", "region_relevance": "Generic", "uncertainty": "Soil-texture adjustment of 5-10% possible"},
-    "ky_season": {"value": 0.9, "unit": "-", "reference": "FAO-56 Chapter 8 Table 24 'Seasonal yield response functions from FAO Irrigation and Drainage Paper No. 33' (Doorenbos & Kassam 1979), value 0.9", "region_relevance": "Generic; applied to the whole growing period, water-limited yield only", "uncertainty": "Seasonal Ky only (stage-specific values are not in Table 24); varies with variety and climate"},
+    "kc_mid": {
+      "value": 1.05,
+      "unit": "-",
+      "reference": "FAO-56 Table 12, 'Sorghum - grain', Kc mid 1.00-1.10 (midpoint used)",
+      "region_relevance": "Sub-humid reference climate; adjusted with FAO-56 eq. 62 at run time",
+      "uncertainty": "1.00-1.10"
+    },
+    "kc_end": {
+      "value": 0.55,
+      "unit": "-",
+      "reference": "FAO-56 Table 12, 'Sorghum - grain'",
+      "region_relevance": "Sub-humid reference climate; adjusted with FAO-56 eq. 65 because Kc end > 0.45",
+      "uncertainty": "Generic value"
+    },
+    "stage_lengths_days": {
+      "ini": {
+        "value": 20,
+        "unit": "days",
+        "reference": "FAO-56 Table 11, Sorghum, May/June planting, 'USA, Pakis., Med.' row (20/35/40/30)",
+        "region_relevance": "US row of the table; not site-specific",
+        "uncertainty": "Printed total is 130 days but the stages sum to 125; the stage values are used and the mismatch is disclosed"
+      },
+      "dev": {
+        "value": 35,
+        "unit": "days",
+        "reference": "FAO-56 Table 11, Sorghum, 'USA, Pakis., Med.'",
+        "region_relevance": "As for ini",
+        "uncertainty": "As for ini"
+      },
+      "mid": {
+        "value": 40,
+        "unit": "days",
+        "reference": "FAO-56 Table 11, Sorghum, 'USA, Pakis., Med.'",
+        "region_relevance": "As for ini",
+        "uncertainty": "As for ini"
+      },
+      "late": {
+        "value": 30,
+        "unit": "days",
+        "reference": "FAO-56 Table 11, Sorghum, 'USA, Pakis., Med.'",
+        "region_relevance": "As for ini",
+        "uncertainty": "As for ini"
+      }
+    },
+    "max_root_depth_m": {
+      "value": 2.0,
+      "unit": "m",
+      "reference": "FAO-56 Table 22, Sorghum - grain: 1.0-2.0 m",
+      "region_relevance": "Larger value for modelling soil water stress (Table 22 footnote 1)",
+      "uncertainty": "1.0-2.0 m"
+    },
+    "depletion_fraction_p": {
+      "value": 0.55,
+      "unit": "-",
+      "reference": "FAO-56 Table 22; daily ETc adjustment p = p_table + 0.04(5 - ETc), limited to 0.1-0.8",
+      "region_relevance": "Generic",
+      "uncertainty": "Soil-texture adjustment of 5-10% possible"
+    },
+    "ky_season": {
+      "value": 0.9,
+      "unit": "-",
+      "reference": "FAO-56 Chapter 8 Table 24 'Seasonal yield response functions from FAO Irrigation and Drainage Paper No. 33' (Doorenbos & Kassam 1979), value 0.9",
+      "region_relevance": "Generic; applied to the whole growing period, water-limited yield only",
+      "uncertainty": "Seasonal Ky only (stage-specific values are not in Table 24); varies with variety and climate"
+    },
     "planting_window": null,
     "is_cover_crop": false,
     "notes": "Table 11 row lists May/June planting.",
-    "is_demo": false
+    "is_demo": false,
+    "family": "Poaceae",
+    "legume": false,
+    "traits_reference": "USDA PLANTS Database (plants.usda.gov), family of Sorghum bicolor; legume nitrogen fixation: Mohler & Johnson (2009) Crop Rotation on Organic Farms: A Planning Manual, SARE/NRAES-177",
+    "t_base_c": {
+      "value": 8.0,
+      "unit": "degC",
+      "reference": "FAO AquaCrop default crop file via AquaCrop-OSPy crop_params.py (Apache-2.0, github.com/aquacropos/aquacrop), 'Sorghum' Tbase 8.0 degC",
+      "region_relevance": "Generic AquaCrop default (calibrated on other sites)",
+      "uncertainty": "Not varietal; cultivars differ by a few degrees"
+    },
+    "table11_planting_months": [
+      5,
+      6
+    ]
   },
   "engine_extras": {
-    "max_height_m": {"value": 1.5, "unit": "m", "reference": "FAO-56 Table 12, h = 1-2 m (midpoint used)", "region_relevance": "Generic", "uncertainty": "1-2 m"},
+    "max_height_m": {
+      "value": 1.5,
+      "unit": "m",
+      "reference": "FAO-56 Table 12, h = 1-2 m (midpoint used)",
+      "region_relevance": "Generic",
+      "uncertainty": "1-2 m"
+    },
     "tr55_cover": "row_crops_straight_row_good"
   }
 }

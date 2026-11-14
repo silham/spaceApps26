@@ -17,6 +17,13 @@ test('build rotations: the planner validates, then saves and runs the comparison
   await page.route(/\/api\/sites(\?.*)?$/, (r) => r.fulfill({ json: [FARM] }))
   await page.route(/\/api\/crops\?for_rotations=true$/, (r) => r.fulfill({ json: CROPS }))
   await page.route(/\/api\/strategies\?site_id=f1$/, (r) => r.fulfill({ json: [] }))
+  // D16: the comparison period is the real calendar, from the day after the latest weather on record.
+  await page.route(/\/api\/sites\/f1\/horizon$/, (r) =>
+    r.fulfill({
+      json: { site_id: 'f1', observed_end: '2026-11-11', start: '2026-11-12', end: '2028-11-11', weather_source_id: 'w' },
+    }),
+  )
+  await page.route(/\/api\/sites\/f1\/(outlook|refresh)$/, (r) => r.fulfill({ status: 409, json: { detail: 'TEST' } }))
   await page.route(/\/api\/sites\/f1\/rotations$/, (r) => {
     expect(r.request().method()).toBe('PUT')
     expect(r.request().headers()['x-ftm-request']).toBe('1')
@@ -32,6 +39,8 @@ test('build rotations: the planner validates, then saves and runs the comparison
   await page.getByRole('button', { name: 'Open farm' }).click()
   await page.getByRole('navigation', { name: 'Main' }).getByRole('button', { name: 'Rotation planner' }).click()
   await expect(page.getByRole('heading', { name: 'Rotation planner' })).toBeVisible()
+  await expect(page.getByText(/runs from 2026-11-12 .* to 2028-11-11/)).toBeVisible()
+  await expect(page.getByLabel('Planting date')).toHaveAttribute('min', '2026-11-12')
 
   const save = page.getByRole('button', { name: 'Save and compare' })
   await expect(save).toBeDisabled() // no crop chosen yet

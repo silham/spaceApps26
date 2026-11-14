@@ -12,7 +12,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-SCHEMA_VERSION = "1.5.0"
+SCHEMA_VERSION = "1.6.0"
 # 1.1.0: additive (MODELED kind, ParamValue bounds, Validation periods/sources)
 # 1.2.0: additive (RunRequest, RunDetail, PairedDelta, ReplayTrace, FarmerContext, EnvironmentalTimeline,
 #        DecisionCardRequest, DecisionCard; D6 supported edits)
@@ -20,6 +20,10 @@ SCHEMA_VERSION = "1.5.0"
 # 1.4.0: additive (accounts, farm ownership, D14)
 # 1.5.0: additive (CropProfile.ky_season, SeasonPlan.usual_yield_t_ha, Result.season_index/crop_id, RotationInput
 #        and RotationsUpdate; user-built rotations and the water-limited relative-yield metric, D15)
+# 1.6.0: additive (CropProfile traits, SoilRuleResult, Strategy.soil_health, RecommendationRequest, RotationCandidate,
+#        RecommendationJob; ValueKind.FORECAST, SiteLoadStep "forecast", FarmerContext field-now inputs,
+#        PredictionHorizon,
+#        ForecastOdds, OutlookBand, WeatherOutlook; seasonal-forecast-weighted outlook on the real calendar, D16)
 
 # Wording agreed in DEVELOPMENT_GUIDE.md section 7: p10-p90 is NOT a calibrated prediction interval.
 RANGE_LABEL = "central 80% simulation range (p10–p90)"
@@ -50,6 +54,7 @@ class ValueKind(StrEnum):
     FARMER_INPUT = "farmer_input"
     LITERATURE = "literature"
     SIMULATED = "simulated"
+    FORECAST = "forecast"  # seasonal forecast odds (D16): steers which historical years are drawn, never weather
     DEMO = "demo"
 
 
@@ -208,6 +213,17 @@ class CropProfile(Contract):
         description="FAO-33 seasonal yield response factor Ky (unit '-'); null blocks the yield claim for this crop",
     )
     planting_window: tuple[str, str] | None = Field(default=None, description="MM-DD start/end")
+    # D16 (1.6.0): rotation traits for soil-health indicators and suggestions. None = not cited, rule switched off.
+    family: str | None = Field(default=None, description="Botanical family, e.g. 'Poaceae'")
+    legume: bool | None = Field(default=None, description="Fixes nitrogen with rhizobia (a legume)")
+    traits_reference: str | None = Field(default=None, description="Citation for family and legume")
+    t_base_c: ParamValue | None = Field(
+        default=None, description="Base temperature below which the crop does not develop (degC)"
+    )
+    table11_planting_months: list[int] | None = Field(
+        default=None,
+        description="Planting month(s) of the FAO-56 Table 11 row the stage lengths come from (northern hemisphere)",
+    )
     is_cover_crop: bool = False
     notes: str | None = None
     is_demo: bool = False
@@ -239,6 +255,16 @@ class Feasibility(Contract):
     reasons: list[str] = Field(default_factory=list, description="Human-readable; required when infeasible")
 
 
+class SoilRuleResult(Contract):
+    """A soil-health rule of thumb for a rotation (D16), stated conditionally, never a numeric gain."""
+
+    rule_id: str
+    label: str
+    status: Literal["met", "not_met", "unknown"]
+    explanation: str
+    reference: str
+
+
 class Strategy(Contract):
     id: str
     site_id: str
@@ -246,6 +272,7 @@ class Strategy(Contract):
     is_baseline: bool = False
     seasons: list[SeasonPlan]
     feasibility: Feasibility | None = None
+    soil_health: list[SoilRuleResult] = Field(default_factory=list, description="Computed when served (D16)")
     is_demo: bool = False
 
 
@@ -450,6 +477,10 @@ class FarmerContext(Contract):
         default=None, description="Crops the farmer can grow; None = not stated (all catalog crops allowed)"
     )
     market_use: str | None = None
+    # D16: what is on the field now (or was last harvested); starts today's simulated soil water. None = not stated.
+    current_crop_id: str | None = None
+    current_plant_date: date | None = None
+    last_harvest_date: date | None = None
     updated_at: datetime | None = None
 
 
@@ -534,7 +565,7 @@ class NewSiteRequest(Contract):
 
 
 class SiteLoadStep(Contract):
-    name: Literal["weather", "soil", "vegetation"]
+    name: Literal["weather", "soil", "vegetation", "forecast"]
     source: str = Field(description="Product being loaded, e.g. 'NASA POWER daily'")
     status: Literal["pending", "running", "done", "failed", "skipped"]
     message: str | None = None
@@ -630,6 +661,141 @@ class FarmUpdate(Contract):
         return ProfileUpdate.clean_name(value)
 
 
+# --------------------------------------------------------------------------- seasonal outlook (1.6.0, D16)
+
+
+class PredictionHorizon(Contract):
+    """The comparison horizon on the real calendar: it starts the day after the last observed weather day."""
+
+    site_id: str
+    observed_end: date = Field(description="Last day with usable NASA POWER rain and temperature")
+    start: date
+    end: date
+    weather_source_id: str
+
+
+class ForecastOdds(Contract):
+    """Seasonal-forecast odds for one window: the share of ensemble members below / near / above normal."""
+
+    window: str = Field(description="e.g. 'Nov–Jan'")
+    months: list[date] = Field(description="First day of each month in the window")
+    variable: Literal["rain", "temperature"]
+    below: float = Field(ge=0, le=1)
+    near: float = Field(ge=0, le=1)
+    above: float = Field(ge=0, le=1)
+    member_count: int
+
+
+class OutlookBand(Contract):
+    p10: list[float | None]
+    p50: list[float | None]
+    p90: list[float | None]
+
+
+class WeatherOutlook(Contract):
+    """The coming months at a farm: forecast odds plus daily bands from forecast-weighted past years."""
+
+    site_id: str
+    observed_end: date
+    horizon_start: date
+    horizon_end: date
+    forecast_source_id: str | None = Field(description="None: no forecast available; every past year equally likely")
+    forecast_retrieved_at: datetime | None = None
+    odds: list[ForecastOdds]
+    effective_sample_size: float | None = Field(
+        default=None, description="Of the weighted past years; small values mean few years carry the outlook"
+    )
+    dates: list[date]
+    rain_mm: OutlookBand
+    rain_cumulative_mm: OutlookBand = Field(description="Rain from the horizon start, totalled per path")
+    tmin_c: OutlookBand
+    tmax_c: OutlookBand
+    storage_mm: OutlookBand = Field(description="Simulated soil water (whole profile) under the field-now crop")
+    soil_water_now_mm: float = Field(description="Simulated, not measured")
+    soil_water_capacity_mm: float
+    initial_assumption: str
+    n_paths: int
+    range_label: str = RANGE_LABEL
+    assumptions: list[str] = Field(default_factory=list)
+    source_ids: list[str]
+    attribution: str | None = None
+    limitations: list[str] = Field(default_factory=list)
+    is_demo: bool = False
+
+
+# --------------------------------------------------------------------------- suggested rotations (1.6.0, D16)
+
+Objective = Literal["cover", "irrigation", "soil_health"]
+
+
+class RecommendationRequest(Contract):
+    """Farmer priorities order the feasible options; constraints filter them (guide §4). Stored with the job."""
+
+    priorities: list[Objective] = Field(
+        default_factory=lambda: ["cover", "irrigation", "soil_health"], min_length=3, max_length=3
+    )
+    irrigation_allowed: bool = True
+    max_irrigation_mm: float | None = Field(default=None, ge=0, description="Over the whole comparison period")
+    exclude_crop_ids: list[str] = Field(default_factory=list)
+    require_crop_id: str | None = None
+    max_seasons: int = Field(default=3, ge=1, le=3)
+    min_relative_yield_pct: float = Field(
+        default=60.0, ge=0, le=100, description="Every season's median relative yield must reach this (farmer floor)"
+    )
+
+    @field_validator("priorities")
+    @classmethod
+    def _distinct(cls, v: list[str]) -> list[str]:
+        if len(set(v)) != 3:
+            raise ValueError("priorities must list cover, irrigation and soil_health once each")
+        return v
+
+
+class CandidateMetric(Contract):
+    metric: str
+    unit: str
+    season_index: int | None = None
+    p10: float | None
+    p50: float | None
+    p90: float | None
+    delta_p50_vs_current: float | None = Field(
+        default=None, description="Median of the per-path difference to the farm's current practice"
+    )
+
+
+class RotationCandidate(Contract):
+    rank: int | None = Field(description="1 = best in the farmer's priority order; None for current practice")
+    name: str
+    seasons: list[SeasonPlan]
+    metrics: list[CandidateMetric]
+    soil_health: list[SoilRuleResult]
+    soil_rules_met: int
+    non_dominated: bool
+    why: list[str]
+    trade_offs: list[str]
+
+
+class RecommendationJob(Contract):
+    id: str
+    site_id: str
+    status: Literal["queued", "running", "done", "failed"]
+    progress: float = Field(ge=0, le=1)
+    message: str | None = None
+    request: RecommendationRequest
+    created_at: datetime
+    finished_at: datetime | None = None
+    horizon_start: date | None = None
+    horizon_end: date | None = None
+    candidates_considered: int = 0
+    candidates: list[RotationCandidate] = Field(default_factory=list)
+    current_practice: RotationCandidate | None = None
+    n_paths: int = 0
+    range_label: str = RANGE_LABEL
+    source_ids: list[str] = Field(default_factory=list)
+    assumptions: list[str] = Field(default_factory=list)
+    limitations: list[str] = Field(default_factory=list)
+
+
 ALL_CONTRACTS: list[type[Contract]] = [
     User,
     ProfileUpdate,
@@ -666,4 +832,13 @@ ALL_CONTRACTS: list[type[Contract]] = [
     NewSiteRequest,
     SiteLoadStep,
     SiteLoadStatus,
+    PredictionHorizon,
+    ForecastOdds,
+    OutlookBand,
+    WeatherOutlook,
+    SoilRuleResult,
+    RecommendationRequest,
+    CandidateMetric,
+    RotationCandidate,
+    RecommendationJob,
 ]

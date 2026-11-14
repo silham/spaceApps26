@@ -9,16 +9,18 @@ farm's active rotations; the old rows are marked superseded, not deleted, becaus
 
 from __future__ import annotations
 
+from datetime import date
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ftm.api.services.runs import farmer_context_for
-from ftm.contracts.models import RotationsUpdate, SeasonPlan, Strategy
+from ftm.contracts.models import Feasibility, RotationsUpdate, SeasonPlan, Strategy
 from ftm.data.engine_inputs import SOIL_DATA_DEPTH_M, latest_soil_profile
 from ftm.db.models import SiteRow, StrategyRow
 from ftm.engine.params import CatalogError, CropEntry, load_crops, soil_spec_from_profile
 from ftm.engine.rotation import SUPPORTED_IRRIGATION_RULE, check_feasibility
-from ftm.engine.scenarios import SCENARIO_HORIZON, _end
+from ftm.engine.scenarios import _end
 from ftm.provenance import inputs_hash
 
 
@@ -43,8 +45,21 @@ def _season(entry: CropEntry, plant, irrigated: bool, usual: float | None) -> Se
     )
 
 
+def comparison_horizon(session: Session, site_id: str) -> tuple[date, date]:
+    """D16: the real-calendar horizon, from the day after the last observed weather day, 24 months."""
+    from ftm.api.services.prediction import horizon_for
+    from ftm.data.engine_inputs import EngineInputsNotAvailableError
+
+    try:
+        h = horizon_for(session, site_id)
+    except (EngineInputsNotAvailableError, ValueError) as exc:
+        raise RotationError(f"the farm's weather is not ready, so the comparison period is unknown: {exc}") from exc
+    return h.start, h.end
+
+
 def build_strategies(session: Session, site: SiteRow, req: RotationsUpdate) -> list[Strategy]:
     crops = selectable_crops()
+    horizon = comparison_horizon(session, site.id)
     ctx = farmer_context_for(session, site.id)
     allowed = set(ctx.available_crop_ids) if ctx and ctx.available_crop_ids is not None else None
     strategies: list[Strategy] = []
@@ -56,10 +71,10 @@ def build_strategies(session: Session, site: SiteRow, req: RotationsUpdate) -> l
                 raise RotationError(f"{where}: unknown crop {s.crop_id!r}; choose one of {sorted(crops)}")
             if allowed is not None and s.crop_id not in allowed:
                 raise RotationError(f"{where}: {s.crop_id!r} is not among the crops you said you can grow")
-            if not SCENARIO_HORIZON[0] <= s.plant_date <= SCENARIO_HORIZON[1]:
+            if not horizon[0] <= s.plant_date <= horizon[1]:
                 raise RotationError(
                     f"{where}: planting date {s.plant_date} is outside the comparison period "
-                    f"{SCENARIO_HORIZON[0]} to {SCENARIO_HORIZON[1]}"
+                    f"{horizon[0]} to {horizon[1]}"
                 )
             seasons.append(_season(crops[s.crop_id], s.plant_date, s.irrigated, s.usual_yield_t_ha))
         key = inputs_hash(
@@ -88,8 +103,30 @@ def _soil_or_none(session: Session, site_id: str):  # type: ignore[no-untyped-de
         return None  # the run reports the unsupported texture; feasibility is then unknown until it runs
 
 
+def _after_standing_crop(session: Session, site_id: str, s: Strategy, crops: dict[str, CropEntry]) -> Strategy:
+    """D16: a season cannot be planted before the crop the farmer reports on the field now is harvested."""
+    from ftm.api.services.prediction import prediction_for
+
+    st = prediction_for(session, site_id, crops)[0].standing
+    early = [x for x in s.seasons if st is not None and x.plant_date <= st.end_date]
+    if st is None or not early:
+        return s
+    name = crops[st.crop_id].profile.name if st.crop_id in crops else st.crop_id
+    prior = s.feasibility.reasons if s.feasibility else []
+    reasons = [
+        *prior,
+        *(
+            f"Season planted {x.plant_date} starts before the crop on the field now ({name}) is harvested on "
+            f"{st.end_date}."
+            for x in early
+        ),
+    ]
+    return s.model_copy(update={"feasibility": Feasibility(feasible=False, reasons=reasons)})
+
+
 def save_rotations(session: Session, site: SiteRow, req: RotationsUpdate) -> list[Strategy]:
     strategies = build_strategies(session, site, req)
+    horizon = comparison_horizon(session, site.id)
     crops = selectable_crops()
     ctx = farmer_context_for(session, site.id)
     allowed = set(ctx.available_crop_ids) if ctx and ctx.available_crop_ids is not None else None
@@ -98,13 +135,12 @@ def save_rotations(session: Session, site: SiteRow, req: RotationsUpdate) -> lis
         strategies = [
             s.model_copy(
                 update={
-                    "feasibility": check_feasibility(
-                        s, crops, horizon=SCENARIO_HORIZON, soil=soil, available_crop_ids=allowed
-                    )
+                    "feasibility": check_feasibility(s, crops, horizon=horizon, soil=soil, available_crop_ids=allowed)
                 }
             )
             for s in strategies
         ]
+    strategies = [_after_standing_crop(session, site.id, s, crops) for s in strategies]
     keep = {s.id for s in strategies}
     for old in session.scalars(
         select(StrategyRow).where(StrategyRow.site_id == site.id, StrategyRow.superseded.is_(False))
@@ -112,7 +148,7 @@ def save_rotations(session: Session, site: SiteRow, req: RotationsUpdate) -> lis
         if old.id not in keep:
             old.superseded = True
     for s in strategies:
-        data = s.model_dump(mode="json")
+        data = s.model_dump(mode="json", exclude={"soil_health"})
         row = session.get(StrategyRow, s.id)
         if row is None:
             session.add(StrategyRow(**data))
@@ -120,7 +156,7 @@ def save_rotations(session: Session, site: SiteRow, req: RotationsUpdate) -> lis
             row.name, row.is_baseline = data["name"], data["is_baseline"]
             row.seasons, row.feasibility, row.superseded = data["seasons"], data["feasibility"], False
     session.commit()
-    return strategies
+    return with_soil_health(session, site.id, strategies)
 
 
 def active_strategies(session: Session, site_id: str) -> list[Strategy]:
@@ -130,3 +166,16 @@ def active_strategies(session: Session, site_id: str) -> list[Strategy]:
         .order_by(StrategyRow.is_baseline.desc(), StrategyRow.created_at, StrategyRow.id)
     )
     return [Strategy.model_validate(r) for r in rows]
+
+
+def with_soil_health(session: Session, site_id: str, strategies: list[Strategy]) -> list[Strategy]:
+    """D16: soil-health indicators for serving; the crop on the field now (if any) precedes each rotation."""
+    from ftm.api.services.prediction import prediction_for
+    from ftm.engine.soil_health import soil_rules
+
+    crops = selectable_crops()
+    try:
+        before = prediction_for(session, site_id, crops)[0].standing
+    except Exception:  # weather not ready: rules without the crop on the field now
+        before = None
+    return [s.model_copy(update={"soil_health": soil_rules(s, crops, before=before)}) for s in strategies]

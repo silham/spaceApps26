@@ -210,3 +210,84 @@ dialog.farm-dialog::backdrop { background: rgb(15 42 29 / 0.35); }
 .rot-card__add { align-self: flex-start; }
 .rot-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .metrics-table .num { font-variant-numeric: tabular-nums; }
+
+/* ---- The coming months (D16): extends the card/table patterns of frame 25:49 ---- */
+.outlook__now {
+  display: grid;
+  grid-template-columns: minmax(180px, 260px) 1fr;
+  gap: 16px;
+  align-items: start;
+  padding: 12px;
+  border-radius: var(--radius-inner);
+  background: var(--color-inset);
+}
+.outlook__now > div {
+  display: grid;
+  gap: 4px;
+}
+.outlook__now strong {
+  font-size: 1.25rem;
+  color: var(--color-text);
+}
+.outlook__now meter {
+  width: 100%;
+  height: 8px;
+}
+.outlook__odds {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0;
+}
+.outlook__odds caption {
+  text-align: left;
+  padding-bottom: 6px;
+}
+.outlook__odds th,
+.outlook__odds td {
+  text-align: left;
+  padding: 8px 10px;
+  border-top: 1px solid var(--color-border);
+  vertical-align: top;
+}
+.outlook__odds thead th {
+  border-top: 0;
+  color: var(--color-secondary);
+  font-weight: 600;
+}
+@media (max-width: 640px) {
+  .outlook__now {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---- Suggested rotations and soil-health rules (D16): card, badge and form patterns of frame 25:49 ---- */
+.suggestions__form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 16px;
+}
+.suggestions__form .select { min-width: 220px; }
+.suggestions__progress { display: flex; align-items: center; gap: 10px; }
+.suggestions__progress progress { width: min(320px, 100%); }
+.suggestions__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 16px;
+  align-items: start;
+}
+.suggestion { display: grid; gap: 10px; padding: 16px; }
+.suggestion__head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.suggestion__head h3 { margin: 0; font-size: 1rem; }
+.suggestion__seasons { margin: 0; padding-left: 18px; color: var(--color-secondary); font-size: 13px; }
+.suggestion__metrics { display: grid; gap: 6px; margin: 0; }
+.suggestion__metrics div { display: grid; gap: 2px; }
+.suggestion__metrics dt { font-size: 12px; color: var(--color-muted); }
+.suggestion__metrics dd { margin: 0; font-weight: 600; color: var(--color-text); }
+.suggestion__why { margin: 0; padding-left: 18px; color: var(--color-secondary); }
+.soil-rules { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 13px; }
+.soil-rules__met > span[aria-hidden] { color: var(--color-primary); }
+.soil-rules__not_met > span[aria-hidden] { color: #b7791f; }
+.soil-rules__unknown > span[aria-hidden] { color: var(--color-muted); }
+.soil-health-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 16px; }
+.soil-health-grid > div { display: grid; gap: 6px; }

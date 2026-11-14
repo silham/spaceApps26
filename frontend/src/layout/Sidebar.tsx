@@ -1,7 +1,6 @@
 import type { User } from '../types/contracts'
 import dotActive from '../assets/v2/dot-active.svg'
 import gear from '../assets/v2/icon-gear.svg'
-import trophy from '../assets/v2/icon-trophy.svg'
 import logo from '../assets/v2/logo-reversed.svg'
 import navGrid from '../assets/v2/nav-grid.svg'
 import navHome from '../assets/v2/nav-home.svg'
@@ -49,15 +48,7 @@ export function Sidebar({ view, onNavigate, user }: { view: View; onNavigate: (v
         ))}
       </nav>
       <div className="spacer" />
-      <div className="sidebar__challenge">
-        <span className="tile">
-          <Icon src={trophy} size={16} />
-        </span>
-        <div>
-          <strong>NASA Space Apps 2026</strong>
-          <span>Challenge submission</span>
-        </div>
-      </div>
+
       <div className="sidebar__divider" />
       <button
         type="button"

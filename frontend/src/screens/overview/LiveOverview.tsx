@@ -20,6 +20,7 @@ import {
   TONES,
   axisFor,
   changesSince,
+  predictionChanged,
   draftFromRequest,
   draftProblem,
   isFeasible,
@@ -37,6 +38,8 @@ import { NextStep } from './NextStep'
 import { LivePrioritiesPanel } from './PrioritiesPanel'
 import { LiveRotation } from './LiveRotation'
 import { RunComparison } from './RunComparison'
+import { OutlookCard } from './OutlookCard'
+import { SoilRules } from '../SuggestionsPanel'
 import { TimelineCard } from './TimelineCard'
 import { HarvestTable } from './HarvestTable'
 import { TradeOffs } from './TradeOffs'
@@ -76,6 +79,34 @@ export function LiveOverview({
   const sources = useAsync(api.sources, [reload])
   const timeline = useAsync(() => api.timeline(siteId), [siteId])
   const load = useAsync(() => api.siteLoad(siteId), [siteId])
+  // D16: the outlook starts from the latest weather; on opening, newer weather and a newer forecast are fetched in
+  // the background and the outlook reloads once they are stored.
+  const [dataVersion, setDataVersion] = useState(0)
+  const outlook = useAsync(() => api.outlook(siteId), [siteId, dataVersion])
+  const [refreshNote, setRefreshNote] = useState('')
+  useEffect(() => {
+    let active = true
+    let timer: number | undefined
+    const poll = (first: boolean) =>
+      api.refreshSite(siteId).then(
+        (job) => {
+          if (!active) return
+          if (job.status === 'queued' || job.status === 'running') {
+            setRefreshNote('Fetching newer weather and seasonal forecast…')
+            timer = window.setTimeout(() => void poll(false), 5000)
+            return
+          }
+          setRefreshNote(job.status === 'failed' ? 'Newer data could not be fetched; showing what is stored.' : '')
+          if (!first && job.status === 'done') setDataVersion((v) => v + 1)
+        },
+        () => active && setRefreshNote(''),
+      )
+    void poll(true)
+    return () => {
+      active = false
+      window.clearTimeout(timer)
+    }
+  }, [siteId])
   // Observe-only farm (D13): no locally reviewed strategies, so no comparison can be run.
   const observeOnly = load.status === 'ready' && !load.data.has_strategies
   const [farmer, setFarmer] = useState<FarmerContext | null>(null)
@@ -132,7 +163,12 @@ export function LiveOverview({
       storedRotations.data.length > 0 &&
       storedRotations.data.map((s) => s.id).sort().join() !== run.strategies.map((s) => s.id).sort().join(),
   )
-  const changes = [...changesSince(run, draft, names, farmerChanged), ...(rotationsChanged ? ['rotations'] : [])]
+  const newerPrediction = predictionChanged(run, outlook.status === 'ready' ? outlook.data : null)
+  const changes = [
+    ...changesSince(run, draft, names, farmerChanged),
+    ...(rotationsChanged ? ['rotations'] : []),
+    ...(newerPrediction ? ['weather and seasonal forecast'] : []),
+  ]
   const outdated = changes.length > 0
   const problem = draftProblem(draft)
   const cropMap = useMemo(() => new Map((crops.status === 'ready' ? crops.data : []).map((c) => [c.id, c])), [crops])
@@ -190,7 +226,7 @@ export function LiveOverview({
           <h1 tabIndex={-1}>Your farm. Different futures.</h1>
           <div className="header__subtitle">
             {(site.is_demo || run?.run.is_demo) && <DemoBadge />}
-            <span>Compare rotations under the same historical weather.</span>
+            <span>Compare rotations under the same predicted weather paths.</span>
           </div>
         </div>
         <div className="header__controls">
@@ -322,6 +358,13 @@ export function LiveOverview({
         />
       </div>
 
+      {refreshNote && (
+        <p className="small muted" role="status">
+          {refreshNote}
+        </p>
+      )}
+      <OutlookCard state={outlook} onEditFieldNow={() => setFarmOpen(true)} />
+
       <TimelineCard state={timeline} />
 
       {runs.status === 'loading' && <StateView kind="loading" title="Loading runs…" />}
@@ -336,7 +379,7 @@ export function LiveOverview({
       )}
       {runs.status === 'ready' && !run && runState.status !== 'running' && !observeOnly && (
         <StateView kind="empty" title="No comparison run yet">
-          Press <strong>Run comparison</strong> to simulate current practice and the alternatives on the same historical weather.
+          Press <strong>Run comparison</strong> to simulate current practice and the alternatives on the same weather paths, from today&rsquo;s simulated soil water.
         </StateView>
       )}
 
@@ -409,6 +452,23 @@ export function LiveOverview({
 
           <TradeOffs strategies={strategies} results={results} ranking={ranking} outdated={outdated} />
           <HarvestTable strategies={strategies} results={results} crops={cropMap} outdated={outdated} />
+          {storedRotations.status === 'ready' && storedRotations.data.some((s) => s.soil_health?.length) && (
+            <section className="card page-card" aria-labelledby="soil-health-h">
+              <div className="card-title card-title--small">
+                <h2 id="soil-health-h">Soil health of your rotations</h2>
+                <p>Rules of thumb from crop-rotation planning, stated as possibilities; no soil gain is calculated.</p>
+              </div>
+              <div className="soil-health-grid">
+                {storedRotations.data.map((s) => (
+                  <div key={s.id}>
+                    <strong>{s.name}</strong>
+                    <SoilRules rules={s.soil_health ?? []} />
+                  </div>
+                ))}
+              </div>
+              <p className="small muted">Source: {storedRotations.data.find((s) => s.soil_health?.length)?.soil_health?.[0]?.reference}</p>
+            </section>
+          )}
         </>
       )}
 
@@ -433,7 +493,7 @@ export function LiveOverview({
             ? `Sources used by run ${run.run.id}: ${runSources.length ? runSources.map((s) => `${s?.provider} — ${s?.product}`).join(' · ') : run.source_ids.join(', ')}`
             : 'No run yet: no simulation sources to list.'}
         </span>
-        <span>Historical weather is resampled: this is not a forecast. No NASA endorsement is implied.</span>
+        <span>Past NASA POWER years are resampled, made more or less likely by the seasonal forecast: no day is a weather forecast. No NASA endorsement is implied.</span>
       </footer>
 
       <FarmDetailsDialog
@@ -446,6 +506,7 @@ export function LiveOverview({
         onSaved={(ctx) => {
           setFarmer(ctx)
           setFarmOpen(false)
+          setDataVersion((v) => v + 1) // what is on the field changes today's soil water
         }}
       />
     </>

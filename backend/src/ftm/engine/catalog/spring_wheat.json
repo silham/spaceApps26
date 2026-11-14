@@ -78,7 +78,21 @@
     "planting_window": null,
     "is_cover_crop": false,
     "notes": "Stage lengths come from the generic small-grain row, not a row labelled spring wheat.",
-    "is_demo": false
+    "is_demo": false,
+    "family": "Poaceae",
+    "legume": false,
+    "traits_reference": "USDA PLANTS Database (plants.usda.gov), family of Triticum aestivum; legume nitrogen fixation: Mohler & Johnson (2009) Crop Rotation on Organic Farms: A Planning Manual, SARE/NRAES-177",
+    "t_base_c": {
+      "value": 0.0,
+      "unit": "degC",
+      "reference": "FAO AquaCrop default crop file via AquaCrop-OSPy crop_params.py (Apache-2.0, github.com/aquacropos/aquacrop), 'Wheat' Tbase 0.0 degC",
+      "region_relevance": "Generic AquaCrop default (calibrated on other sites); wheat uses the generic Wheat file",
+      "uncertainty": "Not varietal; cultivars differ by a few degrees"
+    },
+    "table11_planting_months": [
+      3,
+      4
+    ]
   },
   "engine_extras": {
     "max_height_m": {

@@ -26,7 +26,7 @@ def main() -> None:
             s.merge(SourceRow(**data, footprint=_geom(src.footprint_geojson)))
         s.flush()
         for st in demo.strategies:
-            s.merge(StrategyRow(**st.model_dump(mode="json")))
+            s.merge(StrategyRow(**st.model_dump(mode="json", exclude={"soil_health"})))
         s.flush()
         for run in demo.simulation_runs:
             data = run.model_dump(exclude={"sample_period"})

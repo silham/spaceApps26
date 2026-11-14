@@ -3,25 +3,104 @@
   "profile": {
     "id": "maize-grain",
     "name": "Maize, field (grain)",
-    "kc_ini": {"value": 0.3, "unit": "-", "reference": "FAO-56 (Allen et al. 1998) Table 12, Cereals group Kc ini", "region_relevance": "Generic; Table 12 footnote 1: Kc ini depends on wetting interval and is better estimated with Fig. 29/30 or Annex 7 eq. 7-3", "uncertainty": "Kc ini may range 0.1-1.15 with wetting frequency (FAO-56 ch. 6)"},
-    "kc_mid": {"value": 1.20, "unit": "-", "reference": "FAO-56 Table 12, 'Maize, Field (grain) (field corn)'", "region_relevance": "Sub-humid reference climate (RHmin 45%, u2 2 m/s); adjusted to local climate with FAO-56 eq. 62 at run time", "uncertainty": "Generic value; no local calibration"},
-    "kc_end": {"value": 0.35, "unit": "-", "reference": "FAO-56 Table 12, 'Maize, Field (grain)', Kc end 0.60-0.35, footnote 11", "region_relevance": "0.35 = harvest after complete field drying of the grain (assumed); 0.60 if harvested at high grain moisture", "uncertainty": "0.35-0.60 depending on harvest moisture"},
-    "stage_lengths_days": {
-      "ini": {"value": 30, "unit": "days", "reference": "FAO-56 Table 11, Maize (grain), April planting, 'Idaho, USA' row (30/40/50/50)", "region_relevance": "Nearest listed US semi-arid analogue; not specific to either candidate site", "uncertainty": "Table 11 footnote: indicative only, may vary substantially with region, climate and variety"},
-      "dev": {"value": 40, "unit": "days", "reference": "FAO-56 Table 11, Maize (grain), 'Idaho, USA'", "region_relevance": "As for ini", "uncertainty": "As for ini"},
-      "mid": {"value": 50, "unit": "days", "reference": "FAO-56 Table 11, Maize (grain), 'Idaho, USA'", "region_relevance": "As for ini", "uncertainty": "As for ini"},
-      "late": {"value": 50, "unit": "days", "reference": "FAO-56 Table 11, Maize (grain), 'Idaho, USA'", "region_relevance": "As for ini", "uncertainty": "As for ini"}
+    "kc_ini": {
+      "value": 0.3,
+      "unit": "-",
+      "reference": "FAO-56 (Allen et al. 1998) Table 12, Cereals group Kc ini",
+      "region_relevance": "Generic; Table 12 footnote 1: Kc ini depends on wetting interval and is better estimated with Fig. 29/30 or Annex 7 eq. 7-3",
+      "uncertainty": "Kc ini may range 0.1-1.15 with wetting frequency (FAO-56 ch. 6)"
     },
-    "max_root_depth_m": {"value": 1.7, "unit": "m", "reference": "FAO-56 Table 22, Maize, Field (grain): 1.0-1.7 m", "region_relevance": "Table 22 footnote 1: larger values for modelling soil water stress or rainfed conditions", "uncertainty": "1.0-1.7 m; shallower where rooting is restricted"},
-    "depletion_fraction_p": {"value": 0.55, "unit": "-", "reference": "FAO-56 Table 22 (for ETc about 5 mm/day); adjusted daily with p = p_table + 0.04(5 - ETc), limited to 0.1-0.8", "region_relevance": "Generic", "uncertainty": "FAO-56: reduce 5-10% on fine soils, increase 5-10% on coarse soils"},
-    "ky_season": {"value": 1.25, "unit": "-", "reference": "FAO-56 Chapter 8 Table 24 'Seasonal yield response functions from FAO Irrigation and Drainage Paper No. 33' (Doorenbos & Kassam 1979), value 1.25", "region_relevance": "Generic; applied to the whole growing period, water-limited yield only", "uncertainty": "Seasonal Ky only (stage-specific values are not in Table 24); varies with variety and climate"},
+    "kc_mid": {
+      "value": 1.2,
+      "unit": "-",
+      "reference": "FAO-56 Table 12, 'Maize, Field (grain) (field corn)'",
+      "region_relevance": "Sub-humid reference climate (RHmin 45%, u2 2 m/s); adjusted to local climate with FAO-56 eq. 62 at run time",
+      "uncertainty": "Generic value; no local calibration"
+    },
+    "kc_end": {
+      "value": 0.35,
+      "unit": "-",
+      "reference": "FAO-56 Table 12, 'Maize, Field (grain)', Kc end 0.60-0.35, footnote 11",
+      "region_relevance": "0.35 = harvest after complete field drying of the grain (assumed); 0.60 if harvested at high grain moisture",
+      "uncertainty": "0.35-0.60 depending on harvest moisture"
+    },
+    "stage_lengths_days": {
+      "ini": {
+        "value": 30,
+        "unit": "days",
+        "reference": "FAO-56 Table 11, Maize (grain), April planting, 'Idaho, USA' row (30/40/50/50)",
+        "region_relevance": "Nearest listed US semi-arid analogue; not specific to either candidate site",
+        "uncertainty": "Table 11 footnote: indicative only, may vary substantially with region, climate and variety"
+      },
+      "dev": {
+        "value": 40,
+        "unit": "days",
+        "reference": "FAO-56 Table 11, Maize (grain), 'Idaho, USA'",
+        "region_relevance": "As for ini",
+        "uncertainty": "As for ini"
+      },
+      "mid": {
+        "value": 50,
+        "unit": "days",
+        "reference": "FAO-56 Table 11, Maize (grain), 'Idaho, USA'",
+        "region_relevance": "As for ini",
+        "uncertainty": "As for ini"
+      },
+      "late": {
+        "value": 50,
+        "unit": "days",
+        "reference": "FAO-56 Table 11, Maize (grain), 'Idaho, USA'",
+        "region_relevance": "As for ini",
+        "uncertainty": "As for ini"
+      }
+    },
+    "max_root_depth_m": {
+      "value": 1.7,
+      "unit": "m",
+      "reference": "FAO-56 Table 22, Maize, Field (grain): 1.0-1.7 m",
+      "region_relevance": "Table 22 footnote 1: larger values for modelling soil water stress or rainfed conditions",
+      "uncertainty": "1.0-1.7 m; shallower where rooting is restricted"
+    },
+    "depletion_fraction_p": {
+      "value": 0.55,
+      "unit": "-",
+      "reference": "FAO-56 Table 22 (for ETc about 5 mm/day); adjusted daily with p = p_table + 0.04(5 - ETc), limited to 0.1-0.8",
+      "region_relevance": "Generic",
+      "uncertainty": "FAO-56: reduce 5-10% on fine soils, increase 5-10% on coarse soils"
+    },
+    "ky_season": {
+      "value": 1.25,
+      "unit": "-",
+      "reference": "FAO-56 Chapter 8 Table 24 'Seasonal yield response functions from FAO Irrigation and Drainage Paper No. 33' (Doorenbos & Kassam 1979), value 1.25",
+      "region_relevance": "Generic; applied to the whole growing period, water-limited yield only",
+      "uncertainty": "Seasonal Ky only (stage-specific values are not in Table 24); varies with variety and climate"
+    },
     "planting_window": null,
     "is_cover_crop": false,
     "notes": "Table 11 'Idaho, USA' row lists April planting. Printed total 170 days matches the stage sum.",
-    "is_demo": false
+    "is_demo": false,
+    "family": "Poaceae",
+    "legume": false,
+    "traits_reference": "USDA PLANTS Database (plants.usda.gov), family of Zea mays; legume nitrogen fixation: Mohler & Johnson (2009) Crop Rotation on Organic Farms: A Planning Manual, SARE/NRAES-177",
+    "t_base_c": {
+      "value": 8.0,
+      "unit": "degC",
+      "reference": "FAO AquaCrop default crop file via AquaCrop-OSPy crop_params.py (Apache-2.0, github.com/aquacropos/aquacrop), 'Maize' Tbase 8.0 degC",
+      "region_relevance": "Generic AquaCrop default (calibrated on other sites)",
+      "uncertainty": "Not varietal; cultivars differ by a few degrees"
+    },
+    "table11_planting_months": [
+      4
+    ]
   },
   "engine_extras": {
-    "max_height_m": {"value": 2.0, "unit": "m", "reference": "FAO-56 Table 12, maximum crop height h", "region_relevance": "Generic", "uncertainty": "Variety dependent"},
+    "max_height_m": {
+      "value": 2.0,
+      "unit": "m",
+      "reference": "FAO-56 Table 12, maximum crop height h",
+      "region_relevance": "Generic",
+      "uncertainty": "Variety dependent"
+    },
     "tr55_cover": "row_crops_straight_row_good"
   }
 }

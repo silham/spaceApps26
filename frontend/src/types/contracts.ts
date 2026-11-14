@@ -60,7 +60,15 @@ export type Variables = string[];
  * Keeps observed, estimated, farmer, reanalysis, literature and simulated values distinguishable.
  */
 export type ValueKind =
-  "observed" | "reanalysis" | "modeled" | "estimated" | "farmer_input" | "literature" | "simulated" | "demo";
+  | "observed"
+  | "reanalysis"
+  | "modeled"
+  | "estimated"
+  | "farmer_input"
+  | "literature"
+  | "simulated"
+  | "forecast"
+  | "demo";
 export type SpatialResolution = string | null;
 export type TemporalResolution = string | null;
 export type CoverageStart = string | null;
@@ -135,6 +143,22 @@ export type BoundsKind = string | null;
  * MM-DD start/end
  */
 export type PlantingWindow = [unknown, unknown] | null;
+/**
+ * Botanical family, e.g. 'Poaceae'
+ */
+export type Family = string | null;
+/**
+ * Fixes nitrogen with rhizobia (a legume)
+ */
+export type Legume = boolean | null;
+/**
+ * Citation for family and legume
+ */
+export type TraitsReference = string | null;
+/**
+ * Planting month(s) of the FAO-56 Table 11 row the stage lengths come from (northern hemisphere)
+ */
+export type Table11PlantingMonths = number[] | null;
 export type IsCoverCrop = boolean;
 export type Notes = string | null;
 export type IsDemo2 = boolean;
@@ -168,6 +192,15 @@ export type Feasible = boolean;
  * Human-readable; required when infeasible
  */
 export type Reasons = string[];
+export type RuleId = string;
+export type Label = string;
+export type Status = "met" | "not_met" | "unknown";
+export type Explanation = string;
+export type Reference1 = string;
+/**
+ * Computed when served (D16)
+ */
+export type SoilHealth = SoilRuleResult[];
 export type IsDemo4 = boolean;
 export type Id7 = string;
 export type SiteId4 = string;
@@ -220,7 +253,7 @@ export type Limitations1 = string[];
 export type IsDemo6 = boolean;
 export type Id9 = string;
 export type Target = string;
-export type Reference1 = string;
+export type Reference2 = string;
 /**
  * Sources actually used: the evaluated data and the reference (rule 2)
  */
@@ -374,6 +407,9 @@ export type Equipment = string[];
  */
 export type AvailableCropIds = string[] | null;
 export type MarketUse = string | null;
+export type CurrentCropId = string | null;
+export type CurrentPlantDate = string | null;
+export type LastHarvestDate = string | null;
 export type UpdatedAt = string | null;
 export type SiteId7 = string;
 export type Start = string;
@@ -431,15 +467,15 @@ export type Longitude1 = number;
 export type BoundaryGeojson1 = {
   [k: string]: unknown;
 } | null;
-export type Name7 = "weather" | "soil" | "vegetation";
+export type Name7 = "weather" | "soil" | "vegetation" | "forecast";
 /**
  * Product being loaded, e.g. 'NASA POWER daily'
  */
 export type Source1 = string;
-export type Status = "pending" | "running" | "done" | "failed" | "skipped";
+export type Status1 = "pending" | "running" | "done" | "failed" | "skipped";
 export type Message = string | null;
 export type SiteId10 = string;
-export type Status1 = "queued" | "running" | "done" | "failed";
+export type Status2 = "queued" | "running" | "done" | "failed";
 export type Steps1 = SiteLoadStep[];
 export type StartedAt = string | null;
 export type FinishedAt = string | null;
@@ -447,9 +483,120 @@ export type FinishedAt = string | null;
  * False: observe only, no locally reviewed strategies (D13)
  */
 export type HasStrategies = boolean;
+export type SiteId11 = string;
+/**
+ * Last day with usable NASA POWER rain and temperature
+ */
+export type ObservedEnd = string;
+export type Start1 = string;
+export type End1 = string;
+export type WeatherSourceId2 = string;
+/**
+ * e.g. 'Nov–Jan'
+ */
+export type Window = string;
+/**
+ * First day of each month in the window
+ */
+export type Months = string[];
+export type Variable1 = "rain" | "temperature";
+export type Below = number;
+export type Near = number;
+export type Above = number;
+export type MemberCount = number;
+export type P102 = (number | null)[];
+export type P502 = (number | null)[];
+export type P902 = (number | null)[];
+export type SiteId12 = string;
+export type ObservedEnd1 = string;
+export type HorizonStart = string;
+export type HorizonEnd = string;
+/**
+ * None: no forecast available; every past year equally likely
+ */
+export type ForecastSourceId = string | null;
+export type ForecastRetrievedAt = string | null;
+export type Odds = ForecastOdds[];
+/**
+ * Of the weighted past years; small values mean few years carry the outlook
+ */
+export type EffectiveSampleSize = number | null;
+export type Dates2 = string[];
+/**
+ * Simulated, not measured
+ */
+export type SoilWaterNowMm = number;
+export type SoilWaterCapacityMm = number;
+export type InitialAssumption = string;
+export type NPaths2 = number;
+export type RangeLabel2 = string;
+export type Assumptions1 = string[];
+export type SourceIds8 = string[];
+export type Attribution1 = string | null;
+export type Limitations5 = string[];
+export type IsDemo13 = boolean;
+/**
+ * @minItems 3
+ * @maxItems 3
+ */
+export type Priorities1 = [
+  "cover" | "irrigation" | "soil_health",
+  "cover" | "irrigation" | "soil_health",
+  "cover" | "irrigation" | "soil_health"
+];
+export type IrrigationAllowed = boolean;
+/**
+ * Over the whole comparison period
+ */
+export type MaxIrrigationMm = number | null;
+export type ExcludeCropIds = string[];
+export type RequireCropId = string | null;
+export type MaxSeasons = number;
+/**
+ * Every season's median relative yield must reach this (farmer floor)
+ */
+export type MinRelativeYieldPct = number;
+export type Metric2 = string;
+export type Unit4 = string;
+export type SeasonIndex1 = number | null;
+export type P103 = number | null;
+export type P503 = number | null;
+export type P903 = number | null;
+/**
+ * Median of the per-path difference to the farm's current practice
+ */
+export type DeltaP50VsCurrent = number | null;
+/**
+ * 1 = best in the farmer's priority order; None for current practice
+ */
+export type Rank = number | null;
+export type Name8 = string;
+export type Seasons2 = SeasonPlan[];
+export type Metrics2 = CandidateMetric[];
+export type SoilHealth1 = SoilRuleResult[];
+export type SoilRulesMet = number;
+export type NonDominated = boolean;
+export type Why = string[];
+export type TradeOffs = string[];
+export type Id13 = string;
+export type SiteId13 = string;
+export type Status3 = "queued" | "running" | "done" | "failed";
+export type Progress = number;
+export type Message1 = string | null;
+export type CreatedAt5 = string;
+export type FinishedAt1 = string | null;
+export type HorizonStart1 = string | null;
+export type HorizonEnd1 = string | null;
+export type CandidatesConsidered = number;
+export type Candidates = RotationCandidate[];
+export type NPaths3 = number;
+export type RangeLabel3 = string;
+export type SourceIds9 = string[];
+export type Assumptions2 = string[];
+export type Limitations6 = string[];
 
 /**
- * Schema version 1.5.0. Generated - do not edit.
+ * Schema version 1.6.0. Generated - do not edit.
  */
 export interface FarmTimeMachineContracts {
   User?: User;
@@ -487,6 +634,15 @@ export interface FarmTimeMachineContracts {
   NewSiteRequest?: NewSiteRequest;
   SiteLoadStep?: SiteLoadStep;
   SiteLoadStatus?: SiteLoadStatus;
+  PredictionHorizon?: PredictionHorizon;
+  ForecastOdds?: ForecastOdds;
+  OutlookBand?: OutlookBand;
+  WeatherOutlook?: WeatherOutlook;
+  SoilRuleResult?: SoilRuleResult;
+  RecommendationRequest?: RecommendationRequest;
+  CandidateMetric?: CandidateMetric;
+  RotationCandidate?: RotationCandidate;
+  RecommendationJob?: RecommendationJob;
 }
 export interface User {
   id: Id;
@@ -627,6 +783,14 @@ export interface CropProfile {
    */
   ky_season?: ParamValue | null;
   planting_window?: PlantingWindow;
+  family?: Family;
+  legume?: Legume;
+  traits_reference?: TraitsReference;
+  /**
+   * Base temperature below which the crop does not develop (degC)
+   */
+  t_base_c?: ParamValue | null;
+  table11_planting_months?: Table11PlantingMonths;
   is_cover_crop?: IsCoverCrop;
   notes?: Notes;
   is_demo?: IsDemo2;
@@ -663,6 +827,7 @@ export interface Strategy {
   is_baseline?: IsBaseline;
   seasons: Seasons1;
   feasibility?: Feasibility | null;
+  soil_health?: SoilHealth;
   is_demo?: IsDemo4;
 }
 export interface SeasonPlan {
@@ -676,6 +841,16 @@ export interface SeasonPlan {
 export interface Feasibility {
   feasible: Feasible;
   reasons?: Reasons;
+}
+/**
+ * A soil-health rule of thumb for a rotation (D16), stated conditionally, never a numeric gain.
+ */
+export interface SoilRuleResult {
+  rule_id: RuleId;
+  label: Label;
+  status: Status;
+  explanation: Explanation;
+  reference: Reference1;
 }
 export interface SimulationRun {
   id: Id7;
@@ -718,7 +893,7 @@ export interface Result {
 export interface Validation {
   id: Id9;
   target: Target;
-  reference: Reference1;
+  reference: Reference2;
   source_ids?: SourceIds2;
   train_period?: TrainPeriod;
   calibration_period?: CalibrationPeriod;
@@ -864,6 +1039,9 @@ export interface FarmerContext {
   equipment?: Equipment;
   available_crop_ids?: AvailableCropIds;
   market_use?: MarketUse;
+  current_crop_id?: CurrentCropId;
+  current_plant_date?: CurrentPlantDate;
+  last_harvest_date?: LastHarvestDate;
   updated_at?: UpdatedAt;
 }
 /**
@@ -941,14 +1119,138 @@ export interface NewSiteRequest {
 export interface SiteLoadStep {
   name: Name7;
   source: Source1;
-  status: Status;
+  status: Status1;
   message?: Message;
 }
 export interface SiteLoadStatus {
   site_id: SiteId10;
-  status: Status1;
+  status: Status2;
   steps: Steps1;
   started_at?: StartedAt;
   finished_at?: FinishedAt;
   has_strategies: HasStrategies;
+}
+/**
+ * The comparison horizon on the real calendar: it starts the day after the last observed weather day.
+ */
+export interface PredictionHorizon {
+  site_id: SiteId11;
+  observed_end: ObservedEnd;
+  start: Start1;
+  end: End1;
+  weather_source_id: WeatherSourceId2;
+}
+/**
+ * Seasonal-forecast odds for one window: the share of ensemble members below / near / above normal.
+ */
+export interface ForecastOdds {
+  window: Window;
+  months: Months;
+  variable: Variable1;
+  below: Below;
+  near: Near;
+  above: Above;
+  member_count: MemberCount;
+}
+export interface OutlookBand {
+  p10: P102;
+  p50: P502;
+  p90: P902;
+}
+/**
+ * The coming months at a farm: forecast odds plus daily bands from forecast-weighted past years.
+ */
+export interface WeatherOutlook {
+  site_id: SiteId12;
+  observed_end: ObservedEnd1;
+  horizon_start: HorizonStart;
+  horizon_end: HorizonEnd;
+  forecast_source_id: ForecastSourceId;
+  forecast_retrieved_at?: ForecastRetrievedAt;
+  odds: Odds;
+  effective_sample_size?: EffectiveSampleSize;
+  dates: Dates2;
+  rain_mm: OutlookBand;
+  rain_cumulative_mm: OutlookBand1;
+  tmin_c: OutlookBand;
+  tmax_c: OutlookBand;
+  storage_mm: OutlookBand2;
+  soil_water_now_mm: SoilWaterNowMm;
+  soil_water_capacity_mm: SoilWaterCapacityMm;
+  initial_assumption: InitialAssumption;
+  n_paths: NPaths2;
+  range_label?: RangeLabel2;
+  assumptions?: Assumptions1;
+  source_ids: SourceIds8;
+  attribution?: Attribution1;
+  limitations?: Limitations5;
+  is_demo?: IsDemo13;
+}
+/**
+ * Rain from the horizon start, totalled per path
+ */
+export interface OutlookBand1 {
+  p10: P102;
+  p50: P502;
+  p90: P902;
+}
+/**
+ * Simulated soil water (whole profile) under the field-now crop
+ */
+export interface OutlookBand2 {
+  p10: P102;
+  p50: P502;
+  p90: P902;
+}
+/**
+ * Farmer priorities order the feasible options; constraints filter them (guide §4). Stored with the job.
+ */
+export interface RecommendationRequest {
+  priorities?: Priorities1;
+  irrigation_allowed?: IrrigationAllowed;
+  max_irrigation_mm?: MaxIrrigationMm;
+  exclude_crop_ids?: ExcludeCropIds;
+  require_crop_id?: RequireCropId;
+  max_seasons?: MaxSeasons;
+  min_relative_yield_pct?: MinRelativeYieldPct;
+}
+export interface CandidateMetric {
+  metric: Metric2;
+  unit: Unit4;
+  season_index?: SeasonIndex1;
+  p10: P103;
+  p50: P503;
+  p90: P903;
+  delta_p50_vs_current?: DeltaP50VsCurrent;
+}
+export interface RotationCandidate {
+  rank: Rank;
+  name: Name8;
+  seasons: Seasons2;
+  metrics: Metrics2;
+  soil_health: SoilHealth1;
+  soil_rules_met: SoilRulesMet;
+  non_dominated: NonDominated;
+  why: Why;
+  trade_offs: TradeOffs;
+}
+export interface RecommendationJob {
+  id: Id13;
+  site_id: SiteId13;
+  status: Status3;
+  progress: Progress;
+  message?: Message1;
+  request: RecommendationRequest;
+  created_at: CreatedAt5;
+  finished_at?: FinishedAt1;
+  horizon_start?: HorizonStart1;
+  horizon_end?: HorizonEnd1;
+  candidates_considered?: CandidatesConsidered;
+  candidates?: Candidates;
+  current_practice?: RotationCandidate | null;
+  n_paths?: NPaths3;
+  range_label?: RangeLabel3;
+  source_ids?: SourceIds9;
+  assumptions?: Assumptions2;
+  limitations?: Limitations6;
 }

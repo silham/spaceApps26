@@ -78,7 +78,21 @@
     "planting_window": null,
     "is_cover_crop": false,
     "notes": "Ky is the 'Beans' row of Table 24.",
-    "is_demo": false
+    "is_demo": false,
+    "family": "Fabaceae",
+    "legume": true,
+    "traits_reference": "USDA PLANTS Database (plants.usda.gov), family of Phaseolus vulgaris; legume nitrogen fixation: Mohler & Johnson (2009) Crop Rotation on Organic Farms: A Planning Manual, SARE/NRAES-177",
+    "t_base_c": {
+      "value": 9.0,
+      "unit": "degC",
+      "reference": "FAO AquaCrop default crop file via AquaCrop-OSPy crop_params.py (Apache-2.0, github.com/aquacropos/aquacrop), 'DryBean' Tbase 9.0 degC",
+      "region_relevance": "Generic AquaCrop default (calibrated on other sites)",
+      "uncertainty": "Not varietal; cultivars differ by a few degrees"
+    },
+    "table11_planting_months": [
+      5,
+      6
+    ]
   },
   "engine_extras": {
     "max_height_m": {

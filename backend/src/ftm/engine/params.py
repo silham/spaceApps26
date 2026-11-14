@@ -97,6 +97,10 @@ def validate_crop(entry: CropEntry) -> None:
     _check_param(f"{prof.id}.max_height_m", entry.max_height_m, "m")
     if prof.ky_season is not None:
         _check_param(f"{prof.id}.ky_season", prof.ky_season, "-")
+    if prof.t_base_c is not None:
+        _check_param(f"{prof.id}.t_base_c", prof.t_base_c, "degC")
+    if (prof.family is not None or prof.legume is not None) and not prof.traits_reference:
+        raise CatalogError(f"{prof.id}: family/legume traits need a traits_reference")
     if entry.tr55_cover not in load_curve_numbers()["covers"]:
         raise CatalogError(f"{prof.id}: unknown TR-55 cover class {entry.tr55_cover!r}")
 

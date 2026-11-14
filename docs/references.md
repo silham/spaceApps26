@@ -12,6 +12,13 @@ Owner: M5. Every method, parameter and dataset cited anywhere in the code, UI or
 - **USDA NRCS SSURGO** via Soil Data Access: Soil Survey Staff, Natural Resources Conservation Service, USDA. *Soil Survey Geographic (SSURGO) Database*. https://sdmdataaccess.sc.egov.usda.gov/
 - **ISRIC SoilGrids 2.0** (global soil fallback): Poggio, L. et al. (2021). SoilGrids 2.0: producing soil information for the globe with quantified spatial uncertainty. *SOIL* 7, 217–240. doi:10.5194/soil-7-217-2021 (CC BY 4.0)
 
+## Seasonal outlook and suggestions (D16)
+- **ECMWF SEAS5 via Open-Meteo** Seasonal Forecast API (daily members, monthly anomalies): https://open-meteo.com/en/docs/seasonal-forecast-api; system: Johnson, S.J. et al. (2019). SEAS5: the new ECMWF seasonal forecast system. *Geosci. Model Dev.* 12, 1087–1117. doi:10.5194/gmd-12-1087-2019. Data CC BY 4.0, "Weather data by Open-Meteo.com".
+- **Forecast-weighted year resampling:** Han, E. & Ines, A.V.M. (2017). Downscaling probabilistic seasonal climate forecasts for decision support in agriculture: a comparison of parametric and non-parametric approach. *Climate Risk Management* 18, 51–65. doi:10.1016/j.crm.2017.09.003 (FResampler1, conditional block sampling).
+- **Crop base temperatures:** FAO AquaCrop default crop files, as packaged in AquaCrop-OSPy `aquacrop/entities/crops/crop_params.py` (Apache-2.0): https://github.com/aquacropos/aquacrop (`Tbase`: maize 8, sorghum 8, wheat 0, soybean 5, dry bean 9, cotton 12, sunflower 4 °C).
+- **Crop families:** USDA NRCS PLANTS Database: https://plants.usda.gov
+- **Rotation rules of thumb (legume nitrogen, family alternation):** Mohler, C.L. & Johnson, S.E. (eds.) (2009). *Crop Rotation on Organic Farms: A Planning Manual*. SARE / NRAES-177.
+
 ## Validation reference data
 - **USDA NASS Crop Progress** (Kansas, weekly % planted) via the Quick Stats API: https://quickstats.nass.usda.gov/api. Reference for season-start evaluation (validation plan v1.2).
 - **USDA NASS Cropland Data Layer** 2006–2024 (crop per year at the field; also the field search): https://www.nass.usda.gov/Research_and_Science/Cropland/

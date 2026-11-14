@@ -1,0 +1,75 @@
+{
+  "additionalProperties": false,
+  "description": "Farmer priorities order the feasible options; constraints filter them (guide §4). Stored with the job.",
+  "properties": {
+    "priorities": {
+      "items": {
+        "enum": [
+          "cover",
+          "irrigation",
+          "soil_health"
+        ],
+        "type": "string"
+      },
+      "maxItems": 3,
+      "minItems": 3,
+      "title": "Priorities",
+      "type": "array"
+    },
+    "irrigation_allowed": {
+      "default": true,
+      "title": "Irrigation Allowed",
+      "type": "boolean"
+    },
+    "max_irrigation_mm": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Over the whole comparison period",
+      "title": "Max Irrigation Mm"
+    },
+    "exclude_crop_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Exclude Crop Ids",
+      "type": "array"
+    },
+    "require_crop_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Require Crop Id"
+    },
+    "max_seasons": {
+      "default": 3,
+      "maximum": 3,
+      "minimum": 1,
+      "title": "Max Seasons",
+      "type": "integer"
+    },
+    "min_relative_yield_pct": {
+      "default": 60.0,
+      "description": "Every season's median relative yield must reach this (farmer floor)",
+      "maximum": 100,
+      "minimum": 0,
+      "title": "Min Relative Yield Pct",
+      "type": "number"
+    }
+  },
+  "title": "RecommendationRequest",
+  "type": "object"
+}

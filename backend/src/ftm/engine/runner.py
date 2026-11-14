@@ -27,6 +27,7 @@ from ftm.contracts.models import (
     JourneyStage,
     JourneyStageName,
     Result,
+    SeasonPlan,
     SimulationMode,
     SimulationRun,
     Site,
@@ -115,6 +116,15 @@ class EngineRequest:
     pool_range: tuple[int, int] | None = None
     available_crop_ids: set[str] | None = None
     trace_dir: Path | None = None  # set: write per-strategy Parquet traces under it
+    # D16: seasonal-forecast odds on the first block's year (None = every pool year equally likely).
+    first_block_weights: Mapping[int, float] | None = None
+    forecast_source_id: str | None = None
+    forecast_notes: tuple[str, ...] = ()
+    # D16: an initial state simulated from observed weather replaces the per-path warm-up.
+    warmup: bool = True
+    initial_note: str | None = None
+    # D16: the crop on the field now, still growing at the horizon start; simulated ahead of every strategy.
+    standing: SeasonPlan | None = None
 
 
 @dataclass
@@ -167,16 +177,50 @@ def validate_request(req: EngineRequest) -> ForcingInfo:
     return info
 
 
+def _after_standing(f: Feasibility, req: EngineRequest, strategy_id: str) -> Feasibility:
+    """A season planted before the standing crop is harvested cannot happen on this field."""
+    st = req.standing
+    assert st is not None
+    strat = next(s for s in req.strategies if s.id == strategy_id)
+    early = [s for s in strat.seasons if s.plant_date <= st.end_date]
+    if not early:
+        return f
+    name = req.crops[st.crop_id].profile.name if st.crop_id in req.crops else st.crop_id
+    extra = [
+        f"Season planted {s.plant_date} starts before the crop on the field now ({name}) is harvested on {st.end_date}."
+        for s in early
+    ]
+    return Feasibility(feasible=False, reasons=[*f.reasons, *extra])
+
+
 def _source_ids(req: EngineRequest) -> list[str]:
-    ids = [req.weather_source.id, *req.soil.profile.source_ids, *(s.id for s in LITERATURE_SOURCES)]
+    forecast = [req.forecast_source_id] if req.forecast_source_id and req.first_block_weights is not None else []
+    ids = [req.weather_source.id, *forecast, *req.soil.profile.source_ids, *(s.id for s in LITERATURE_SOURCES)]
     return list(dict.fromkeys(ids))
 
 
 def _common_limitations(
     req: EngineRequest, et0: pd.DataFrame, et0_days: dict[str, int], pool: BlockPool, n_paths: int
 ) -> list[str]:
+    weighted = req.first_block_weights is not None
     lim = [
-        "Historical weather is resampled; this is not a climate forecast.",
+        (
+            "Past NASA POWER years are resampled; the seasonal forecast only sets how likely each past year is "
+            "for the coming months (D16). Results are not a weather forecast."
+            if weighted
+            else "Historical weather is resampled; this is not a climate forecast."
+        ),
+        *req.forecast_notes,
+        *([req.initial_note] if req.initial_note else []),
+        *(
+            [
+                f"The crop on the field now ({req.standing.crop_id}, planted {req.standing.plant_date}) is simulated "
+                f"until {req.standing.end_date} ahead of every rotation, rainfed (farmer input; its irrigation is "
+                "not known). It adds cover and water use but no yield result."
+            ]
+            if req.standing
+            else []
+        ),
         f"p10-p90 is the {RANGE_LABEL} across weather paths, not a calibrated prediction interval.",
         "Crop parameters are generic FAO-56 table values (ILLUSTRATIVE, not locally calibrated; D4 is open).",
         "Single crop coefficient soil-water balance (FAO-56 ch. 8); root depth fixed from planting.",
@@ -228,8 +272,10 @@ def run_engine(req: EngineRequest) -> EngineOutput:
         )
         for s in req.strategies
     }
+    if req.standing is not None:
+        feas = {sid: _after_standing(f, req, sid) for sid, f in feas.items()}
     feasible = [s for s in req.strategies if feas[s.id].feasible]
-    config = SoilRunConfig(soil=req.soil, initial_fraction=req.initial_fraction)
+    config = SoilRunConfig(soil=req.soil, initial_fraction=req.initial_fraction, warmup=req.warmup)
     n_years = horizon_blocks(req.horizon)
     keep = req.trace_dir is not None
     pool = usable_blocks(req.forcing, et0, req.horizon[0].strftime("%m-%d"), req.pool_range)
@@ -250,6 +296,7 @@ def run_engine(req: EngineRequest) -> EngineOutput:
                 years=req.replay_years,
                 pool_range=req.pool_range,
                 keep_traces=keep,
+                standing=req.standing,
             )
             outcomes = [one]
         elif feasible:
@@ -266,6 +313,8 @@ def run_engine(req: EngineRequest) -> EngineOutput:
                 seed=req.seed,
                 pool_range=req.pool_range,
                 keep_traces=keep,
+                first_block_weights=req.first_block_weights,
+                standing=req.standing,
             )
     except ValueError as exc:
         raise EngineInputError(str(exc)) from exc
@@ -310,6 +359,16 @@ def run_engine(req: EngineRequest) -> EngineOutput:
             "crop_catalog_sha256": inputs_hash(catalog),
             "elevation_m": f"{req.elevation_m:g}",
             "initial_fraction_of_field_capacity": f"{req.initial_fraction:g}",
+            "initial_state": "observed spin-up (D16)" if not req.warmup else "declared fraction + one-block warm-up",
+            **({"standing_season": req.standing.model_dump_json()} if req.standing else {}),
+            **(
+                {
+                    "forecast_source_id": req.forecast_source_id or "",
+                    "first_block_weighting": "seasonal forecast terciles",
+                }
+                if req.first_block_weights is not None
+                else {}
+            ),
             "irrigation_rule": SUPPORTED_IRRIGATION_RULE,
             **EnsembleConfig(req.horizon, req.pool_range, len(outcomes), req.seed, method).describe(),
             "held_out_or_outside_pool_years": ",".join(map(str, pool.outside_pool_years)) or "none",
@@ -404,6 +463,13 @@ def _journey(
             f"{len(pool.pool_years)} usable seasons in the sample pool ({len(pool.excluded)} excluded for missing "
             f"data, {len(pool.outside_pool_years)} outside the pool)."
         )
+        if req.first_block_weights is not None:
+            w = list(req.first_block_weights.values())
+            ess = 1.0 / sum(x * x for x in w) if w and sum(w) > 0 else 0.0
+            summary += (
+                f" The seasonal forecast ({req.forecast_source_id}) weighted the first season's past years "
+                f"(about {ess:.0f} effective years)."
+            )
     return JourneyStage(
         stage=JourneyStageName.SIMULATE,
         status=status,
@@ -428,6 +494,12 @@ def _journey(
             "min_paths_for_range": MIN_PATHS_FOR_RANGE,
             "unsupported_claims": list(UNSUPPORTED_CLAIMS),
             "input_versions": json.loads(json.dumps(run.input_versions)),
+            "forecast_weights": (
+                {str(k): round(v, 4) for k, v in sorted(req.first_block_weights.items())}
+                if req.first_block_weights is not None
+                else None
+            ),
+            "forecast_notes": list(req.forecast_notes),
         },
         is_demo=run.is_demo,
     )

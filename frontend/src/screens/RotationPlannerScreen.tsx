@@ -2,12 +2,11 @@ import { useEffect, useMemo, useState } from 'react'
 import { api } from '../api/client'
 import { useAsync } from '../api/useAsync'
 import { StateView } from '../components/StateView'
+import { SoilRules, SuggestionsPanel } from './SuggestionsPanel'
 import { Badge, SelectControl } from '../components/ui'
 import {
   MAX_ROTATIONS,
   MAX_SEASONS,
-  ROTATION_END,
-  ROTATION_START,
   blankSeason,
   draftsFromStrategies,
   harvestDate,
@@ -39,6 +38,7 @@ export function RotationPlannerScreen({
 }) {
   const crops = useAsync(api.rotationCrops, [])
   const saved = useAsync(() => api.strategies(siteId), [siteId])
+  const horizonState = useAsync(() => api.horizon(siteId), [siteId])
   const [rotations, setRotations] = useState<RotationDraft[] | null>(null)
   const [busy, setBusy] = useState<'idle' | 'saving' | 'running'>('idle')
   const [error, setError] = useState('')
@@ -57,13 +57,20 @@ export function RotationPlannerScreen({
     setRotations(saved.data.length ? draftsFromStrategies(saved.data) : [newRotation(1)])
   }, [saved, rotations])
 
-  if (crops.status === 'loading' || saved.status === 'loading' || rotations === null) {
-    if (saved.status === 'error' || crops.status === 'error')
+  if (crops.status === 'loading' || saved.status === 'loading' || horizonState.status !== 'ready' || rotations === null) {
+    if (saved.status === 'error' || crops.status === 'error' || horizonState.status === 'error')
       return (
         <>
           <h1 className="page-title" tabIndex={-1}>Rotation planner</h1>
           <StateView kind="failed" title="Could not load the planner">
-            {(saved.status === 'error' ? saved.error : crops.status === 'error' ? crops.error : new Error('')).message}
+            {(saved.status === 'error'
+              ? saved.error
+              : crops.status === 'error'
+                ? crops.error
+                : horizonState.status === 'error'
+                  ? horizonState.error
+                  : new Error('')
+            ).message}
           </StateView>
         </>
       )
@@ -75,7 +82,8 @@ export function RotationPlannerScreen({
     )
   }
 
-  const problem = rotationsProblem(rotations, cropMap)
+  const horizon = horizonState.data
+  const problem = rotationsProblem(rotations, cropMap, horizon)
   const cropOptions = [
     { value: '', label: 'Choose a crop' },
     ...[...cropMap.values()].map((c) => ({ value: c.id, label: c.name })),
@@ -113,16 +121,34 @@ export function RotationPlannerScreen({
         </h1>
         <p className="muted">
           Choose the crops you would grow, up to {MAX_ROTATIONS} rotations. The first is your current practice; the others
-          are compared with it on the same historical weather, soil and water.
+          are compared with it on the same weather paths, soil and water, starting from today&rsquo;s simulated soil water.
         </p>
       </div>
 
       <StateView kind="unavailable" title="How to read the results">
         Crop values are generic FAO table values, not calibrated to your field. Harvest is the share of the water-unlimited
         yield, lost to water stress only (not nutrients, pests, heat or variety). Tonnes per hectare appear only where you
-        enter your own usual yield. Weather is resampled from history: it is not a forecast. The comparison covers{' '}
-        {ROTATION_START.slice(0, 4)}–{ROTATION_END.slice(0, 4)} as a model calendar.
+        enter your own usual yield. Weather comes from past NASA POWER years; the seasonal forecast only makes years like
+        the coming months more likely, so no day is a weather forecast. The comparison runs from {horizon.start} (the day
+        after the latest weather on record, {horizon.observed_end}) to {horizon.end}.
       </StateView>
+
+      <SuggestionsPanel
+        siteId={siteId}
+        crops={[...cropMap.values()]}
+        onUse={(c) => {
+          const draft: RotationDraft = {
+            name: c.name.slice(0, 120),
+            seasons: c.seasons
+              .filter((x) => x.crop_id)
+              .map((x) => ({ crop_id: x.crop_id as string, plant_date: x.plant_date, irrigated: Boolean(x.irrigation_rule), usual_yield: '' })),
+          }
+          // Added as an alternative: the first rotation stays current practice; with three already, the last is replaced.
+          setRotations(rotations.length < MAX_ROTATIONS ? [...rotations, draft] : [...rotations.slice(0, -1), draft])
+          setStrategies([])
+          setSavedNote(`“${c.name}” added below as an alternative. Save and compare to run it with your other rotations.`)
+        }}
+      />
 
       <div className="rot-grid">
         {rotations.map((rotation, i) => {
@@ -187,8 +213,8 @@ export function RotationPlannerScreen({
                           <input
                             type="date"
                             value={season.plant_date}
-                            min={ROTATION_START}
-                            max={ROTATION_END}
+                            min={horizon.start}
+                            max={horizon.end}
                             onChange={(e) => editSeason(i, j, { plant_date: e.target.value })}
                           />
                         </label>
@@ -248,6 +274,7 @@ export function RotationPlannerScreen({
                 </button>
               )}
 
+              {stored?.soil_health && stored.soil_health.length > 0 && <SoilRules rules={stored.soil_health} />}
               {stored?.feasibility && !stored.feasibility.feasible && (
                 <p role="note" className="alert">
                   ⚠ Not feasible: {stored.feasibility.reasons?.join('; ') || 'no reason recorded'}

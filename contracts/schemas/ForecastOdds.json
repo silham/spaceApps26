@@ -1,0 +1,61 @@
+{
+  "additionalProperties": false,
+  "description": "Seasonal-forecast odds for one window: the share of ensemble members below / near / above normal.",
+  "properties": {
+    "window": {
+      "description": "e.g. 'Nov–Jan'",
+      "title": "Window",
+      "type": "string"
+    },
+    "months": {
+      "description": "First day of each month in the window",
+      "items": {
+        "format": "date",
+        "type": "string"
+      },
+      "title": "Months",
+      "type": "array"
+    },
+    "variable": {
+      "enum": [
+        "rain",
+        "temperature"
+      ],
+      "title": "Variable",
+      "type": "string"
+    },
+    "below": {
+      "maximum": 1,
+      "minimum": 0,
+      "title": "Below",
+      "type": "number"
+    },
+    "near": {
+      "maximum": 1,
+      "minimum": 0,
+      "title": "Near",
+      "type": "number"
+    },
+    "above": {
+      "maximum": 1,
+      "minimum": 0,
+      "title": "Above",
+      "type": "number"
+    },
+    "member_count": {
+      "title": "Member Count",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "window",
+    "months",
+    "variable",
+    "below",
+    "near",
+    "above",
+    "member_count"
+  ],
+  "title": "ForecastOdds",
+  "type": "object"
+}

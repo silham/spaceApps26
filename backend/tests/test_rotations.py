@@ -10,6 +10,7 @@ from pydantic import ValidationError
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from ftm.api.services import prediction
 from ftm.api.services import rotations as rot
 from ftm.api.services import runs as svc
 from ftm.contracts.models import (
@@ -62,7 +63,11 @@ def farm(session: Session, monkeypatch: pytest.MonkeyPatch, tmp_path) -> SiteRow
     sp = soil(awc=150.0)
     inputs = SiteEngineInputs(site, src, sp.profile, sp, forcing, 300.0, "TEST ONLY elevation")
     monkeypatch.setattr(svc, "load_site_engine_inputs", lambda s, site_id: inputs)
-    monkeypatch.setattr(svc, "_window_rain", lambda f, years: 400.0)
+    monkeypatch.setattr(prediction, "load_site_engine_inputs", lambda s, site_id: inputs)
+    prediction._inputs_cache.clear()
+    prediction._prediction_cache.clear()
+    prediction._outlook_cache.clear()
+    monkeypatch.setattr(svc, "_window_rain", lambda f, years, anchor="01-01": 400.0)
     svc._prepared_cache.clear()
     svc._et0_cache.clear()
     settings = svc.get_settings()
@@ -82,23 +87,23 @@ def _three() -> RotationsUpdate:
         rotations=[
             RotationInput(
                 name="Current: irrigated maize",
-                seasons=[_season("maize-grain", date(2027, 10, 15), irrigated=True, usual=9.0)],
+                seasons=[_season("maize-grain", date(2026, 10, 15), irrigated=True, usual=9.0)],
             ),
-            RotationInput(name="Rainfed soybean", seasons=[_season("soybean", date(2027, 10, 20))]),
+            RotationInput(name="Rainfed soybean", seasons=[_season("soybean", date(2026, 10, 20))]),
             RotationInput(
                 name="Sorghum then wheat",
-                seasons=[_season("sorghum-grain", date(2027, 10, 25)), _season("spring-wheat", date(2028, 7, 1))],
+                seasons=[_season("sorghum-grain", date(2026, 10, 25)), _season("spring-wheat", date(2027, 7, 1))],
             ),
         ]
     )
 
 
 def test_more_than_three_rotations_or_four_seasons_is_refused() -> None:
-    one = RotationInput(name="A", seasons=[_season("maize-grain", date(2027, 5, 1))])
+    one = RotationInput(name="A", seasons=[_season("maize-grain", date(2026, 5, 1))])
     with pytest.raises(ValidationError):
         RotationsUpdate(rotations=[one, one, one, one])
     with pytest.raises(ValidationError):
-        RotationInput(name="A", seasons=[_season("maize-grain", date(2027, 5, 1))] * 5)
+        RotationInput(name="A", seasons=[_season("maize-grain", date(2026, 5, 1))] * 5)
 
 
 def test_unknown_crop_late_date_and_unavailable_crop_are_refused(session: Session, farm: SiteRow) -> None:
@@ -106,12 +111,12 @@ def test_unknown_crop_late_date_and_unavailable_crop_are_refused(session: Sessio
         return RotationsUpdate(rotations=[RotationInput(name="A", seasons=[season])])
 
     with pytest.raises(rot.RotationError, match="unknown crop"):
-        rot.save_rotations(session, farm, one(_season("quinoa", date(2027, 5, 1))))
+        rot.save_rotations(session, farm, one(_season("quinoa", date(2026, 5, 1))))
     with pytest.raises(rot.RotationError, match="outside the comparison period"):
         rot.save_rotations(session, farm, one(_season("maize-grain", date(2030, 5, 1))))
     farm.farmer_context = {"available_crop_ids": ["soybean"]}
     with pytest.raises(rot.RotationError, match="not among the crops you said you can grow"):
-        rot.save_rotations(session, farm, one(_season("maize-grain", date(2027, 5, 1))))
+        rot.save_rotations(session, farm, one(_season("maize-grain", date(2026, 5, 1))))
 
 
 def test_saving_replaces_the_active_set_but_keeps_old_rows(session: Session, farm: SiteRow) -> None:
@@ -159,3 +164,77 @@ def test_run_on_user_rotations_reports_water_soil_and_yield(session: Session, fa
 def test_a_farm_with_no_saved_rotations_stays_observe_only(session: Session, farm: SiteRow) -> None:
     with pytest.raises(svc.SiteNotReadyError, match="observe-only"):
         svc.create_run(session, RunRequest(site_id=SITE, n_paths=20))
+
+
+def test_outlook_and_run_use_the_real_calendar_without_a_forecast(session: Session, farm: SiteRow) -> None:
+    out = prediction.outlook_for(session, SITE)
+    assert out.horizon_start == date(2026, 1, 1) and out.observed_end == date(2025, 12, 31)
+    assert out.forecast_source_id is None and out.odds == []  # no snapshot: past years equally likely, stated
+    assert any("equally likely" in a for a in out.assumptions)
+    assert "bare fallow" in out.initial_assumption
+    assert 0 <= out.soil_water_now_mm <= out.soil_water_capacity_mm
+    assert out.dates[0] == date(2026, 1, 1) and len(out.rain_mm.p50) == len(out.dates)
+    rot.save_rotations(session, farm, _three())
+    detail = svc.create_run(session, RunRequest(site_id=SITE, n_paths=20))
+    iv = detail.run.input_versions
+    assert iv["horizon"] == "2026-01-01 to 2027-12-31" and iv["initial_state"].startswith("observed")
+    replay = svc.replay(session, detail.run.id, tuple(detail.replay_windows[0].years))
+    assert replay.dates[0] == date(2026, 1, 1)
+
+
+def test_field_now_crop_changes_soil_water_now(session: Session, farm: SiteRow) -> None:
+    bare = prediction.outlook_for(session, SITE)
+    farm.farmer_context = {"current_crop_id": "maize-grain", "current_plant_date": "2025-09-01"}
+    session.flush()
+    cropped = prediction.outlook_for(session, SITE)
+    assert "farmer input" in cropped.initial_assumption
+    assert cropped.soil_water_now_mm <= bare.soil_water_now_mm
+
+
+def test_crop_on_the_field_now_runs_ahead_of_every_rotation(session: Session, farm: SiteRow) -> None:
+    # maize planted 2025-11-01 is still growing when the horizon starts (2026-01-01): it runs ahead of every rotation
+    farm.farmer_context = {"current_crop_id": "maize-grain", "current_plant_date": "2025-11-01"}
+    session.flush()
+    early = RotationsUpdate(rotations=[RotationInput(name="Too early", seasons=[_season("soybean", date(2026, 2, 1))])])
+    (blocked,) = rot.save_rotations(session, farm, early)
+    assert blocked.feasibility and not blocked.feasibility.feasible
+    assert any("crop on the field now" in r for r in blocked.feasibility.reasons)
+    rot.save_rotations(session, farm, _three())
+    detail = svc.create_run(session, RunRequest(site_id=SITE, n_paths=20))
+    assert "standing_season" in detail.run.input_versions
+    results = svc.get_results(session, detail.run.id)
+    seasons = {r.season_index for r in results if r.metric == "relative_yield_pct"}
+    assert seasons == {0, 1}  # the standing maize adds no yield result; rotation seasons keep their numbers
+    assert any("crop on the field now" in lim for lim in results[0].limitations)
+    replay = svc.replay(session, detail.run.id, tuple(detail.replay_windows[0].years))
+    assert any(c == "maize-grain" for c in replay.series[1].crop_id[:30])  # rotation 2 starts under the maize
+
+
+def test_suggestions_job_on_a_southern_farm(session: Session, farm: SiteRow) -> None:
+    from datetime import UTC, datetime
+
+    from ftm.api.services import recommendations as rec
+    from ftm.contracts.models import RecommendationJob, RecommendationRequest
+    from ftm.engine.recommend import in_table11_months
+
+    rot.save_rotations(session, farm, _three())
+    req = RecommendationRequest(max_seasons=2, priorities=["soil_health", "cover", "irrigation"])
+    job = RecommendationJob(
+        id="rec_test", site_id=SITE, status="running", progress=0, request=req, created_at=datetime.now(UTC)
+    )
+    rec._jobs[job.id] = job
+    rec._compute(session, job.id)  # the job thread opens its own session; call the work directly
+    out = rec._jobs.pop(job.id)
+    assert out.status == "done" and out.candidates, out.message
+    crops = rot.selectable_crops()
+    for c in out.candidates:
+        assert all(in_table11_months(crops[s.crop_id], s.plant_date, True) for s in c.seasons if s.crop_id)
+        assert c.soil_health and c.why
+    assert any(a.startswith("Groundnut (peanut) is not suggested") for a in out.assumptions)
+    ranks = [c.rank for c in out.candidates]
+    assert ranks == sorted(ranks)
+    if out.current_practice is not None:  # bullets use the same per-path difference as the metric line
+        c = out.candidates[0]
+        irr = next(m for m in c.metrics if m.metric == "irrigation_mm")
+        if irr.delta_p50_vs_current and abs(irr.delta_p50_vs_current) >= 1:
+            assert any(f"{abs(irr.delta_p50_vs_current):.0f} mm" in t for t in c.trade_offs)

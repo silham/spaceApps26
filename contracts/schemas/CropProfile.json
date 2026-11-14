@@ -179,6 +179,73 @@
       "description": "MM-DD start/end",
       "title": "Planting Window"
     },
+    "family": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Botanical family, e.g. 'Poaceae'",
+      "title": "Family"
+    },
+    "legume": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Fixes nitrogen with rhizobia (a legume)",
+      "title": "Legume"
+    },
+    "traits_reference": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Citation for family and legume",
+      "title": "Traits Reference"
+    },
+    "t_base_c": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ParamValue"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Base temperature below which the crop does not develop (degC)"
+    },
+    "table11_planting_months": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Planting month(s) of the FAO-56 Table 11 row the stage lengths come from (northern hemisphere)",
+      "title": "Table11 Planting Months"
+    },
     "is_cover_crop": {
       "default": false,
       "title": "Is Cover Crop",

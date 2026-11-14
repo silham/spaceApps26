@@ -332,6 +332,9 @@ export function LiveRotation({
       {data && window_ && (
         <p className="small muted">
           Replaying the weather of {yearsLabel(window_.years)}
+          {data.source_dates.length > 0
+            ? ` (${data.source_dates[0]} to ${data.source_dates[data.source_dates.length - 1]})`
+            : ''}
           {window_.rain_mm != null ? ` (${window_.rain_mm} mm rain)` : ''} on the {fullDate.format(start)} calendar · one path, so no
           range · {window_.in_sample_pool ? 'inside the sample pool' : <Badge tone="warning">held out: replay only</Badge>} · sources{' '}
           {data.source_ids.join(', ')}

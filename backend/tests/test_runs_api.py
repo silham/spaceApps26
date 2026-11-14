@@ -168,7 +168,7 @@ def synthetic_site(session: Session, monkeypatch: pytest.MonkeyPatch, tmp_path) 
     from ftm.data import engine_inputs
 
     monkeypatch.setitem(engine_inputs.SCENARIO_BUILDERS, SITE, build_ks_field_2)  # strategies "reviewed" for the test
-    monkeypatch.setattr(svc, "_window_rain", lambda f, years: 400.0)
+    monkeypatch.setattr(svc, "_window_rain", lambda f, years, anchor="01-01": 400.0)
     svc._prepared_cache.clear()
     svc._et0_cache.clear()
     svc._replay_cache.clear()

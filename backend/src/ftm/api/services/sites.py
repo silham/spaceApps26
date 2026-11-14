@@ -15,7 +15,7 @@ import subprocess
 import sys
 import tempfile
 import threading
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -24,11 +24,20 @@ from sqlalchemy.orm import Session
 
 from ftm.contracts.models import MAX_NEW_SITE_AREA_HA, NewSiteRequest, SiteLoadStatus, SiteLoadStep
 from ftm.data.engine_inputs import SCENARIO_BUILDERS, latest_weather_source_id
-from ftm.db.models import SiteRow, StrategyRow
+from ftm.db.models import SiteRow, SourceRow, StrategyRow
 from ftm.provenance import inputs_hash
 
 SCRIPTS = Path(__file__).resolve().parents[4] / "scripts"
-RECORD = (date(1981, 1, 1), date(2025, 12, 31))  # same record as ks-field-2 (scripts/load_site.py)
+RECORD_START = date(1981, 1, 1)  # same start as ks-field-2 (scripts/load_site.py)
+# D16: the record runs to yesterday (UTC); POWER's last few days come back missing (-999) and stay missing.
+STALE_AFTER = timedelta(days=3)
+FORECAST_STALE_AFTER = timedelta(days=7)
+
+
+def record_end(today: date | None = None) -> date:
+    return (today or datetime.now(UTC).date()) - timedelta(days=1)
+
+
 STATUS = "user-selected location; not locally reviewed (D13: observe only)"
 STEP_TIMEOUT_S = 900
 EE_NOT_SIGNED_IN = "Earth Engine is not signed in on the server (run `earthengine authenticate`); vegetation not loaded"
@@ -122,9 +131,10 @@ def _check_boundary(session: Session, req: NewSiteRequest) -> tuple[dict[str, An
 def _steps(lat: float, lon: float) -> list[SiteLoadStep]:
     soil = "USDA SSURGO" if in_conus(lat, lon) else "ISRIC SoilGrids 2.0"
     return [
-        SiteLoadStep(name="weather", source="NASA POWER daily, 1981–2025", status="pending"),
+        SiteLoadStep(name="weather", source="NASA POWER daily, 1981 to the latest day", status="pending"),
         SiteLoadStep(name="soil", source=soil, status="pending"),
         SiteLoadStep(name="vegetation", source="MODIS MOD13Q1 NDVI via Earth Engine", status="pending"),
+        SiteLoadStep(name="forecast", source="ECMWF SEAS5 seasonal forecast via Open-Meteo", status="pending"),
     ]
 
 
@@ -232,7 +242,7 @@ def _load_steps(
         power = [
             "--site-id", site_id, "--name", req.name,
             "--lat", f"{req.latitude}", "--lon", f"{req.longitude}", "--timezone", tz,
-            "--start", RECORD[0].isoformat(), "--end", RECORD[1].isoformat(), "--status", STATUS,
+            "--start", RECORD_START.isoformat(), "--end", record_end().isoformat(), "--status", STATUS,
         ]  # fmt: skip
         if boundary is not None:
             path = Path(tmp) / "boundary.geojson"
@@ -256,7 +266,105 @@ def _load_steps(
         _set_step(site_id, "vegetation", "running")
         ok, msg = _run_script("load_modis.py", "--site-id", site_id)
         _set_step(site_id, "vegetation", "done" if ok else "failed", msg or None)
+
+        # Without a forecast the farm still works: every past year is then equally likely (stated in results).
+        _set_step(site_id, "forecast", "running")
+        ok, msg = _run_script("load_forecast.py", "--site-id", site_id)
+        _set_step(site_id, "forecast", "done" if ok else "failed", msg or None)
     _set(site_id, status="done", finished_at=datetime.now(UTC))
+
+
+# ----------------------------------------------------------------- refresh (D16): newer weather and forecast
+
+_refresh: dict[str, SiteLoadStatus] = {}
+
+
+def refresh_needed(session: Session, site_id: str) -> tuple[bool, bool]:
+    """(weather stale, forecast stale): weather older than 3 days, forecast older than 7 days or absent."""
+    from ftm.db.models import ForecastSnapshotRow
+
+    now = datetime.now(UTC)
+    src_id = latest_weather_source_id(session, site_id)
+    src = session.get(SourceRow, src_id) if src_id else None
+    weather = src is None or src.coverage_end is None or record_end() - src.coverage_end >= STALE_AFTER
+    snap = session.scalars(
+        select(ForecastSnapshotRow)
+        .where(ForecastSnapshotRow.site_id == site_id)
+        .order_by(ForecastSnapshotRow.retrieved_at.desc())
+        .limit(1)
+    ).first()
+    forecast = snap is None or now - snap.retrieved_at >= FORECAST_STALE_AFTER
+    return weather, forecast
+
+
+def refresh_site(session: Session, site_id: str) -> SiteLoadStatus:
+    """Fetch newer weather and/or forecast in the background. Never blocks editing; one refresh at a time."""
+    with _lock:
+        job = _refresh.get(site_id)
+    if job is not None and job.status in ("queued", "running"):
+        return job
+    with _lock:
+        loading = _jobs.get(site_id)
+    if loading is not None and loading.status in ("queued", "running"):
+        return loading
+    row = session.get(SiteRow, site_id)
+    if row is None:
+        raise LookupError(f"site {site_id!r} not found")
+    weather, forecast = refresh_needed(session, site_id)
+    steps = []
+    if weather:
+        steps.append(SiteLoadStep(name="weather", source="NASA POWER daily, to the latest day", status="pending"))
+    if forecast:
+        steps.append(
+            SiteLoadStep(name="forecast", source="ECMWF SEAS5 seasonal forecast via Open-Meteo", status="pending")
+        )
+    job = SiteLoadStatus(
+        site_id=site_id,
+        status="queued" if steps else "done",
+        steps=steps,
+        has_strategies=has_strategies(session, site_id),
+    )
+    if not steps:
+        return job
+    with _lock:
+        _refresh[site_id] = job
+    args = (site_id, row.name, row.latitude, row.longitude, row.timezone, weather, forecast)
+    threading.Thread(target=_do_refresh, args=args, name=f"refresh-{site_id}", daemon=True).start()
+    return job
+
+
+def _refresh_step(site_id: str, name: str, status: str, message: str | None = None) -> None:
+    with _lock:
+        job = _refresh[site_id]
+        steps = [
+            s.model_copy(update={"status": status, "message": message}) if s.name == name else s for s in job.steps
+        ]
+        _refresh[site_id] = job.model_copy(update={"steps": steps})
+
+
+def _do_refresh(site_id: str, name: str, lat: float, lon: float, tz: str, weather: bool, forecast: bool) -> None:
+    with _lock:
+        _refresh[site_id] = _refresh[site_id].model_copy(update={"status": "running", "started_at": datetime.now(UTC)})
+    failed = False
+    with _one_load:
+        if weather:
+            _refresh_step(site_id, "weather", "running")
+            ok, msg = _run_script(
+                "load_power.py",
+                "--site-id", site_id, "--name", name, "--lat", f"{lat}", "--lon", f"{lon}", "--timezone", tz,
+                "--start", RECORD_START.isoformat(), "--end", record_end().isoformat(), "--status", STATUS,
+            )  # fmt: skip
+            _refresh_step(site_id, "weather", "done" if ok else "failed", msg or None)
+            failed |= not ok
+        if forecast:
+            _refresh_step(site_id, "forecast", "running")
+            ok, msg = _run_script("load_forecast.py", "--site-id", site_id)
+            _refresh_step(site_id, "forecast", "done" if ok else "failed", msg or None)
+            failed |= not ok
+    with _lock:
+        _refresh[site_id] = _refresh[site_id].model_copy(
+            update={"status": "failed" if failed else "done", "finished_at": datetime.now(UTC)}
+        )
 
 
 def load_status(session: Session, site_id: str) -> SiteLoadStatus:

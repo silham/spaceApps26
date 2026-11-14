@@ -13,6 +13,8 @@ import {
   rankStrategies,
   requestFromDraft,
   rotationsProblem,
+  oddsSummary,
+  predictionChanged,
   rotationsRequest,
   seasonDays,
   seasonResults,
@@ -147,6 +149,8 @@ const rotation = (...seasons: Partial<ReturnType<typeof blankSeason>>[]): Rotati
   seasons: seasons.map((s) => ({ ...blankSeason(), crop_id: 'maize', plant_date: '2027-04-01', ...s })),
 })
 
+const H = { start: '2027-01-01', end: '2028-12-31' }
+
 describe('rotation builder', () => {
   it('computes harvest from the crop stage lengths and refuses incomplete crops', () => {
     assert.equal(seasonDays(CROPS.get('maize')), 170)
@@ -157,24 +161,24 @@ describe('rotation builder', () => {
 
   it('accepts a valid rotation and builds the API request without blank yields', () => {
     const r = rotation({ irrigated: true, usual_yield: '9' }, { plant_date: '2027-10-01', usual_yield: '' })
-    assert.equal(rotationsProblem([r], CROPS), null)
+    assert.equal(rotationsProblem([r], CROPS, H), null)
     const req = rotationsRequest([r])
     assert.deepEqual(req.rotations[0]?.seasons.map((s) => s.usual_yield_t_ha), [9, null])
     assert.equal(req.rotations[0]?.seasons[0]?.irrigated, true)
   })
 
   it('names the first problem the API would refuse', () => {
-    assert.match(rotationsProblem([rotation({ crop_id: '' })], CROPS) ?? '', /choose a crop/)
-    assert.match(rotationsProblem([rotation({ plant_date: '2030-01-01' })], CROPS) ?? '', /between/)
-    assert.match(rotationsProblem([rotation({ plant_date: '2028-09-01' })], CROPS) ?? '', /after the comparison ends/)
-    assert.match(rotationsProblem([rotation({ crop_id: 'broken' })], CROPS) ?? '', /growth-stage/)
-    assert.match(rotationsProblem([rotation({ usual_yield: '99' })], CROPS) ?? '', /usual yield/)
+    assert.match(rotationsProblem([rotation({ crop_id: '' })], CROPS, H) ?? '', /choose a crop/)
+    assert.match(rotationsProblem([rotation({ plant_date: '2030-01-01' })], CROPS, H) ?? '', /between/)
+    assert.match(rotationsProblem([rotation({ plant_date: '2028-09-01' })], CROPS, H) ?? '', /after the comparison ends/)
+    assert.match(rotationsProblem([rotation({ crop_id: 'broken' })], CROPS, H) ?? '', /growth-stage/)
+    assert.match(rotationsProblem([rotation({ usual_yield: '99' })], CROPS, H) ?? '', /usual yield/)
     assert.match(
-      rotationsProblem([rotation({}, { plant_date: '2027-06-01' })], CROPS) ?? '',
+      rotationsProblem([rotation({}, { plant_date: '2027-06-01' })], CROPS, H) ?? '',
       /starts before season 1 is harvested/,
     )
-    assert.match(rotationsProblem([], CROPS) ?? '', /1 to 3/)
-    assert.match(rotationsProblem(Array(4).fill(rotation({})), CROPS) ?? '', /1 to 3/)
+    assert.match(rotationsProblem([], CROPS, H) ?? '', /1 to 3/)
+    assert.match(rotationsProblem(Array(4).fill(rotation({})), CROPS, H) ?? '', /1 to 3/)
   })
 
   it('opens saved strategies as editable drafts in planting order, skipping fallow', () => {
@@ -203,5 +207,24 @@ describe('rotation builder', () => {
       'relative_yield_pct',
     )
     assert.deepEqual(got.map((x) => x.season_index), [0, 1])
+  })
+})
+
+describe('seasonal outlook wording', () => {
+  it('names the most likely tercile only when it stands out', () => {
+    assert.equal(oddsSummary({ variable: 'rain', below: 0.04, near: 0.1, above: 0.86 }), '86% of members wetter than usual')
+    assert.equal(oddsSummary({ variable: 'temperature', below: 0.53, near: 0.33, above: 0.14 }), '53% of members cooler than usual')
+    assert.equal(oddsSummary({ variable: 'rain', below: 0.37, near: 0.28, above: 0.35 }), 'No clear signal')
+  })
+})
+
+describe('runs made before newer weather or forecast', () => {
+  const run = (iv: Record<string, string>) => ({ run: { input_versions: iv } }) as unknown as RunDetail
+  const outlook = { horizon_start: '2026-11-12', horizon_end: '2028-11-11', forecast_source_id: 'seas5_a' }
+  it('flags a different horizon or forecast, not an identical one', () => {
+    assert.equal(predictionChanged(run({ horizon: '2026-11-12 to 2028-11-11', forecast_source_id: 'seas5_a' }), outlook), false)
+    assert.equal(predictionChanged(run({ horizon: '2026-11-12 to 2028-11-11', forecast_source_id: 'seas5_b' }), outlook), true)
+    assert.equal(predictionChanged(run({ horizon: '2027-01-01 to 2028-12-31' }), outlook), true)
+    assert.equal(predictionChanged(null, outlook), false)
   })
 })
