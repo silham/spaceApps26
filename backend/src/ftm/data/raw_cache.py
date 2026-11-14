@@ -36,7 +36,8 @@ def save_raw(source_key: str, filename: str, content: bytes, raw_dir: Path | Non
     target.chmod(0o444)
     return RawSnapshot(
         path=target,
-        relative_path=str(target.relative_to(root.parent)),
+        # POSIX separators so DB-stored paths are identical across Windows/Linux machines.
+        relative_path=target.relative_to(root.parent).as_posix(),
         sha256=sha256_bytes(content),
         retrieved_at=retrieved_at,
     )
