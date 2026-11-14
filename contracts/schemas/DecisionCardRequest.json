@@ -1,0 +1,66 @@
+{
+  "$defs": {
+    "Priorities": {
+      "additionalProperties": false,
+      "description": "Farmer priorities rank feasible options; they never override hard constraints.",
+      "properties": {
+        "conserve_water": {
+          "default": 50,
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Conserve Water",
+          "type": "integer"
+        },
+        "protect_soil": {
+          "default": 50,
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Protect Soil",
+          "type": "integer"
+        }
+      },
+      "title": "Priorities",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "site_id": {
+      "title": "Site Id",
+      "type": "string"
+    },
+    "run_id": {
+      "title": "Run Id",
+      "type": "string"
+    },
+    "chosen_strategy_id": {
+      "title": "Chosen Strategy Id",
+      "type": "string"
+    },
+    "reason": {
+      "maxLength": 4000,
+      "minLength": 1,
+      "title": "Reason",
+      "type": "string"
+    },
+    "priorities": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Priorities"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "site_id",
+    "run_id",
+    "chosen_strategy_id",
+    "reason"
+  ],
+  "title": "DecisionCardRequest",
+  "type": "object"
+}

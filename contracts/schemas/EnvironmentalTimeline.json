@@ -1,0 +1,179 @@
+{
+  "additionalProperties": false,
+  "description": "Daily weather and satellite vegetation for the Observe timeline. Missing values stay null.",
+  "properties": {
+    "site_id": {
+      "title": "Site Id",
+      "type": "string"
+    },
+    "start": {
+      "format": "date",
+      "title": "Start",
+      "type": "string"
+    },
+    "end": {
+      "format": "date",
+      "title": "End",
+      "type": "string"
+    },
+    "weather_source_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Weather Source Id"
+    },
+    "processing_run_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Processing Run Id"
+    },
+    "dates": {
+      "items": {
+        "format": "date",
+        "type": "string"
+      },
+      "title": "Dates",
+      "type": "array"
+    },
+    "rain_mm": {
+      "items": {
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "title": "Rain Mm",
+      "type": "array"
+    },
+    "rain_flag": {
+      "items": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "title": "Rain Flag",
+      "type": "array"
+    },
+    "tmax_c": {
+      "items": {
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "title": "Tmax C",
+      "type": "array"
+    },
+    "tmin_c": {
+      "items": {
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "title": "Tmin C",
+      "type": "array"
+    },
+    "vegetation_source_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Vegetation Source Id"
+    },
+    "vegetation_dates": {
+      "items": {
+        "format": "date",
+        "type": "string"
+      },
+      "title": "Vegetation Dates",
+      "type": "array"
+    },
+    "ndvi": {
+      "items": {
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "title": "Ndvi",
+      "type": "array"
+    },
+    "vegetation_note": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Vegetation Note"
+    },
+    "source_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Source Ids",
+      "type": "array"
+    },
+    "is_demo": {
+      "default": false,
+      "title": "Is Demo",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "site_id",
+    "start",
+    "end",
+    "weather_source_id",
+    "processing_run_id",
+    "dates",
+    "rain_mm",
+    "rain_flag",
+    "tmax_c",
+    "tmin_c",
+    "source_ids"
+  ],
+  "title": "EnvironmentalTimeline",
+  "type": "object"
+}

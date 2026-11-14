@@ -57,4 +57,4 @@ format:
 backup:        ## pg_dump + static files tarball for the offline demo
 	mkdir -p backups
 	docker compose exec -T db pg_dump -U ftm -Fc ftm > backups/ftm.dump
-	tar czf backups/static.tgz data results
+	tar czf backups/static.tgz data results exports

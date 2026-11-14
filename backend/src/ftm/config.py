@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://ftm:ftm@localhost:5432/ftm"
     data_dir: Path = REPO_ROOT / "data"
     results_dir: Path = REPO_ROOT / "results"
+    exports_dir: Path = REPO_ROOT / "exports"  # decision cards (JSON + PDF), D1 static files
     cors_origins: list[str] = ["http://localhost:5173"]
     demo_mode: bool = True
     # Earth Engine Cloud project (plain EE_PROJECT, as in .env.example). Credentials never live here.

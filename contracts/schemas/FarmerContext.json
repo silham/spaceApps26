@@ -1,0 +1,130 @@
+{
+  "additionalProperties": false,
+  "description": "Farmer-confirmed inputs (value kind farmer_input). Unconfirmed fields stay null, never guessed.",
+  "properties": {
+    "value_kind": {
+      "const": "farmer_input",
+      "default": "farmer_input",
+      "title": "Value Kind",
+      "type": "string"
+    },
+    "confirmed": {
+      "default": false,
+      "title": "Confirmed",
+      "type": "boolean"
+    },
+    "planting_history": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Planting History"
+    },
+    "harvest_history": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Harvest History"
+    },
+    "soil_confirmed": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Farmer agrees with the stored soil profile",
+      "title": "Soil Confirmed"
+    },
+    "soil_notes": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Soil Notes"
+    },
+    "irrigation_allocation_mm": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "mm per irrigated season",
+      "title": "Irrigation Allocation Mm"
+    },
+    "equipment": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Equipment",
+      "type": "array"
+    },
+    "available_crop_ids": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Crops the farmer can grow; None = not stated (all catalog crops allowed)",
+      "title": "Available Crop Ids"
+    },
+    "market_use": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Market Use"
+    },
+    "updated_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Updated At"
+    }
+  },
+  "title": "FarmerContext",
+  "type": "object"
+}

@@ -12,10 +12,21 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-SCHEMA_VERSION = "1.1.0"  # 1.1.0: additive (MODELED kind, ParamValue bounds, Validation periods/sources)
+SCHEMA_VERSION = "1.2.0"
+# 1.1.0: additive (MODELED kind, ParamValue bounds, Validation periods/sources)
+# 1.2.0: additive (RunRequest, RunDetail, PairedDelta, ReplayTrace, FarmerContext, EnvironmentalTimeline,
+#        DecisionCardRequest, DecisionCard; D6 supported edits)
 
 # Wording agreed in DEVELOPMENT_GUIDE.md section 7: p10-p90 is NOT a calibrated prediction interval.
 RANGE_LABEL = "central 80% simulation range (p10–p90)"
+
+# D6 (docs/decisions.md): the only supported edits are the mode, the irrigation allocation (fixed-allocation
+# mode) and a planting-date shift within +/- this many days per strategy. Anything else is refused (422).
+MAX_PLANTING_SHIFT_DAYS = 14
+MIN_RUN_PATHS = 20  # below this the engine reports no p10/p90 (ftm.engine.ensemble.MIN_PATHS_FOR_RANGE)
+MAX_RUN_PATHS = 500
+DEFAULT_RUN_PATHS = 200
+DEFAULT_RUN_SEED = 20261114
 
 
 class Contract(BaseModel):
@@ -299,6 +310,196 @@ class JourneyStage(Contract):
     is_demo: bool = False
 
 
+# --------------------------------------------------------------------------- runs, comparison, decision (1.2.0)
+
+
+class RunRequest(Contract):
+    """A comparison run with the D6 supported edits only. Unsupported edits are rejected, never approximated."""
+
+    site_id: str
+    mode: SimulationMode = SimulationMode.IRRIGATION_NEEDED
+    allocation_mm: float | None = Field(
+        default=None, ge=0, description="Net irrigation allocation per irrigated season (mm); fixed_allocation only"
+    )
+    planting_shift_days: dict[str, int] = Field(
+        default_factory=dict,
+        description=f"strategy_id -> days to move every crop season (|days| <= {MAX_PLANTING_SHIFT_DAYS}, D6)",
+    )
+    n_paths: int = Field(default=DEFAULT_RUN_PATHS, ge=MIN_RUN_PATHS, le=MAX_RUN_PATHS)
+    seed: int = DEFAULT_RUN_SEED
+
+    @model_validator(mode="after")
+    def _supported_edits(self) -> "RunRequest":
+        if self.mode is SimulationMode.FIXED_ALLOCATION and self.allocation_mm is None:
+            raise ValueError("fixed_allocation mode needs an irrigation allocation (mm per irrigated season)")
+        if self.mode is SimulationMode.IRRIGATION_NEEDED and self.allocation_mm is not None:
+            raise ValueError("an allocation applies only in fixed_allocation mode; remove it or change the mode")
+        for sid, days in self.planting_shift_days.items():
+            if abs(days) > MAX_PLANTING_SHIFT_DAYS:
+                raise ValueError(
+                    f"planting shift {days:+d} days for {sid!r} is not supported: "
+                    f"only shifts within ±{MAX_PLANTING_SHIFT_DAYS} days are computed (D6)"
+                )
+        return self
+
+
+class ReplayWindow(Contract):
+    years: list[int]
+    enabled: bool
+    reason: str | None = Field(default=None, description="Why the window cannot be replayed")
+    in_sample_pool: bool = Field(description="False: held out or outside the pool; replay only, never a range")
+    rain_mm: float | None = Field(default=None, description="Total usable rainfall over the window's years")
+
+
+class RunDetail(Contract):
+    """A stored run with everything the comparison screens need besides results and deltas."""
+
+    run: SimulationRun
+    request: RunRequest
+    strategies: list[Strategy] = Field(description="As simulated (edits applied), each with its feasibility")
+    replay_windows: list[ReplayWindow]
+    excluded_blocks: list[dict[str, Any]] = Field(default_factory=list)
+    limitations: list[str] = Field(default_factory=list)
+    source_ids: list[str]
+    scenario_notes: list[str] = Field(default_factory=list, description="How planting dates were derived")
+    unsupported_claims: list[str] = Field(default_factory=list, description="Shown as unavailable, never estimated")
+    cached: bool = Field(default=False, description="True: an identical earlier run was returned")
+
+
+class PairedDelta(Contract):
+    """Strategy minus baseline on the same weather path, summarised across paths (paired comparison)."""
+
+    id: str
+    run_id: str
+    strategy_id: str
+    baseline_strategy_id: str
+    metric: str
+    unit: str
+    p10: float | None
+    p50: float | None
+    p90: float | None
+    range_label: str = RANGE_LABEL
+    better_direction: Literal["lower", "higher"] | None = Field(
+        description="Which direction is preferable for this metric; None = no preferred direction"
+    )
+    share_better: float | None = Field(description="Fraction of paths where the strategy beats the baseline")
+    share_worse: float | None
+    sample_count: int
+    source_ids: list[str] = Field(default_factory=list)
+    is_demo: bool = False
+
+
+class ReplaySeries(Contract):
+    strategy_id: str
+    crop_id: list[str | None]
+    in_crop: list[bool]
+    storage_mm: list[float | None] = Field(description="Root-zone soil water at the end of the day")
+    ks: list[float | None] = Field(description="FAO-56 water-stress coefficient (1 = no stress)")
+    irrigation_mm: list[float | None]
+    aet_mm: list[float | None]
+    metrics: dict[str, float] = Field(description="This single path's metrics (no range: one path)")
+
+
+class ReplayTrace(Contract):
+    """One historical weather window replayed day by day for every strategy (identical weather)."""
+
+    run_id: str
+    years: list[int]
+    in_sample_pool: bool
+    dates: list[date] = Field(description="Strategy-calendar dates (the comparison horizon)")
+    source_dates: list[date] = Field(description="The historical dates whose weather is replayed")
+    rain_mm: list[float | None]
+    et0_mm: list[float | None]
+    series: list[ReplaySeries]
+    turning_point: date | None
+    turning_point_reason: str | None
+    source_ids: list[str]
+    limitations: list[str] = Field(default_factory=list)
+    is_demo: bool = False
+
+
+class FarmerContext(Contract):
+    """Farmer-confirmed inputs (value kind farmer_input). Unconfirmed fields stay null, never guessed."""
+
+    value_kind: Literal[ValueKind.FARMER_INPUT] = ValueKind.FARMER_INPUT
+    confirmed: bool = False
+    planting_history: str | None = None
+    harvest_history: str | None = None
+    soil_confirmed: bool | None = Field(default=None, description="Farmer agrees with the stored soil profile")
+    soil_notes: str | None = None
+    irrigation_allocation_mm: float | None = Field(default=None, ge=0, description="mm per irrigated season")
+    equipment: list[str] = Field(default_factory=list)
+    available_crop_ids: list[str] | None = Field(
+        default=None, description="Crops the farmer can grow; None = not stated (all catalog crops allowed)"
+    )
+    market_use: str | None = None
+    updated_at: datetime | None = None
+
+
+class EnvironmentalTimeline(Contract):
+    """Daily weather and satellite vegetation for the Observe timeline. Missing values stay null."""
+
+    site_id: str
+    start: date
+    end: date
+    weather_source_id: str | None
+    processing_run_id: str | None
+    dates: list[date]
+    rain_mm: list[float | None]
+    rain_flag: list[str | None]
+    tmax_c: list[float | None]
+    tmin_c: list[float | None]
+    vegetation_source_id: str | None = None
+    vegetation_dates: list[date] = Field(default_factory=list)
+    ndvi: list[float | None] = Field(default_factory=list)
+    vegetation_note: str | None = None
+    source_ids: list[str]
+    is_demo: bool = False
+
+
+class Priorities(Contract):
+    """Farmer priorities rank feasible options; they never override hard constraints."""
+
+    conserve_water: int = Field(default=50, ge=0, le=100)
+    protect_soil: int = Field(default=50, ge=0, le=100)
+
+
+class DecisionCardRequest(Contract):
+    site_id: str
+    run_id: str
+    chosen_strategy_id: str
+    reason: str = Field(min_length=1, max_length=4000)
+    priorities: Priorities | None = None
+
+
+class DecisionCard(Contract):
+    """Everything needed to review a decision later: choice, reason, evidence, assumptions, open questions."""
+
+    id: str
+    site_id: str
+    site_name: str
+    created_at: datetime
+    chosen_strategy_id: str
+    reason: str
+    priorities: Priorities | None
+    farmer_context: FarmerContext | None
+    run: SimulationRun
+    request: RunRequest
+    strategies: list[Strategy]
+    results: list[Result]
+    deltas: list[PairedDelta]
+    sources: list[Source]
+    crops: list[CropProfile]
+    assumptions: list[str]
+    limitations: list[str]
+    local_review_questions: list[str]
+    unsupported_claims: list[str]
+    json_url: str
+    pdf_url: str | None
+    sha256: str | None = Field(default=None, description="SHA-256 of the exported JSON")
+    is_demo: bool = False
+
+
 ALL_CONTRACTS: list[type[Contract]] = [
     Site,
     Source,
@@ -312,4 +513,15 @@ ALL_CONTRACTS: list[type[Contract]] = [
     Validation,
     DecisionRecord,
     JourneyStage,
+    RunRequest,
+    ReplayWindow,
+    RunDetail,
+    PairedDelta,
+    ReplaySeries,
+    ReplayTrace,
+    FarmerContext,
+    EnvironmentalTimeline,
+    Priorities,
+    DecisionCardRequest,
+    DecisionCard,
 ]

@@ -1,8 +1,9 @@
 from fastapi import APIRouter
 
-from ftm import MODEL_VERSION, __version__
+from ftm import __version__
 from ftm.config import get_settings
 from ftm.contracts.models import SCHEMA_VERSION
+from ftm.engine.ensemble import MODEL_VERSION  # the engine's version, as recorded on every run
 
 router = APIRouter(tags=["meta"])
 

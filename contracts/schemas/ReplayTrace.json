@@ -1,0 +1,241 @@
+{
+  "$defs": {
+    "ReplaySeries": {
+      "additionalProperties": false,
+      "properties": {
+        "strategy_id": {
+          "title": "Strategy Id",
+          "type": "string"
+        },
+        "crop_id": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Crop Id",
+          "type": "array"
+        },
+        "in_crop": {
+          "items": {
+            "type": "boolean"
+          },
+          "title": "In Crop",
+          "type": "array"
+        },
+        "storage_mm": {
+          "description": "Root-zone soil water at the end of the day",
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Storage Mm",
+          "type": "array"
+        },
+        "ks": {
+          "description": "FAO-56 water-stress coefficient (1 = no stress)",
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Ks",
+          "type": "array"
+        },
+        "irrigation_mm": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Irrigation Mm",
+          "type": "array"
+        },
+        "aet_mm": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Aet Mm",
+          "type": "array"
+        },
+        "metrics": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "This single path's metrics (no range: one path)",
+          "title": "Metrics",
+          "type": "object"
+        }
+      },
+      "required": [
+        "strategy_id",
+        "crop_id",
+        "in_crop",
+        "storage_mm",
+        "ks",
+        "irrigation_mm",
+        "aet_mm",
+        "metrics"
+      ],
+      "title": "ReplaySeries",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "One historical weather window replayed day by day for every strategy (identical weather).",
+  "properties": {
+    "run_id": {
+      "title": "Run Id",
+      "type": "string"
+    },
+    "years": {
+      "items": {
+        "type": "integer"
+      },
+      "title": "Years",
+      "type": "array"
+    },
+    "in_sample_pool": {
+      "title": "In Sample Pool",
+      "type": "boolean"
+    },
+    "dates": {
+      "description": "Strategy-calendar dates (the comparison horizon)",
+      "items": {
+        "format": "date",
+        "type": "string"
+      },
+      "title": "Dates",
+      "type": "array"
+    },
+    "source_dates": {
+      "description": "The historical dates whose weather is replayed",
+      "items": {
+        "format": "date",
+        "type": "string"
+      },
+      "title": "Source Dates",
+      "type": "array"
+    },
+    "rain_mm": {
+      "items": {
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "title": "Rain Mm",
+      "type": "array"
+    },
+    "et0_mm": {
+      "items": {
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "title": "Et0 Mm",
+      "type": "array"
+    },
+    "series": {
+      "items": {
+        "$ref": "#/$defs/ReplaySeries"
+      },
+      "title": "Series",
+      "type": "array"
+    },
+    "turning_point": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Turning Point"
+    },
+    "turning_point_reason": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Turning Point Reason"
+    },
+    "source_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Source Ids",
+      "type": "array"
+    },
+    "limitations": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Limitations",
+      "type": "array"
+    },
+    "is_demo": {
+      "default": false,
+      "title": "Is Demo",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "run_id",
+    "years",
+    "in_sample_pool",
+    "dates",
+    "source_dates",
+    "rain_mm",
+    "et0_mm",
+    "series",
+    "turning_point",
+    "turning_point_reason",
+    "source_ids"
+  ],
+  "title": "ReplayTrace",
+  "type": "object"
+}

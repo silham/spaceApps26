@@ -1,0 +1,108 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "strategy_id": {
+      "title": "Strategy Id",
+      "type": "string"
+    },
+    "crop_id": {
+      "items": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "title": "Crop Id",
+      "type": "array"
+    },
+    "in_crop": {
+      "items": {
+        "type": "boolean"
+      },
+      "title": "In Crop",
+      "type": "array"
+    },
+    "storage_mm": {
+      "description": "Root-zone soil water at the end of the day",
+      "items": {
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "title": "Storage Mm",
+      "type": "array"
+    },
+    "ks": {
+      "description": "FAO-56 water-stress coefficient (1 = no stress)",
+      "items": {
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "title": "Ks",
+      "type": "array"
+    },
+    "irrigation_mm": {
+      "items": {
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "title": "Irrigation Mm",
+      "type": "array"
+    },
+    "aet_mm": {
+      "items": {
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "title": "Aet Mm",
+      "type": "array"
+    },
+    "metrics": {
+      "additionalProperties": {
+        "type": "number"
+      },
+      "description": "This single path's metrics (no range: one path)",
+      "title": "Metrics",
+      "type": "object"
+    }
+  },
+  "required": [
+    "strategy_id",
+    "crop_id",
+    "in_crop",
+    "storage_mm",
+    "ks",
+    "irrigation_mm",
+    "aet_mm",
+    "metrics"
+  ],
+  "title": "ReplaySeries",
+  "type": "object"
+}

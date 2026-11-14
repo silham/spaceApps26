@@ -1,0 +1,63 @@
+{
+  "$defs": {
+    "SimulationMode": {
+      "enum": [
+        "irrigation_needed",
+        "fixed_allocation"
+      ],
+      "title": "SimulationMode",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A comparison run with the D6 supported edits only. Unsupported edits are rejected, never approximated.",
+  "properties": {
+    "site_id": {
+      "title": "Site Id",
+      "type": "string"
+    },
+    "mode": {
+      "$ref": "#/$defs/SimulationMode",
+      "default": "irrigation_needed"
+    },
+    "allocation_mm": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Net irrigation allocation per irrigated season (mm); fixed_allocation only",
+      "title": "Allocation Mm"
+    },
+    "planting_shift_days": {
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "description": "strategy_id -> days to move every crop season (|days| <= 14, D6)",
+      "title": "Planting Shift Days",
+      "type": "object"
+    },
+    "n_paths": {
+      "default": 200,
+      "maximum": 500,
+      "minimum": 20,
+      "title": "N Paths",
+      "type": "integer"
+    },
+    "seed": {
+      "default": 20261114,
+      "title": "Seed",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "site_id"
+  ],
+  "title": "RunRequest",
+  "type": "object"
+}
