@@ -48,16 +48,23 @@ export function JourneySummary({
       <div className="steps">
         {steps.map((step, i) => {
           const { label, kind } = STATUS[step.status]
+          // A connector is "done" only when both stages it joins have run.
+          const ran = (j: number) => {
+            const other = steps[j]
+            return other !== undefined && STATUS[other.status].kind !== 'idle'
+          }
+          const line = (j: number) => `step__line${ran(i) && ran(j) ? ' step__line--done' : ''}`
           return (
             <button key={step.id} type="button" className="step" onClick={onInspect}>
               <span className="step__track">
-                {i > 0 && <span className="step__line" />}
+                <span className={i > 0 ? line(i - 1) : 'step__line step__line--end'} />
                 <span className={`step__dot step__dot--${kind}`}>
                   {kind === 'ok' && <Icon src={checkIcon} size={14} />}
                   {kind === 'warning' && <Icon src={alertIcon} size={14} />}
                 </span>
-                {i < steps.length - 1 && <span className="step__line" />}
+                <span className={i < steps.length - 1 ? line(i + 1) : 'step__line step__line--end'} />
               </span>
+              <span className="step__index" aria-hidden="true">Step {i + 1}</span>
               <span className="step__name">{step.label}</span>
               <span className={`step__status step__status--${kind}`}>{label}</span>
             </button>
