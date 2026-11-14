@@ -30,6 +30,7 @@ RULES: dict[str, VariableRule] = {
     "T2M_MAX": VariableRule("C", -90.0, 60.0, "beyond WMO-recorded air-temperature extremes"),
     "T2M_MIN": VariableRule("C", -90.0, 60.0, "beyond WMO-recorded air-temperature extremes"),
     "T2M": VariableRule("C", -90.0, 60.0, "beyond WMO-recorded air-temperature extremes"),
+    "T2MDEW": VariableRule("C", -90.0, 60.0, "dew point beyond WMO-recorded air-temperature extremes"),
     "PRECTOTCORR": VariableRule("mm/day", 0.0, 2000.0, "negative or beyond WMO 24-h rainfall record"),
     "RH2M": VariableRule("%", 0.0, 100.0, "relative humidity outside 0-100%"),
     "WS2M": VariableRule("m/s", 0.0, 75.0, "negative or implausible daily-mean 2 m wind"),

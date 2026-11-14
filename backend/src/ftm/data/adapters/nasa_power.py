@@ -56,6 +56,8 @@ class PowerDaily:
     api_version: str | None
     header_sources: list[str]
     grid_point: tuple[float, float] | None  # (lon, lat) POWER reports for the request
+    elevation_m: float | None  # elevation POWER reports for the grid point (3rd coordinate)
+    time_standard: str | None  # e.g. 'LST': daily values aggregated in local solar time
     messages: list[str]
 
 
@@ -157,6 +159,7 @@ def parse_daily(content: bytes) -> PowerDaily:
 
     coords = (payload.get("geometry") or {}).get("coordinates")
     grid_point = (float(coords[0]), float(coords[1])) if coords and len(coords) >= 2 else None
+    elevation_m = float(coords[2]) if coords and len(coords) >= 3 and coords[2] is not None else None
     api = header.get("api") or {}
 
     return PowerDaily(
@@ -167,6 +170,8 @@ def parse_daily(content: bytes) -> PowerDaily:
         api_version=api.get("version"),
         header_sources=[str(s) for s in header.get("sources", [])],
         grid_point=grid_point,
+        elevation_m=elevation_m,
+        time_standard=header.get("time_standard"),
         messages=[str(m) for m in payload.get("messages", [])],
     )
 
@@ -193,7 +198,8 @@ def build_source(source_id: str, snapshot: RawSnapshot, parsed: PowerDaily) -> S
         attribution=ATTRIBUTION,
         qa_notes=(
             f"Fill value {parsed.fill_value} marks missing data; decoded in the QA step. "
-            f"Upstream sources: {', '.join(parsed.header_sources) or 'not listed'}."
+            f"Upstream sources: {', '.join(parsed.header_sources) or 'not listed'}. "
+            f"Daily aggregation time standard: {parsed.time_standard or 'not stated'}."
         ),
         limitations=(
             "Gridded reanalysis/satellite-derived values, not field measurements; a grid cell is much "
